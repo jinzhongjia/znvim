@@ -1,0 +1,2934 @@
+[
+	1,
+	0,
+	null,
+	[
+		11,
+		{
+			"version": {
+				"major": 0,
+				"minor": 10,
+				"patch": 0,
+				"build": "ga376d979b",
+				"prerelease": true,
+				"api_level": 12,
+				"api_compatible": 0,
+				"api_prerelease": true
+			},
+			"functions": [
+				{
+					"since": 9,
+					"return_type": "Array",
+					"method": false,
+					"parameters": [["Dictionary", "opts"]],
+					"name": "nvim_get_autocmds"
+				},
+				{
+					"since": 9,
+					"return_type": "Integer",
+					"method": false,
+					"parameters": [
+						["Object", "event"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_create_autocmd"
+				},
+				{
+					"since": 9,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["Integer", "id"]],
+					"name": "nvim_del_autocmd"
+				},
+				{
+					"since": 9,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["Dictionary", "opts"]],
+					"name": "nvim_clear_autocmds"
+				},
+				{
+					"since": 9,
+					"return_type": "Integer",
+					"method": false,
+					"parameters": [
+						["String", "name"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_create_augroup"
+				},
+				{
+					"since": 9,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["Integer", "id"]],
+					"name": "nvim_del_augroup_by_id"
+				},
+				{
+					"since": 9,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "name"]],
+					"name": "nvim_del_augroup_by_name"
+				},
+				{
+					"since": 9,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["Object", "event"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_exec_autocmds"
+				},
+				{
+					"since": 1,
+					"return_type": "Integer",
+					"method": true,
+					"parameters": [["Buffer", "buffer"]],
+					"name": "nvim_buf_line_count"
+				},
+				{
+					"since": 4,
+					"return_type": "Boolean",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Boolean", "send_buffer"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_buf_attach"
+				},
+				{
+					"since": 4,
+					"return_type": "Boolean",
+					"method": true,
+					"parameters": [["Buffer", "buffer"]],
+					"name": "nvim_buf_detach"
+				},
+				{
+					"since": 1,
+					"return_type": "ArrayOf(String)",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "start"],
+						["Integer", "end"],
+						["Boolean", "strict_indexing"]
+					],
+					"name": "nvim_buf_get_lines"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "start"],
+						["Integer", "end"],
+						["Boolean", "strict_indexing"],
+						["ArrayOf(String)", "replacement"]
+					],
+					"name": "nvim_buf_set_lines"
+				},
+				{
+					"since": 7,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "start_row"],
+						["Integer", "start_col"],
+						["Integer", "end_row"],
+						["Integer", "end_col"],
+						["ArrayOf(String)", "replacement"]
+					],
+					"name": "nvim_buf_set_text"
+				},
+				{
+					"since": 9,
+					"return_type": "ArrayOf(String)",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "start_row"],
+						["Integer", "start_col"],
+						["Integer", "end_row"],
+						["Integer", "end_col"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_buf_get_text"
+				},
+				{
+					"since": 5,
+					"return_type": "Integer",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "index"]
+					],
+					"name": "nvim_buf_get_offset"
+				},
+				{
+					"since": 1,
+					"return_type": "Object",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "name"]
+					],
+					"name": "nvim_buf_get_var"
+				},
+				{
+					"since": 2,
+					"return_type": "Integer",
+					"method": true,
+					"parameters": [["Buffer", "buffer"]],
+					"name": "nvim_buf_get_changedtick"
+				},
+				{
+					"since": 3,
+					"return_type": "ArrayOf(Dictionary)",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "mode"]
+					],
+					"name": "nvim_buf_get_keymap"
+				},
+				{
+					"since": 6,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "mode"],
+						["String", "lhs"],
+						["String", "rhs"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_buf_set_keymap"
+				},
+				{
+					"since": 6,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "mode"],
+						["String", "lhs"]
+					],
+					"name": "nvim_buf_del_keymap"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "name"],
+						["Object", "value"]
+					],
+					"name": "nvim_buf_set_var"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "name"]
+					],
+					"name": "nvim_buf_del_var"
+				},
+				{
+					"since": 1,
+					"return_type": "String",
+					"method": true,
+					"parameters": [["Buffer", "buffer"]],
+					"name": "nvim_buf_get_name"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "name"]
+					],
+					"name": "nvim_buf_set_name"
+				},
+				{
+					"since": 5,
+					"return_type": "Boolean",
+					"method": true,
+					"parameters": [["Buffer", "buffer"]],
+					"name": "nvim_buf_is_loaded"
+				},
+				{
+					"since": 7,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_buf_delete"
+				},
+				{
+					"since": 1,
+					"return_type": "Boolean",
+					"method": true,
+					"parameters": [["Buffer", "buffer"]],
+					"name": "nvim_buf_is_valid"
+				},
+				{
+					"since": 8,
+					"return_type": "Boolean",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "name"]
+					],
+					"name": "nvim_buf_del_mark"
+				},
+				{
+					"since": 8,
+					"return_type": "Boolean",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "name"],
+						["Integer", "line"],
+						["Integer", "col"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_buf_set_mark"
+				},
+				{
+					"since": 1,
+					"return_type": "ArrayOf(Integer, 2)",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "name"]
+					],
+					"name": "nvim_buf_get_mark"
+				},
+				{
+					"since": 7,
+					"return_type": "Object",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["LuaRef", "fun"]
+					],
+					"name": "nvim_buf_call"
+				},
+				{
+					"since": 10,
+					"return_type": "Dictionary",
+					"method": false,
+					"parameters": [
+						["String", "str"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_parse_cmd"
+				},
+				{
+					"since": 10,
+					"return_type": "String",
+					"method": false,
+					"parameters": [
+						["Dictionary", "cmd"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_cmd"
+				},
+				{
+					"since": 9,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["String", "name"],
+						["Object", "command"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_create_user_command"
+				},
+				{
+					"since": 9,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "name"]],
+					"name": "nvim_del_user_command"
+				},
+				{
+					"since": 9,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "name"],
+						["Object", "command"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_buf_create_user_command"
+				},
+				{
+					"since": 9,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "name"]
+					],
+					"name": "nvim_buf_del_user_command"
+				},
+				{
+					"since": 4,
+					"return_type": "Dictionary",
+					"method": false,
+					"parameters": [["Dictionary", "opts"]],
+					"name": "nvim_get_commands"
+				},
+				{
+					"since": 4,
+					"return_type": "Dictionary",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_buf_get_commands"
+				},
+				{
+					"since": 7,
+					"return_type": "String",
+					"method": false,
+					"parameters": [
+						["String", "src"],
+						["Boolean", "output"]
+					],
+					"deprecated_since": 11,
+					"name": "nvim_exec"
+				},
+				{
+					"since": 1,
+					"return_type": "String",
+					"method": false,
+					"parameters": [["String", "command"]],
+					"deprecated_since": 7,
+					"name": "nvim_command_output"
+				},
+				{
+					"since": 3,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [
+						["String", "code"],
+						["Array", "args"]
+					],
+					"deprecated_since": 7,
+					"name": "nvim_execute_lua"
+				},
+				{
+					"since": 1,
+					"return_type": "Integer",
+					"method": true,
+					"parameters": [["Buffer", "buffer"]],
+					"deprecated_since": 2,
+					"name": "nvim_buf_get_number"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "ns_id"],
+						["Integer", "line_start"],
+						["Integer", "line_end"]
+					],
+					"deprecated_since": 7,
+					"name": "nvim_buf_clear_highlight"
+				},
+				{
+					"since": 5,
+					"return_type": "Integer",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "src_id"],
+						["Integer", "line"],
+						["Array", "chunks"],
+						["Dictionary", "opts"]
+					],
+					"deprecated_since": 8,
+					"name": "nvim_buf_set_virtual_text"
+				},
+				{
+					"since": 3,
+					"return_type": "Dictionary",
+					"method": false,
+					"parameters": [
+						["Integer", "hl_id"],
+						["Boolean", "rgb"]
+					],
+					"deprecated_since": 9,
+					"name": "nvim_get_hl_by_id"
+				},
+				{
+					"since": 3,
+					"return_type": "Dictionary",
+					"method": false,
+					"parameters": [
+						["String", "name"],
+						["Boolean", "rgb"]
+					],
+					"deprecated_since": 9,
+					"name": "nvim_get_hl_by_name"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "lnum"],
+						["ArrayOf(String)", "lines"]
+					],
+					"deprecated_since": 1,
+					"name": "buffer_insert"
+				},
+				{
+					"since": 0,
+					"return_type": "String",
+					"method": false,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "index"]
+					],
+					"deprecated_since": 1,
+					"name": "buffer_get_line"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "index"],
+						["String", "line"]
+					],
+					"deprecated_since": 1,
+					"name": "buffer_set_line"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "index"]
+					],
+					"deprecated_since": 1,
+					"name": "buffer_del_line"
+				},
+				{
+					"since": 0,
+					"return_type": "ArrayOf(String)",
+					"method": false,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "start"],
+						["Integer", "end"],
+						["Boolean", "include_start"],
+						["Boolean", "include_end"]
+					],
+					"deprecated_since": 1,
+					"name": "buffer_get_line_slice"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "start"],
+						["Integer", "end"],
+						["Boolean", "include_start"],
+						["Boolean", "include_end"],
+						["ArrayOf(String)", "replacement"]
+					],
+					"deprecated_since": 1,
+					"name": "buffer_set_line_slice"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "name"],
+						["Object", "value"]
+					],
+					"deprecated_since": 1,
+					"name": "buffer_set_var"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "name"]
+					],
+					"deprecated_since": 1,
+					"name": "buffer_del_var"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [
+						["Window", "window"],
+						["String", "name"],
+						["Object", "value"]
+					],
+					"deprecated_since": 1,
+					"name": "window_set_var"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [
+						["Window", "window"],
+						["String", "name"]
+					],
+					"deprecated_since": 1,
+					"name": "window_del_var"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [
+						["Tabpage", "tabpage"],
+						["String", "name"],
+						["Object", "value"]
+					],
+					"deprecated_since": 1,
+					"name": "tabpage_set_var"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [
+						["Tabpage", "tabpage"],
+						["String", "name"]
+					],
+					"deprecated_since": 1,
+					"name": "tabpage_del_var"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [
+						["String", "name"],
+						["Object", "value"]
+					],
+					"deprecated_since": 1,
+					"name": "vim_set_var"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [["String", "name"]],
+					"deprecated_since": 1,
+					"name": "vim_del_var"
+				},
+				{
+					"since": 7,
+					"return_type": "Dictionary",
+					"method": false,
+					"parameters": [["String", "name"]],
+					"deprecated_since": 11,
+					"name": "nvim_get_option_info"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["String", "name"],
+						["Object", "value"]
+					],
+					"deprecated_since": 11,
+					"name": "nvim_set_option"
+				},
+				{
+					"since": 1,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [["String", "name"]],
+					"deprecated_since": 11,
+					"name": "nvim_get_option"
+				},
+				{
+					"since": 1,
+					"return_type": "Object",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "name"]
+					],
+					"deprecated_since": 11,
+					"name": "nvim_buf_get_option"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "name"],
+						["Object", "value"]
+					],
+					"deprecated_since": 11,
+					"name": "nvim_buf_set_option"
+				},
+				{
+					"since": 1,
+					"return_type": "Object",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["String", "name"]
+					],
+					"deprecated_since": 11,
+					"name": "nvim_win_get_option"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["String", "name"],
+						["Object", "value"]
+					],
+					"deprecated_since": 11,
+					"name": "nvim_win_set_option"
+				},
+				{
+					"since": 5,
+					"return_type": "Integer",
+					"method": false,
+					"parameters": [["String", "name"]],
+					"name": "nvim_create_namespace"
+				},
+				{
+					"since": 5,
+					"return_type": "Dictionary",
+					"method": false,
+					"parameters": [],
+					"name": "nvim_get_namespaces"
+				},
+				{
+					"since": 7,
+					"return_type": "ArrayOf(Integer)",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "ns_id"],
+						["Integer", "id"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_buf_get_extmark_by_id"
+				},
+				{
+					"since": 7,
+					"return_type": "Array",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "ns_id"],
+						["Object", "start"],
+						["Object", "end"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_buf_get_extmarks"
+				},
+				{
+					"since": 7,
+					"return_type": "Integer",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "ns_id"],
+						["Integer", "line"],
+						["Integer", "col"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_buf_set_extmark"
+				},
+				{
+					"since": 7,
+					"return_type": "Boolean",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "ns_id"],
+						["Integer", "id"]
+					],
+					"name": "nvim_buf_del_extmark"
+				},
+				{
+					"since": 1,
+					"return_type": "Integer",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "ns_id"],
+						["String", "hl_group"],
+						["Integer", "line"],
+						["Integer", "col_start"],
+						["Integer", "col_end"]
+					],
+					"name": "nvim_buf_add_highlight"
+				},
+				{
+					"since": 5,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "ns_id"],
+						["Integer", "line_start"],
+						["Integer", "line_end"]
+					],
+					"name": "nvim_buf_clear_namespace"
+				},
+				{
+					"since": 7,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["Integer", "ns_id"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_set_decoration_provider"
+				},
+				{
+					"since": 9,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [
+						["String", "name"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_get_option_value"
+				},
+				{
+					"since": 9,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["String", "name"],
+						["Object", "value"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_set_option_value"
+				},
+				{
+					"since": 7,
+					"return_type": "Dictionary",
+					"method": false,
+					"parameters": [],
+					"name": "nvim_get_all_options_info"
+				},
+				{
+					"since": 11,
+					"return_type": "Dictionary",
+					"method": false,
+					"parameters": [
+						["String", "name"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_get_option_info2"
+				},
+				{
+					"since": 1,
+					"return_type": "ArrayOf(Window)",
+					"method": true,
+					"parameters": [["Tabpage", "tabpage"]],
+					"name": "nvim_tabpage_list_wins"
+				},
+				{
+					"since": 1,
+					"return_type": "Object",
+					"method": true,
+					"parameters": [
+						["Tabpage", "tabpage"],
+						["String", "name"]
+					],
+					"name": "nvim_tabpage_get_var"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Tabpage", "tabpage"],
+						["String", "name"],
+						["Object", "value"]
+					],
+					"name": "nvim_tabpage_set_var"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Tabpage", "tabpage"],
+						["String", "name"]
+					],
+					"name": "nvim_tabpage_del_var"
+				},
+				{
+					"since": 1,
+					"return_type": "Window",
+					"method": true,
+					"parameters": [["Tabpage", "tabpage"]],
+					"name": "nvim_tabpage_get_win"
+				},
+				{
+					"since": 12,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Tabpage", "tabpage"],
+						["Window", "win"]
+					],
+					"name": "nvim_tabpage_set_win"
+				},
+				{
+					"since": 1,
+					"return_type": "Integer",
+					"method": true,
+					"parameters": [["Tabpage", "tabpage"]],
+					"name": "nvim_tabpage_get_number"
+				},
+				{
+					"since": 1,
+					"return_type": "Boolean",
+					"method": true,
+					"parameters": [["Tabpage", "tabpage"]],
+					"name": "nvim_tabpage_is_valid"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["Integer", "width"],
+						["Integer", "height"],
+						["Dictionary", "options"]
+					],
+					"name": "nvim_ui_attach"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["Integer", "width"],
+						["Integer", "height"],
+						["Boolean", "enable_rgb"]
+					],
+					"deprecated_since": 1,
+					"name": "ui_attach"
+				},
+				{
+					"since": 11,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["Boolean", "gained"]],
+					"name": "nvim_ui_set_focus"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [],
+					"name": "nvim_ui_detach"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["Integer", "width"],
+						["Integer", "height"]
+					],
+					"name": "nvim_ui_try_resize"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["String", "name"],
+						["Object", "value"]
+					],
+					"name": "nvim_ui_set_option"
+				},
+				{
+					"since": 6,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["Integer", "grid"],
+						["Integer", "width"],
+						["Integer", "height"]
+					],
+					"name": "nvim_ui_try_resize_grid"
+				},
+				{
+					"since": 6,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["Integer", "height"]],
+					"name": "nvim_ui_pum_set_height"
+				},
+				{
+					"since": 7,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["Float", "width"],
+						["Float", "height"],
+						["Float", "row"],
+						["Float", "col"]
+					],
+					"name": "nvim_ui_pum_set_bounds"
+				},
+				{
+					"since": 12,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["String", "event"],
+						["Object", "value"]
+					],
+					"name": "nvim_ui_term_event"
+				},
+				{
+					"since": 7,
+					"return_type": "Integer",
+					"method": false,
+					"parameters": [["String", "name"]],
+					"name": "nvim_get_hl_id_by_name"
+				},
+				{
+					"since": 11,
+					"return_type": "Dictionary",
+					"method": false,
+					"parameters": [
+						["Integer", "ns_id"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_get_hl"
+				},
+				{
+					"since": 7,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["Integer", "ns_id"],
+						["String", "name"],
+						["Dictionary", "val"]
+					],
+					"name": "nvim_set_hl"
+				},
+				{
+					"since": 12,
+					"return_type": "Integer",
+					"method": false,
+					"parameters": [["Dictionary", "opts"]],
+					"name": "nvim_get_hl_ns"
+				},
+				{
+					"since": 10,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["Integer", "ns_id"]],
+					"name": "nvim_set_hl_ns"
+				},
+				{
+					"since": 10,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["Integer", "ns_id"]],
+					"name": "nvim_set_hl_ns_fast"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["String", "keys"],
+						["String", "mode"],
+						["Boolean", "escape_ks"]
+					],
+					"name": "nvim_feedkeys"
+				},
+				{
+					"since": 1,
+					"return_type": "Integer",
+					"method": false,
+					"parameters": [["String", "keys"]],
+					"name": "nvim_input"
+				},
+				{
+					"since": 6,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["String", "button"],
+						["String", "action"],
+						["String", "modifier"],
+						["Integer", "grid"],
+						["Integer", "row"],
+						["Integer", "col"]
+					],
+					"name": "nvim_input_mouse"
+				},
+				{
+					"since": 1,
+					"return_type": "String",
+					"method": false,
+					"parameters": [
+						["String", "str"],
+						["Boolean", "from_part"],
+						["Boolean", "do_lt"],
+						["Boolean", "special"]
+					],
+					"name": "nvim_replace_termcodes"
+				},
+				{
+					"since": 7,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [
+						["String", "code"],
+						["Array", "args"]
+					],
+					"name": "nvim_exec_lua"
+				},
+				{
+					"since": 7,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [
+						["String", "msg"],
+						["Integer", "log_level"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_notify"
+				},
+				{
+					"since": 1,
+					"return_type": "Integer",
+					"method": false,
+					"parameters": [["String", "text"]],
+					"name": "nvim_strwidth"
+				},
+				{
+					"since": 1,
+					"return_type": "ArrayOf(String)",
+					"method": false,
+					"parameters": [],
+					"name": "nvim_list_runtime_paths"
+				},
+				{
+					"since": 7,
+					"return_type": "ArrayOf(String)",
+					"method": false,
+					"parameters": [
+						["String", "name"],
+						["Boolean", "all"]
+					],
+					"name": "nvim_get_runtime_file"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "dir"]],
+					"name": "nvim_set_current_dir"
+				},
+				{
+					"since": 1,
+					"return_type": "String",
+					"method": false,
+					"parameters": [],
+					"name": "nvim_get_current_line"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "line"]],
+					"name": "nvim_set_current_line"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [],
+					"name": "nvim_del_current_line"
+				},
+				{
+					"since": 1,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [["String", "name"]],
+					"name": "nvim_get_var"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["String", "name"],
+						["Object", "value"]
+					],
+					"name": "nvim_set_var"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "name"]],
+					"name": "nvim_del_var"
+				},
+				{
+					"since": 1,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [["String", "name"]],
+					"name": "nvim_get_vvar"
+				},
+				{
+					"since": 6,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["String", "name"],
+						["Object", "value"]
+					],
+					"name": "nvim_set_vvar"
+				},
+				{
+					"since": 7,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["Array", "chunks"],
+						["Boolean", "history"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_echo"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "str"]],
+					"name": "nvim_out_write"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "str"]],
+					"name": "nvim_err_write"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "str"]],
+					"name": "nvim_err_writeln"
+				},
+				{
+					"since": 1,
+					"return_type": "ArrayOf(Buffer)",
+					"method": false,
+					"parameters": [],
+					"name": "nvim_list_bufs"
+				},
+				{
+					"since": 1,
+					"return_type": "Buffer",
+					"method": false,
+					"parameters": [],
+					"name": "nvim_get_current_buf"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["Buffer", "buffer"]],
+					"name": "nvim_set_current_buf"
+				},
+				{
+					"since": 1,
+					"return_type": "ArrayOf(Window)",
+					"method": false,
+					"parameters": [],
+					"name": "nvim_list_wins"
+				},
+				{
+					"since": 1,
+					"return_type": "Window",
+					"method": false,
+					"parameters": [],
+					"name": "nvim_get_current_win"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["Window", "window"]],
+					"name": "nvim_set_current_win"
+				},
+				{
+					"since": 6,
+					"return_type": "Buffer",
+					"method": false,
+					"parameters": [
+						["Boolean", "listed"],
+						["Boolean", "scratch"]
+					],
+					"name": "nvim_create_buf"
+				},
+				{
+					"since": 7,
+					"return_type": "Integer",
+					"method": false,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_open_term"
+				},
+				{
+					"since": 7,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["Integer", "chan"],
+						["String", "data"]
+					],
+					"name": "nvim_chan_send"
+				},
+				{
+					"since": 1,
+					"return_type": "ArrayOf(Tabpage)",
+					"method": false,
+					"parameters": [],
+					"name": "nvim_list_tabpages"
+				},
+				{
+					"since": 1,
+					"return_type": "Tabpage",
+					"method": false,
+					"parameters": [],
+					"name": "nvim_get_current_tabpage"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["Tabpage", "tabpage"]],
+					"name": "nvim_set_current_tabpage"
+				},
+				{
+					"since": 6,
+					"return_type": "Boolean",
+					"method": false,
+					"parameters": [
+						["String", "data"],
+						["Boolean", "crlf"],
+						["Integer", "phase"]
+					],
+					"name": "nvim_paste"
+				},
+				{
+					"since": 6,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["ArrayOf(String)", "lines"],
+						["String", "type"],
+						["Boolean", "after"],
+						["Boolean", "follow"]
+					],
+					"name": "nvim_put"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "event"]],
+					"name": "nvim_subscribe"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "event"]],
+					"name": "nvim_unsubscribe"
+				},
+				{
+					"since": 1,
+					"return_type": "Integer",
+					"method": false,
+					"parameters": [["String", "name"]],
+					"name": "nvim_get_color_by_name"
+				},
+				{
+					"since": 1,
+					"return_type": "Dictionary",
+					"method": false,
+					"parameters": [],
+					"name": "nvim_get_color_map"
+				},
+				{
+					"since": 6,
+					"return_type": "Dictionary",
+					"method": false,
+					"parameters": [["Dictionary", "opts"]],
+					"name": "nvim_get_context"
+				},
+				{
+					"since": 6,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [["Dictionary", "dict"]],
+					"name": "nvim_load_context"
+				},
+				{
+					"since": 2,
+					"return_type": "Dictionary",
+					"method": false,
+					"parameters": [],
+					"name": "nvim_get_mode"
+				},
+				{
+					"since": 3,
+					"return_type": "ArrayOf(Dictionary)",
+					"method": false,
+					"parameters": [["String", "mode"]],
+					"name": "nvim_get_keymap"
+				},
+				{
+					"since": 6,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["String", "mode"],
+						["String", "lhs"],
+						["String", "rhs"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_set_keymap"
+				},
+				{
+					"since": 6,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["String", "mode"],
+						["String", "lhs"]
+					],
+					"name": "nvim_del_keymap"
+				},
+				{
+					"since": 1,
+					"return_type": "Array",
+					"method": false,
+					"parameters": [],
+					"name": "nvim_get_api_info"
+				},
+				{
+					"since": 4,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["String", "name"],
+						["Dictionary", "version"],
+						["String", "type"],
+						["Dictionary", "methods"],
+						["Dictionary", "attributes"]
+					],
+					"name": "nvim_set_client_info"
+				},
+				{
+					"since": 4,
+					"return_type": "Dictionary",
+					"method": false,
+					"parameters": [["Integer", "chan"]],
+					"name": "nvim_get_chan_info"
+				},
+				{
+					"since": 4,
+					"return_type": "Array",
+					"method": false,
+					"parameters": [],
+					"name": "nvim_list_chans"
+				},
+				{
+					"since": 1,
+					"return_type": "Array",
+					"method": false,
+					"parameters": [["Array", "calls"]],
+					"name": "nvim_call_atomic"
+				},
+				{
+					"since": 4,
+					"return_type": "Array",
+					"method": false,
+					"parameters": [],
+					"name": "nvim_list_uis"
+				},
+				{
+					"since": 4,
+					"return_type": "Array",
+					"method": false,
+					"parameters": [["Integer", "pid"]],
+					"name": "nvim_get_proc_children"
+				},
+				{
+					"since": 4,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [["Integer", "pid"]],
+					"name": "nvim_get_proc"
+				},
+				{
+					"since": 6,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["Integer", "item"],
+						["Boolean", "insert"],
+						["Boolean", "finish"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_select_popupmenu_item"
+				},
+				{
+					"since": 8,
+					"return_type": "Boolean",
+					"method": false,
+					"parameters": [["String", "name"]],
+					"name": "nvim_del_mark"
+				},
+				{
+					"since": 8,
+					"return_type": "Array",
+					"method": false,
+					"parameters": [
+						["String", "name"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_get_mark"
+				},
+				{
+					"since": 8,
+					"return_type": "Dictionary",
+					"method": false,
+					"parameters": [
+						["String", "str"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_eval_statusline"
+				},
+				{
+					"since": 12,
+					"return_type": "Dictionary",
+					"method": false,
+					"parameters": [
+						["Integer", "index"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_complete_set"
+				},
+				{
+					"since": 11,
+					"return_type": "Dictionary",
+					"method": false,
+					"parameters": [
+						["String", "src"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_exec2"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "command"]],
+					"name": "nvim_command"
+				},
+				{
+					"since": 1,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [["String", "expr"]],
+					"name": "nvim_eval"
+				},
+				{
+					"since": 1,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [
+						["String", "fn"],
+						["Array", "args"]
+					],
+					"name": "nvim_call_function"
+				},
+				{
+					"since": 4,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [
+						["Object", "dict"],
+						["String", "fn"],
+						["Array", "args"]
+					],
+					"name": "nvim_call_dict_function"
+				},
+				{
+					"since": 4,
+					"return_type": "Dictionary",
+					"method": false,
+					"parameters": [
+						["String", "expr"],
+						["String", "flags"],
+						["Boolean", "highlight"]
+					],
+					"name": "nvim_parse_expression"
+				},
+				{
+					"since": 6,
+					"return_type": "Window",
+					"method": false,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Boolean", "enter"],
+						["Dictionary", "config"]
+					],
+					"name": "nvim_open_win"
+				},
+				{
+					"since": 6,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["Dictionary", "config"]
+					],
+					"name": "nvim_win_set_config"
+				},
+				{
+					"since": 6,
+					"return_type": "Dictionary",
+					"method": true,
+					"parameters": [["Window", "window"]],
+					"name": "nvim_win_get_config"
+				},
+				{
+					"since": 1,
+					"return_type": "Buffer",
+					"method": true,
+					"parameters": [["Window", "window"]],
+					"name": "nvim_win_get_buf"
+				},
+				{
+					"since": 5,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["Buffer", "buffer"]
+					],
+					"name": "nvim_win_set_buf"
+				},
+				{
+					"since": 1,
+					"return_type": "ArrayOf(Integer, 2)",
+					"method": true,
+					"parameters": [["Window", "window"]],
+					"name": "nvim_win_get_cursor"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["ArrayOf(Integer, 2)", "pos"]
+					],
+					"name": "nvim_win_set_cursor"
+				},
+				{
+					"since": 1,
+					"return_type": "Integer",
+					"method": true,
+					"parameters": [["Window", "window"]],
+					"name": "nvim_win_get_height"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["Integer", "height"]
+					],
+					"name": "nvim_win_set_height"
+				},
+				{
+					"since": 1,
+					"return_type": "Integer",
+					"method": true,
+					"parameters": [["Window", "window"]],
+					"name": "nvim_win_get_width"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["Integer", "width"]
+					],
+					"name": "nvim_win_set_width"
+				},
+				{
+					"since": 1,
+					"return_type": "Object",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["String", "name"]
+					],
+					"name": "nvim_win_get_var"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["String", "name"],
+						["Object", "value"]
+					],
+					"name": "nvim_win_set_var"
+				},
+				{
+					"since": 1,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["String", "name"]
+					],
+					"name": "nvim_win_del_var"
+				},
+				{
+					"since": 1,
+					"return_type": "ArrayOf(Integer, 2)",
+					"method": true,
+					"parameters": [["Window", "window"]],
+					"name": "nvim_win_get_position"
+				},
+				{
+					"since": 1,
+					"return_type": "Tabpage",
+					"method": true,
+					"parameters": [["Window", "window"]],
+					"name": "nvim_win_get_tabpage"
+				},
+				{
+					"since": 1,
+					"return_type": "Integer",
+					"method": true,
+					"parameters": [["Window", "window"]],
+					"name": "nvim_win_get_number"
+				},
+				{
+					"since": 1,
+					"return_type": "Boolean",
+					"method": true,
+					"parameters": [["Window", "window"]],
+					"name": "nvim_win_is_valid"
+				},
+				{
+					"since": 7,
+					"return_type": "void",
+					"method": true,
+					"parameters": [["Window", "window"]],
+					"name": "nvim_win_hide"
+				},
+				{
+					"since": 6,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["Boolean", "force"]
+					],
+					"name": "nvim_win_close"
+				},
+				{
+					"since": 7,
+					"return_type": "Object",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["LuaRef", "fun"]
+					],
+					"name": "nvim_win_call"
+				},
+				{
+					"since": 10,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["Integer", "ns_id"]
+					],
+					"name": "nvim_win_set_hl_ns"
+				},
+				{
+					"since": 12,
+					"return_type": "Dictionary",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["Dictionary", "opts"]
+					],
+					"name": "nvim_win_text_height"
+				},
+				{
+					"since": 0,
+					"return_type": "Integer",
+					"method": true,
+					"parameters": [["Buffer", "buffer"]],
+					"deprecated_since": 1,
+					"name": "buffer_line_count"
+				},
+				{
+					"since": 0,
+					"return_type": "ArrayOf(String)",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "start"],
+						["Integer", "end"],
+						["Boolean", "strict_indexing"]
+					],
+					"deprecated_since": 1,
+					"name": "buffer_get_lines"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "start"],
+						["Integer", "end"],
+						["Boolean", "strict_indexing"],
+						["ArrayOf(String)", "replacement"]
+					],
+					"deprecated_since": 1,
+					"name": "buffer_set_lines"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "name"]
+					],
+					"deprecated_since": 1,
+					"name": "buffer_get_var"
+				},
+				{
+					"since": 0,
+					"return_type": "String",
+					"method": true,
+					"parameters": [["Buffer", "buffer"]],
+					"deprecated_since": 1,
+					"name": "buffer_get_name"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "name"]
+					],
+					"deprecated_since": 1,
+					"name": "buffer_set_name"
+				},
+				{
+					"since": 0,
+					"return_type": "Boolean",
+					"method": true,
+					"parameters": [["Buffer", "buffer"]],
+					"deprecated_since": 1,
+					"name": "buffer_is_valid"
+				},
+				{
+					"since": 0,
+					"return_type": "ArrayOf(Integer, 2)",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "name"]
+					],
+					"deprecated_since": 1,
+					"name": "buffer_get_mark"
+				},
+				{
+					"since": 0,
+					"return_type": "String",
+					"method": false,
+					"parameters": [["String", "command"]],
+					"deprecated_since": 1,
+					"name": "vim_command_output"
+				},
+				{
+					"since": 0,
+					"return_type": "Integer",
+					"method": true,
+					"parameters": [["Buffer", "buffer"]],
+					"deprecated_since": 1,
+					"name": "buffer_get_number"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "ns_id"],
+						["Integer", "line_start"],
+						["Integer", "line_end"]
+					],
+					"deprecated_since": 1,
+					"name": "buffer_clear_highlight"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["String", "name"],
+						["Object", "value"]
+					],
+					"deprecated_since": 1,
+					"name": "vim_set_option"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [["String", "name"]],
+					"deprecated_since": 1,
+					"name": "vim_get_option"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "name"]
+					],
+					"deprecated_since": 1,
+					"name": "buffer_get_option"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["String", "name"],
+						["Object", "value"]
+					],
+					"deprecated_since": 1,
+					"name": "buffer_set_option"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["String", "name"]
+					],
+					"deprecated_since": 1,
+					"name": "window_get_option"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["String", "name"],
+						["Object", "value"]
+					],
+					"deprecated_since": 1,
+					"name": "window_set_option"
+				},
+				{
+					"since": 0,
+					"return_type": "Integer",
+					"method": true,
+					"parameters": [
+						["Buffer", "buffer"],
+						["Integer", "ns_id"],
+						["String", "hl_group"],
+						["Integer", "line"],
+						["Integer", "col_start"],
+						["Integer", "col_end"]
+					],
+					"deprecated_since": 1,
+					"name": "buffer_add_highlight"
+				},
+				{
+					"since": 0,
+					"return_type": "ArrayOf(Window)",
+					"method": true,
+					"parameters": [["Tabpage", "tabpage"]],
+					"deprecated_since": 1,
+					"name": "tabpage_get_windows"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": true,
+					"parameters": [
+						["Tabpage", "tabpage"],
+						["String", "name"]
+					],
+					"deprecated_since": 1,
+					"name": "tabpage_get_var"
+				},
+				{
+					"since": 0,
+					"return_type": "Window",
+					"method": true,
+					"parameters": [["Tabpage", "tabpage"]],
+					"deprecated_since": 1,
+					"name": "tabpage_get_window"
+				},
+				{
+					"since": 0,
+					"return_type": "Boolean",
+					"method": true,
+					"parameters": [["Tabpage", "tabpage"]],
+					"deprecated_since": 1,
+					"name": "tabpage_is_valid"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [],
+					"deprecated_since": 1,
+					"name": "ui_detach"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [
+						["Integer", "width"],
+						["Integer", "height"]
+					],
+					"deprecated_since": 1,
+					"name": "ui_try_resize"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [
+						["String", "keys"],
+						["String", "mode"],
+						["Boolean", "escape_ks"]
+					],
+					"deprecated_since": 1,
+					"name": "vim_feedkeys"
+				},
+				{
+					"since": 0,
+					"return_type": "Integer",
+					"method": false,
+					"parameters": [["String", "keys"]],
+					"deprecated_since": 1,
+					"name": "vim_input"
+				},
+				{
+					"since": 0,
+					"return_type": "String",
+					"method": false,
+					"parameters": [
+						["String", "str"],
+						["Boolean", "from_part"],
+						["Boolean", "do_lt"],
+						["Boolean", "special"]
+					],
+					"deprecated_since": 1,
+					"name": "vim_replace_termcodes"
+				},
+				{
+					"since": 0,
+					"return_type": "Integer",
+					"method": false,
+					"parameters": [["String", "text"]],
+					"deprecated_since": 1,
+					"name": "vim_strwidth"
+				},
+				{
+					"since": 0,
+					"return_type": "ArrayOf(String)",
+					"method": false,
+					"parameters": [],
+					"deprecated_since": 1,
+					"name": "vim_list_runtime_paths"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "dir"]],
+					"deprecated_since": 1,
+					"name": "vim_change_directory"
+				},
+				{
+					"since": 0,
+					"return_type": "String",
+					"method": false,
+					"parameters": [],
+					"deprecated_since": 1,
+					"name": "vim_get_current_line"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "line"]],
+					"deprecated_since": 1,
+					"name": "vim_set_current_line"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [],
+					"deprecated_since": 1,
+					"name": "vim_del_current_line"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [["String", "name"]],
+					"deprecated_since": 1,
+					"name": "vim_get_var"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [["String", "name"]],
+					"deprecated_since": 1,
+					"name": "vim_get_vvar"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "str"]],
+					"deprecated_since": 1,
+					"name": "vim_out_write"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "str"]],
+					"deprecated_since": 1,
+					"name": "vim_err_write"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "str"]],
+					"deprecated_since": 1,
+					"name": "vim_report_error"
+				},
+				{
+					"since": 0,
+					"return_type": "ArrayOf(Buffer)",
+					"method": false,
+					"parameters": [],
+					"deprecated_since": 1,
+					"name": "vim_get_buffers"
+				},
+				{
+					"since": 0,
+					"return_type": "Buffer",
+					"method": false,
+					"parameters": [],
+					"deprecated_since": 1,
+					"name": "vim_get_current_buffer"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["Buffer", "buffer"]],
+					"deprecated_since": 1,
+					"name": "vim_set_current_buffer"
+				},
+				{
+					"since": 0,
+					"return_type": "ArrayOf(Window)",
+					"method": false,
+					"parameters": [],
+					"deprecated_since": 1,
+					"name": "vim_get_windows"
+				},
+				{
+					"since": 0,
+					"return_type": "Window",
+					"method": false,
+					"parameters": [],
+					"deprecated_since": 1,
+					"name": "vim_get_current_window"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["Window", "window"]],
+					"deprecated_since": 1,
+					"name": "vim_set_current_window"
+				},
+				{
+					"since": 0,
+					"return_type": "ArrayOf(Tabpage)",
+					"method": false,
+					"parameters": [],
+					"deprecated_since": 1,
+					"name": "vim_get_tabpages"
+				},
+				{
+					"since": 0,
+					"return_type": "Tabpage",
+					"method": false,
+					"parameters": [],
+					"deprecated_since": 1,
+					"name": "vim_get_current_tabpage"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["Tabpage", "tabpage"]],
+					"deprecated_since": 1,
+					"name": "vim_set_current_tabpage"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "event"]],
+					"deprecated_since": 1,
+					"name": "vim_subscribe"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "event"]],
+					"deprecated_since": 1,
+					"name": "vim_unsubscribe"
+				},
+				{
+					"since": 0,
+					"return_type": "Integer",
+					"method": false,
+					"parameters": [["String", "name"]],
+					"deprecated_since": 1,
+					"name": "vim_name_to_color"
+				},
+				{
+					"since": 0,
+					"return_type": "Dictionary",
+					"method": false,
+					"parameters": [],
+					"deprecated_since": 1,
+					"name": "vim_get_color_map"
+				},
+				{
+					"since": 0,
+					"return_type": "Array",
+					"method": false,
+					"parameters": [],
+					"deprecated_since": 1,
+					"name": "vim_get_api_info"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": false,
+					"parameters": [["String", "command"]],
+					"deprecated_since": 1,
+					"name": "vim_command"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [["String", "expr"]],
+					"deprecated_since": 1,
+					"name": "vim_eval"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": false,
+					"parameters": [
+						["String", "fn"],
+						["Array", "args"]
+					],
+					"deprecated_since": 1,
+					"name": "vim_call_function"
+				},
+				{
+					"since": 0,
+					"return_type": "Buffer",
+					"method": true,
+					"parameters": [["Window", "window"]],
+					"deprecated_since": 1,
+					"name": "window_get_buffer"
+				},
+				{
+					"since": 0,
+					"return_type": "ArrayOf(Integer, 2)",
+					"method": true,
+					"parameters": [["Window", "window"]],
+					"deprecated_since": 1,
+					"name": "window_get_cursor"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["ArrayOf(Integer, 2)", "pos"]
+					],
+					"deprecated_since": 1,
+					"name": "window_set_cursor"
+				},
+				{
+					"since": 0,
+					"return_type": "Integer",
+					"method": true,
+					"parameters": [["Window", "window"]],
+					"deprecated_since": 1,
+					"name": "window_get_height"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["Integer", "height"]
+					],
+					"deprecated_since": 1,
+					"name": "window_set_height"
+				},
+				{
+					"since": 0,
+					"return_type": "Integer",
+					"method": true,
+					"parameters": [["Window", "window"]],
+					"deprecated_since": 1,
+					"name": "window_get_width"
+				},
+				{
+					"since": 0,
+					"return_type": "void",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["Integer", "width"]
+					],
+					"deprecated_since": 1,
+					"name": "window_set_width"
+				},
+				{
+					"since": 0,
+					"return_type": "Object",
+					"method": true,
+					"parameters": [
+						["Window", "window"],
+						["String", "name"]
+					],
+					"deprecated_since": 1,
+					"name": "window_get_var"
+				},
+				{
+					"since": 0,
+					"return_type": "ArrayOf(Integer, 2)",
+					"method": true,
+					"parameters": [["Window", "window"]],
+					"deprecated_since": 1,
+					"name": "window_get_position"
+				},
+				{
+					"since": 0,
+					"return_type": "Tabpage",
+					"method": true,
+					"parameters": [["Window", "window"]],
+					"deprecated_since": 1,
+					"name": "window_get_tabpage"
+				},
+				{
+					"since": 0,
+					"return_type": "Boolean",
+					"method": true,
+					"parameters": [["Window", "window"]],
+					"deprecated_since": 1,
+					"name": "window_is_valid"
+				}
+			],
+			"ui_events": [
+				{
+					"name": "mode_info_set",
+					"since": 3,
+					"parameters": [
+						["Boolean", "enabled"],
+						["Array", "cursor_styles"]
+					]
+				},
+				{
+					"name": "update_menu",
+					"since": 3,
+					"parameters": []
+				},
+				{
+					"name": "busy_start",
+					"since": 3,
+					"parameters": []
+				},
+				{
+					"name": "busy_stop",
+					"since": 3,
+					"parameters": []
+				},
+				{
+					"name": "mouse_on",
+					"since": 3,
+					"parameters": []
+				},
+				{
+					"name": "mouse_off",
+					"since": 3,
+					"parameters": []
+				},
+				{
+					"name": "mode_change",
+					"since": 3,
+					"parameters": [
+						["String", "mode"],
+						["Integer", "mode_idx"]
+					]
+				},
+				{
+					"name": "bell",
+					"since": 3,
+					"parameters": []
+				},
+				{
+					"name": "visual_bell",
+					"since": 3,
+					"parameters": []
+				},
+				{
+					"name": "flush",
+					"since": 3,
+					"parameters": []
+				},
+				{
+					"name": "suspend",
+					"since": 3,
+					"parameters": []
+				},
+				{
+					"name": "set_title",
+					"since": 3,
+					"parameters": [["String", "title"]]
+				},
+				{
+					"name": "set_icon",
+					"since": 3,
+					"parameters": [["String", "icon"]]
+				},
+				{
+					"name": "screenshot",
+					"since": 7,
+					"parameters": [["String", "path"]]
+				},
+				{
+					"name": "option_set",
+					"since": 4,
+					"parameters": [
+						["String", "name"],
+						["Object", "value"]
+					]
+				},
+				{
+					"name": "chdir",
+					"since": 12,
+					"parameters": [["String", "path"]]
+				},
+				{
+					"name": "update_fg",
+					"since": 3,
+					"parameters": [["Integer", "fg"]]
+				},
+				{
+					"name": "update_bg",
+					"since": 3,
+					"parameters": [["Integer", "bg"]]
+				},
+				{
+					"name": "update_sp",
+					"since": 3,
+					"parameters": [["Integer", "sp"]]
+				},
+				{
+					"name": "resize",
+					"since": 3,
+					"parameters": [
+						["Integer", "width"],
+						["Integer", "height"]
+					]
+				},
+				{
+					"name": "clear",
+					"since": 3,
+					"parameters": []
+				},
+				{
+					"name": "eol_clear",
+					"since": 3,
+					"parameters": []
+				},
+				{
+					"name": "cursor_goto",
+					"since": 3,
+					"parameters": [
+						["Integer", "row"],
+						["Integer", "col"]
+					]
+				},
+				{
+					"name": "highlight_set",
+					"since": 3,
+					"parameters": [["Dictionary", "attrs"]]
+				},
+				{
+					"name": "put",
+					"since": 3,
+					"parameters": [["String", "str"]]
+				},
+				{
+					"name": "set_scroll_region",
+					"since": 3,
+					"parameters": [
+						["Integer", "top"],
+						["Integer", "bot"],
+						["Integer", "left"],
+						["Integer", "right"]
+					]
+				},
+				{
+					"name": "scroll",
+					"since": 3,
+					"parameters": [["Integer", "count"]]
+				},
+				{
+					"name": "default_colors_set",
+					"since": 4,
+					"parameters": [
+						["Integer", "rgb_fg"],
+						["Integer", "rgb_bg"],
+						["Integer", "rgb_sp"],
+						["Integer", "cterm_fg"],
+						["Integer", "cterm_bg"]
+					]
+				},
+				{
+					"name": "hl_attr_define",
+					"since": 5,
+					"parameters": [
+						["Integer", "id"],
+						["Dictionary", "rgb_attrs"],
+						["Dictionary", "cterm_attrs"],
+						["Array", "info"]
+					]
+				},
+				{
+					"name": "hl_group_set",
+					"since": 6,
+					"parameters": [
+						["String", "name"],
+						["Integer", "id"]
+					]
+				},
+				{
+					"name": "grid_resize",
+					"since": 5,
+					"parameters": [
+						["Integer", "grid"],
+						["Integer", "width"],
+						["Integer", "height"]
+					]
+				},
+				{
+					"name": "grid_clear",
+					"since": 5,
+					"parameters": [["Integer", "grid"]]
+				},
+				{
+					"name": "grid_cursor_goto",
+					"since": 5,
+					"parameters": [
+						["Integer", "grid"],
+						["Integer", "row"],
+						["Integer", "col"]
+					]
+				},
+				{
+					"name": "grid_line",
+					"since": 5,
+					"parameters": [
+						["Integer", "grid"],
+						["Integer", "row"],
+						["Integer", "col_start"],
+						["Array", "data"],
+						["Boolean", "wrap"]
+					]
+				},
+				{
+					"name": "grid_scroll",
+					"since": 5,
+					"parameters": [
+						["Integer", "grid"],
+						["Integer", "top"],
+						["Integer", "bot"],
+						["Integer", "left"],
+						["Integer", "right"],
+						["Integer", "rows"],
+						["Integer", "cols"]
+					]
+				},
+				{
+					"name": "grid_destroy",
+					"since": 6,
+					"parameters": [["Integer", "grid"]]
+				},
+				{
+					"name": "win_pos",
+					"since": 6,
+					"parameters": [
+						["Integer", "grid"],
+						["Window", "win"],
+						["Integer", "startrow"],
+						["Integer", "startcol"],
+						["Integer", "width"],
+						["Integer", "height"]
+					]
+				},
+				{
+					"name": "win_float_pos",
+					"since": 6,
+					"parameters": [
+						["Integer", "grid"],
+						["Window", "win"],
+						["String", "anchor"],
+						["Integer", "anchor_grid"],
+						["Float", "anchor_row"],
+						["Float", "anchor_col"],
+						["Boolean", "focusable"],
+						["Integer", "zindex"]
+					]
+				},
+				{
+					"name": "win_external_pos",
+					"since": 6,
+					"parameters": [
+						["Integer", "grid"],
+						["Window", "win"]
+					]
+				},
+				{
+					"name": "win_hide",
+					"since": 6,
+					"parameters": [["Integer", "grid"]]
+				},
+				{
+					"name": "win_close",
+					"since": 6,
+					"parameters": [["Integer", "grid"]]
+				},
+				{
+					"name": "msg_set_pos",
+					"since": 6,
+					"parameters": [
+						["Integer", "grid"],
+						["Integer", "row"],
+						["Boolean", "scrolled"],
+						["String", "sep_char"]
+					]
+				},
+				{
+					"name": "win_viewport",
+					"since": 7,
+					"parameters": [
+						["Integer", "grid"],
+						["Window", "win"],
+						["Integer", "topline"],
+						["Integer", "botline"],
+						["Integer", "curline"],
+						["Integer", "curcol"],
+						["Integer", "line_count"],
+						["Integer", "scroll_delta"]
+					]
+				},
+				{
+					"name": "win_extmark",
+					"since": 10,
+					"parameters": [
+						["Integer", "grid"],
+						["Window", "win"],
+						["Integer", "ns_id"],
+						["Integer", "mark_id"],
+						["Integer", "row"],
+						["Integer", "col"]
+					]
+				},
+				{
+					"name": "popupmenu_show",
+					"since": 3,
+					"parameters": [
+						["Array", "items"],
+						["Integer", "selected"],
+						["Integer", "row"],
+						["Integer", "col"],
+						["Integer", "grid"]
+					]
+				},
+				{
+					"name": "popupmenu_hide",
+					"since": 3,
+					"parameters": []
+				},
+				{
+					"name": "popupmenu_select",
+					"since": 3,
+					"parameters": [["Integer", "selected"]]
+				},
+				{
+					"name": "tabline_update",
+					"since": 3,
+					"parameters": [
+						["Tabpage", "current"],
+						["Array", "tabs"],
+						["Buffer", "current_buffer"],
+						["Array", "buffers"]
+					]
+				},
+				{
+					"name": "cmdline_show",
+					"since": 3,
+					"parameters": [
+						["Array", "content"],
+						["Integer", "pos"],
+						["String", "firstc"],
+						["String", "prompt"],
+						["Integer", "indent"],
+						["Integer", "level"]
+					]
+				},
+				{
+					"name": "cmdline_pos",
+					"since": 3,
+					"parameters": [
+						["Integer", "pos"],
+						["Integer", "level"]
+					]
+				},
+				{
+					"name": "cmdline_special_char",
+					"since": 3,
+					"parameters": [
+						["String", "c"],
+						["Boolean", "shift"],
+						["Integer", "level"]
+					]
+				},
+				{
+					"name": "cmdline_hide",
+					"since": 3,
+					"parameters": [["Integer", "level"]]
+				},
+				{
+					"name": "cmdline_block_show",
+					"since": 3,
+					"parameters": [["Array", "lines"]]
+				},
+				{
+					"name": "cmdline_block_append",
+					"since": 3,
+					"parameters": [["Array", "lines"]]
+				},
+				{
+					"name": "cmdline_block_hide",
+					"since": 3,
+					"parameters": []
+				},
+				{
+					"name": "wildmenu_show",
+					"since": 3,
+					"parameters": [["Array", "items"]]
+				},
+				{
+					"name": "wildmenu_select",
+					"since": 3,
+					"parameters": [["Integer", "selected"]]
+				},
+				{
+					"name": "wildmenu_hide",
+					"since": 3,
+					"parameters": []
+				},
+				{
+					"name": "msg_show",
+					"since": 6,
+					"parameters": [
+						["String", "kind"],
+						["Array", "content"],
+						["Boolean", "replace_last"]
+					]
+				},
+				{
+					"name": "msg_clear",
+					"since": 6,
+					"parameters": []
+				},
+				{
+					"name": "msg_showcmd",
+					"since": 6,
+					"parameters": [["Array", "content"]]
+				},
+				{
+					"name": "msg_showmode",
+					"since": 6,
+					"parameters": [["Array", "content"]]
+				},
+				{
+					"name": "msg_ruler",
+					"since": 6,
+					"parameters": [["Array", "content"]]
+				},
+				{
+					"name": "msg_history_show",
+					"since": 6,
+					"parameters": [["Array", "entries"]]
+				},
+				{
+					"name": "msg_history_clear",
+					"since": 10,
+					"parameters": []
+				},
+				{
+					"name": "error_exit",
+					"since": 12,
+					"parameters": [["Integer", "status"]]
+				}
+			],
+			"ui_options": [
+				"rgb",
+				"ext_cmdline",
+				"ext_popupmenu",
+				"ext_tabline",
+				"ext_wildmenu",
+				"ext_messages",
+				"ext_linegrid",
+				"ext_multigrid",
+				"ext_hlstate",
+				"ext_termcolors"
+			],
+			"error_types": {
+				"Exception": {
+					"id": 0
+				},
+				"Validation": {
+					"id": 1
+				}
+			},
+			"types": {
+				"Buffer": {
+					"id": 0,
+					"prefix": "nvim_buf_"
+				},
+				"Window": {
+					"id": 1,
+					"prefix": "nvim_win_"
+				},
+				"Tabpage": {
+					"id": 2,
+					"prefix": "nvim_tabpage_"
+				}
+			}
+		}
+	]
+]
