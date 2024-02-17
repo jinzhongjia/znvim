@@ -106,9 +106,21 @@ pub fn TCPClient(pack_type: type) type {
                     const arena_allocator = arena.allocator();
                     const param = try self.read_params(arena_allocator, param_tuple_type);
 
-                    // TODO: now method can not go wrong
-                    const result = @call(.auto, method, param);
-                    try self.send_result(id, void{}, result);
+                    const return_type_info = @typeInfo(fn_type_info.return_type);
+                    // when return type is errorunion
+                    if (return_type_info == .ErrorUnion) {
+                        if (@call(.auto, method, param)) |result| {
+                            try self.send_result(id, void{}, result);
+                        } else |err| {
+                            log.err("call ({s}) failed, err is {}", .{ method_name, err });
+                            try self.send_result(id, .{@errorName(err)}, void{});
+                        }
+                    }
+                    // when return type is not errorunion
+                    else {
+                        const result = @call(.auto, method, param);
+                        try self.send_result(id, void{}, result);
+                    }
 
                     return;
                 }
@@ -136,8 +148,17 @@ pub fn TCPClient(pack_type: type) type {
                     const arena_allocator = arena.allocator();
                     const param = try self.read_params(arena_allocator, param_tuple_type);
 
-                    // TODO: now method can not go wrong
-                    _ = @call(.auto, method, param);
+                    const return_type_info = @typeInfo(fn_type_info.return_type);
+                    // when return type is errorunion
+                    if (return_type_info == .ErrorUnion) {
+                        _ = @call(.auto, method, param) catch |err| {
+                            log.err("notifaction ({s}) failed, err is {}", .{ method_name, err });
+                        };
+                    }
+                    // when return type is not errorunion
+                    else {
+                        _ = @call(.auto, method, param);
+                    }
 
                     return;
                 }
@@ -169,7 +190,6 @@ pub fn TCPClient(pack_type: type) type {
         /// remote call
         pub fn call(self: *Self, method: []const u8, params: anytype, errorType: type, resultType: type, allocator: Allocator) !resultType {
             const send_id = try self.send_request(method, params);
-
             // This logic is to prevent a request from the server from being received when sending a request.
             while (true) {
                 const t = try self.read_type();

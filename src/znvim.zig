@@ -93,19 +93,22 @@ pub fn Client(pack_type: type) type {
 
         pub fn init(
             stream: net.Stream,
-            allocator: Allocator,
         ) !Self {
             var self: Self = undefined;
             self.c = cT.init(stream);
-            const result = try self.call(.nvim_get_api_info, .{}, allocator);
-            self.channel_id = result[0];
-            self.metadata = result[1];
+
             return self;
         }
 
         pub fn call(self: *Self, comptime method: api_enum, params: get_api_parameters(method), allocator: Allocator) !get_api_return_type(method) {
             const name = @tagName(method);
             return self.c.call(name, params, error_types, get_api_return_type(method), allocator);
+        }
+
+        pub fn get_api_info(self: *Self, allocator: Allocator) !void {
+            const result = try self.call(.nvim_get_api_info, .{}, allocator);
+            self.channel_id = result[0];
+            self.metadata = result[1];
         }
 
         /// event loop

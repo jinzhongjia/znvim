@@ -25,6 +25,7 @@ pub fn build(b: *std.Build) void {
     });
 
     exe.root_module.addImport("znvim", znvim);
+    exe.root_module.addImport("msgpack", msgpack.module("msgpack"));
 
     b.installArtifact(exe);
 
