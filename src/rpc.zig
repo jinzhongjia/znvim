@@ -15,24 +15,28 @@ const MessageType = enum(u2) {
 
 const log = std.log.scoped(.znvim);
 
-pub fn TCPClient(pack_type: type) type {
+pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
     const type_info = @typeInfo(pack_type);
     if (type_info != .Struct or type_info.Struct.is_tuple) {
         const err_msg = comptimePrint("pack_type ({}) must be a struct", .{});
         @compileError(err_msg);
     }
 
-    const streamPack = msgpack.Pack(
-        net.Stream,
-        net.Stream,
-        net.Stream.WriteError,
-        net.Stream.ReadError,
-        net.Stream.write,
-        net.Stream.read,
-    );
-
     const struct_info = type_info.Struct;
     const decls = struct_info.decls;
+
+    const BufferedWriter = std.io.BufferedWriter(buffer_size, net.Stream.Writer);
+    const BufferedReader = std.io.BufferedReader(buffer_size, net.Stream.Reader);
+
+    const streamPack = msgpack.Pack(
+        *BufferedWriter,
+        *BufferedReader,
+        BufferedWriter.Error,
+        BufferedReader.Error,
+        BufferedWriter.write,
+        BufferedReader.read,
+    );
+
     return struct {
         const Self = @This();
 
@@ -40,11 +44,43 @@ pub fn TCPClient(pack_type: type) type {
         stream: net.Stream,
         pack: streamPack,
 
-        pub fn init(stream: net.Stream) Self {
-            return Self{
-                .stream = stream,
-                .pack = streamPack.init(stream, stream),
+        writer_ptr: *BufferedWriter,
+        reader_ptr: *BufferedReader,
+        allocator: Allocator,
+
+        // allocator will create a buffered writer and a buffered reader
+        pub fn init(stream: net.Stream, allocator: Allocator) !Self {
+            const writer_ptr = try allocator.create(BufferedWriter);
+            const reader_ptr = try allocator.create(BufferedReader);
+
+            writer_ptr.* = .{
+                .buf = undefined,
+                .end = 0,
+                .unbuffered_writer = stream.writer(),
             };
+
+            reader_ptr.* = .{
+                .buf = undefined,
+                .start = 0,
+                .end = 0,
+                .unbuffered_reader = stream.reader(),
+            };
+
+            return Self{
+                .allocator = allocator,
+                .stream = stream,
+                .pack = streamPack.init(
+                    writer_ptr,
+                    reader_ptr,
+                ),
+                .writer_ptr = writer_ptr,
+                .reader_ptr = reader_ptr,
+            };
+        }
+
+        pub fn deinit(self: Self) void {
+            self.allocator.destroy(self.writer_ptr);
+            self.allocator.destroy(self.reader_ptr);
         }
 
         /// this function will get the type of message
@@ -190,6 +226,7 @@ pub fn TCPClient(pack_type: type) type {
         /// remote call
         pub fn call(self: *Self, method: []const u8, params: anytype, errorType: type, resultType: type, allocator: Allocator) !resultType {
             const send_id = try self.send_request(method, params);
+            try self.pack.writeContext.flush();
             // This logic is to prevent a request from the server from being received when sending a request.
             while (true) {
                 const t = try self.read_type();

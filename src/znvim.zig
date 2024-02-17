@@ -82,8 +82,12 @@ fn get_api_return_type(comptime api_name: api_enum) type {
     return get_api_type_def(api_name).return_type;
 }
 
-pub fn Client(pack_type: type) type {
-    const cT = rpc.TCPClient(pack_type);
+pub fn DefaultClient(pack_type: type) type {
+    return Client(pack_type, 20480);
+}
+
+pub fn Client(pack_type: type, comptime buffer_size: usize) type {
+    const cT = rpc.TCPClient(pack_type, buffer_size);
     return struct {
         c: cT,
         channel_id: u16,
@@ -91,13 +95,15 @@ pub fn Client(pack_type: type) type {
 
         const Self = @This();
 
-        pub fn init(
-            stream: net.Stream,
-        ) !Self {
+        pub fn init(stream: net.Stream, allocator: Allocator) !Self {
             var self: Self = undefined;
-            self.c = cT.init(stream);
+            self.c = try cT.init(stream, allocator);
 
             return self;
+        }
+
+        pub fn deinit(self: Self) void {
+            self.c.deinit();
         }
 
         pub fn call(self: *Self, comptime method: api_enum, params: get_api_parameters(method), allocator: Allocator) !get_api_return_type(method) {
