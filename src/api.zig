@@ -15,32 +15,32 @@ pub const nvim_get_api_info = struct {
     pub const parameters = struct {};
 
     const version = struct {
-        major: u8,
-        minor: u8,
-        patch: u8,
+        major: u16,
+        minor: u16,
+        patch: u16,
         build: msgpack.Str,
         prerelease: bool,
-        api_level: u8,
-        api_compatible: u8,
+        api_level: u16,
+        api_compatible: u16,
         api_prerelease: bool,
     };
 
     const function = struct {
-        since: u8,
+        since: u16,
         return_type: msgpack.Str,
         method: bool,
         parameters: [][2]msgpack.Str,
-        deprecated_since: ?u8 = null,
+        deprecated_since: ?u16 = null,
         name: msgpack.Str,
     };
 
     const uiEvent = struct {
         name: msgpack.Str,
-        since: u8,
+        since: u16,
         parameters: [][2]msgpack.Str,
     };
 
-    const errorSubType = struct { id: u8 };
+    const errorSubType = struct { id: u16 };
 
     const errorType = struct {
         Exception: errorSubType,
@@ -48,7 +48,7 @@ pub const nvim_get_api_info = struct {
     };
 
     const TypeInfo = struct {
-        id: u8,
+        id: u16,
         prefix: msgpack.Str,
     };
     const Type = struct {
