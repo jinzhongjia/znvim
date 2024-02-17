@@ -105,6 +105,7 @@ pub fn Client(pack_type: type) type {
             return self.c.call(name, params, error_types, get_api_return_type(method), allocator);
         }
 
+        // this api will call('nvim_get_api_info', [])
         pub fn get_api_info(self: *Self, allocator: Allocator) !void {
             const result = try self.call(.nvim_get_api_info, .{}, allocator);
             self.channel_id = result[0];

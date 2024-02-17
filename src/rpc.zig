@@ -15,21 +15,21 @@ const MessageType = enum(u2) {
 
 const log = std.log.scoped(.znvim);
 
-const streamPack = msgpack.Pack(
-    net.Stream,
-    net.Stream,
-    net.Stream.WriteError,
-    net.Stream.ReadError,
-    net.Stream.write,
-    net.Stream.read,
-);
-
 pub fn TCPClient(pack_type: type) type {
     const type_info = @typeInfo(pack_type);
     if (type_info != .Struct or type_info.Struct.is_tuple) {
         const err_msg = comptimePrint("pack_type ({}) must be a struct", .{});
         @compileError(err_msg);
     }
+
+    const streamPack = msgpack.Pack(
+        net.Stream,
+        net.Stream,
+        net.Stream.WriteError,
+        net.Stream.ReadError,
+        net.Stream.write,
+        net.Stream.read,
+    );
 
     const struct_info = type_info.Struct;
     const decls = struct_info.decls;
