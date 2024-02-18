@@ -41,6 +41,26 @@ pub fn main() !void {
     std.log.info("current buffer is {any}", .{buffer.data});
     defer allocator.free(buffer.data);
 
+    const chunk = znvim.api.nvim_echo.chunk;
+
+    var chunks = [2]chunk{
+        chunk{
+            msgpack.wrapStr("hello"),
+            msgpack.wrapStr(""),
+        },
+        chunk{
+            msgpack.wrapStr("world"),
+            msgpack.wrapStr(""),
+        },
+    };
+    try client.call(.nvim_echo, .{
+        &chunks,
+        true,
+        .{
+            .verbose = false,
+        },
+    }, allocator);
+
     // while (true) {
     //     try client.loop(allocator);
     // }

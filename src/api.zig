@@ -1,3 +1,10 @@
+//! this package defines apis
+//! every pub decl is a api
+//! every api has decls called return_type and parameters
+//! return type is the return type
+//! parameters is the tuple of params
+//! more info: https://neovim.io/doc/user/api.html
+
 const msgpack = @import("msgpack");
 const EXT = msgpack.EXT;
 const Str = msgpack.Str;
@@ -84,8 +91,10 @@ pub const nvim_create_buf = struct {
 
     /// parameters
     pub const parameters = struct {
-        listed: bool,
-        scratch: bool,
+        /// listed
+        bool,
+        /// scratch
+        bool,
     };
 };
 
@@ -98,10 +107,118 @@ pub const nvim_del_current_line = struct {
 };
 
 pub const nvim_del_keymap = struct {
+    /// return type
     pub const return_type = void;
 
+    /// parameters
     pub const parameters = struct {
-        mode: Str,
-        lhs: Str,
+        /// mode
+        Str,
+        /// lhs
+        Str,
+    };
+};
+
+pub const nvim_del_mark = struct {
+    /// return type
+    pub const return_type = bool;
+
+    /// parameters
+    pub const parameters = struct {
+        /// name
+        Str,
+    };
+};
+
+pub const nvim_del_var = struct {
+    /// return type
+    pub const return_type = bool;
+
+    /// parameters
+    pub const parameters = struct {
+        /// name
+        Str,
+    };
+};
+
+pub const nvim_echo = struct {
+    /// return type
+    pub const return_type = void;
+
+    /// parameters
+    pub const parameters = struct {
+        /// chunks
+        []chunk,
+        /// history
+        bool,
+        /// opt
+        option,
+    };
+
+    pub const chunk = struct {
+        /// text
+        Str,
+        /// hl_group, this can be null
+        Str,
+    };
+
+    pub const option = struct {
+        verbose: bool,
+    };
+};
+
+pub const nvim_err_write = struct {
+    /// return type
+    pub const return_type = void;
+
+    /// parameters
+    pub const parameters = struct {
+        /// str
+        Str,
+    };
+};
+
+pub const nvim_err_writeln = struct {
+    /// return type
+    pub const return_type = void;
+
+    /// parameters
+    pub const parameters = struct {
+        /// str
+        Str,
+    };
+};
+
+pub const nvim_eval_statusline = struct {
+    /// return type
+    pub const return_type = dictionary;
+
+    /// parameters
+    pub const parameters = struct {
+        /// str
+        Str,
+        /// opts
+        option,
+    };
+
+    const option = struct {
+        winid: u16,
+        maxwidth: u16,
+        fillchar: Str,
+        highlight: bool,
+        use_winbar: bool,
+        use_tabline: bool,
+        use_statuscol_lnum: bool,
+    };
+
+    const hightlight = struct {
+        start: u16,
+        group: Str,
+    };
+
+    const dictionary = struct {
+        str: Str,
+        width: u16,
+        hightlights: []hightlight,
     };
 };
