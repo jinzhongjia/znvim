@@ -9,6 +9,9 @@ const remote = struct {
     }
 };
 
+const address = "127.0.0.1";
+const port = 9090;
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
@@ -22,8 +25,7 @@ pub fn main() !void {
     defer arena.deinit();
     const arena_allocator = arena.allocator();
 
-    const address = try std.net.Address.parseIp4("127.0.0.1", 9090);
-    const stream = try std.net.tcpConnectToAddress(address);
+    const stream = try std.net.tcpConnectToAddress(try std.net.Address.parseIp4(address, port));
 
     defer stream.close();
 
