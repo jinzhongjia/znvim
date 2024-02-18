@@ -14,6 +14,8 @@ const Buffer = EXT;
 const Window = EXT;
 const Tabpage = EXT;
 
+// and exactly, we just need to implementate str and ext ?
+
 pub const nvim_get_api_info = struct {
     /// return type
     pub const return_type = struct {

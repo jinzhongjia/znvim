@@ -1,6 +1,7 @@
 const std = @import("std");
 const msgpack = @import("msgpack");
 const rpc = @import("rpc.zig");
+const builtin = @import("builtin");
 pub const api = @import("api.zig");
 
 const net = std.net;
@@ -12,6 +13,11 @@ const comptimePrint = std.fmt.comptimePrint;
 pub const wrapStr = msgpack.wrapStr;
 
 const api_info = @typeInfo(api).Struct;
+
+const CallErrorSet = error{
+    APIDeprecated,
+    NotFindApi,
+};
 
 /// Error types for neovim result
 pub const error_types = struct {
@@ -111,6 +117,28 @@ pub fn Client(pack_type: type, comptime buffer_size: usize) type {
 
         pub fn call(self: *Self, comptime method: api_enum, params: get_api_parameters(method), allocator: Allocator) !get_api_return_type(method) {
             const name = @tagName(method);
+            // This will verify whether the method is available in the current version in debug mode
+            if (comptime (builtin.mode == .Debug and !std.mem.eql(u8, name, "nvim_get_api_info"))) {
+                var if_find: bool = false;
+                for (self.metadata.functions) |function| {
+                    const function_name = function.name.value();
+                    if (name.len == function_name.len and std.mem.eql(u8, name, function_name)) {
+                        if_find = true;
+                        if (function.deprecated_since) |deprecated_since| {
+                            if (deprecated_since >= self.metadata.version.api_level) {
+                                std.log.warn("since is {}", .{deprecated_since});
+                                return CallErrorSet.APIDeprecated;
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                if (!if_find) {
+                    return CallErrorSet.NotFindApi;
+                }
+            }
+
             return self.c.call(name, params, error_types, get_api_return_type(method), allocator);
         }
 
