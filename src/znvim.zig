@@ -1,7 +1,7 @@
 const std = @import("std");
 const msgpack = @import("msgpack");
 const rpc = @import("rpc.zig");
-const api = @import("api.zig");
+pub const api = @import("api.zig");
 
 const net = std.net;
 const Type = std.builtin.Type;
@@ -62,7 +62,7 @@ fn get_api_parameters(comptime api_name: api_enum) type {
     if (api_params_def_type_info == .Struct) {
         if (api_params_def_type_info.Struct.is_tuple) {
             return api_params_def;
-        } else {
+        } else if (api_params_def_type_info.Struct.fields.len == 0) {
             return @Type(.{
                 .Struct = .{
                     .layout = .Auto,
@@ -71,6 +71,9 @@ fn get_api_parameters(comptime api_name: api_enum) type {
                     .is_tuple = true,
                 },
             });
+        } else {
+            const err_msg = comptimePrint("type ({}) is invalid, it must be tuple", .{api_params_def});
+            @compileError(err_msg);
         }
     } else {
         @compileError(comptimePrint("api ({})'s parameters should be tuple", .{api_name}));

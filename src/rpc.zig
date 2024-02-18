@@ -166,8 +166,8 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
             try self.send_result(id, void{}, msgpack.wrapStr("not found method!"));
         }
 
-        /// this function handle notifaction
-        fn handleNotifaction(self: Self, method_name: []const u8, allocator: Allocator) !void {
+        /// this function handle notification
+        fn handleNotification(self: Self, method_name: []const u8, allocator: Allocator) !void {
             inline for (decls) |decl| {
                 const decl_name = decl.name;
                 if (decl_name.len == method_name.len and std.mem.eql(u8, method_name, decl_name)) {
@@ -188,7 +188,7 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
                     // when return type is errorunion
                     if (return_type_info == .ErrorUnion) {
                         _ = @call(.auto, method, param) catch |err| {
-                            log.err("notifaction ({s}) failed, err is {}", .{ method_name, err });
+                            log.err("notification ({s}) failed, err is {}", .{ method_name, err });
                         };
                     }
                     // when return type is not errorunion
@@ -248,7 +248,7 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
                     },
                     .Notification => {
                         const method_name = try self.read_method(allocator);
-                        try self.handleNotifaction(method_name, allocator);
+                        try self.handleNotification(method_name, allocator);
                         allocator.free(method_name);
                     },
                 }
@@ -260,7 +260,11 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
 
             const err = try self.read_error(arena_allocator, errorType);
             if (err) |err_value| {
-                log.err("request method ({s}) failed, error is {}", .{ method, err_value });
+                log.err("request method ({s}) failed, error id is ({}), msg is ({s})", .{
+                    method,
+                    @intFromEnum(err_value[0]),
+                    err_value[1].value(),
+                });
                 try self.pack.skip();
                 return error.MSGID_INVALID;
             }
@@ -284,7 +288,7 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
                 },
                 .Notification => {
                     const method_name = try self.read_method(allocator);
-                    try self.handleNotifaction(method_name, allocator);
+                    try self.handleNotification(method_name, allocator);
                 },
             }
         }
