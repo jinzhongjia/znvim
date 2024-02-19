@@ -40,7 +40,7 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
     return struct {
         const Self = @This();
 
-        id: u32 = 0,
+        id_ptr: *u32,
         stream: net.Stream,
         pack: streamPack,
 
@@ -52,6 +52,7 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
         pub fn init(stream: net.Stream, allocator: Allocator) !Self {
             const writer_ptr = try allocator.create(BufferedWriter);
             const reader_ptr = try allocator.create(BufferedReader);
+            const id_ptr = try allocator.create(u32);
 
             writer_ptr.* = .{
                 .buf = undefined,
@@ -67,7 +68,7 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
             };
 
             return Self{
-                .allocator = allocator,
+                .id_ptr = id_ptr,
                 .stream = stream,
                 .pack = streamPack.init(
                     writer_ptr,
@@ -75,12 +76,14 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
                 ),
                 .writer_ptr = writer_ptr,
                 .reader_ptr = reader_ptr,
+                .allocator = allocator,
             };
         }
 
         pub fn deinit(self: Self) void {
             self.allocator.destroy(self.writer_ptr);
             self.allocator.destroy(self.reader_ptr);
+            self.allocator.destroy(self.id_ptr);
         }
 
         /// this function will get the type of message
@@ -211,20 +214,21 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
             });
         }
 
-        fn send_request(self: *Self, method: []const u8, params: anytype) !u32 {
+        fn send_request(self: Self, method: []const u8, params: anytype) !u32 {
+            const id_ptr = self.id_ptr;
+            const msgid = id_ptr.*;
             const paramsT = @TypeOf(params);
             const params_type_info = @typeInfo(paramsT);
             if (params_type_info != .Struct or !params_type_info.Struct.is_tuple) {
                 @compileError("params must be tuple type!");
             }
-            try self.pack.write(.{ @intFromEnum(MessageType.Request), self.id, wrapStr(method), params });
-            const msgid = self.id;
-            self.id += 1;
+            try self.pack.write(.{ @intFromEnum(MessageType.Request), msgid, wrapStr(method), params });
+            id_ptr.* += 1;
             return msgid;
         }
 
         /// remote call
-        pub fn call(self: *Self, method: []const u8, params: anytype, errorType: type, resultType: type, allocator: Allocator) !resultType {
+        pub fn call(self: Self, method: []const u8, params: anytype, errorType: type, resultType: type, allocator: Allocator) !resultType {
             const send_id = try self.send_request(method, params);
             try self.pack.writeContext.flush();
             // This logic is to prevent a request from the server from being received when sending a request.
