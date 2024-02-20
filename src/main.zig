@@ -1,7 +1,8 @@
 const std = @import("std");
 const znvim = @import("znvim");
-const msgpack = @import("msgpack");
 const net = std.net;
+
+const wrapStr = znvim.wrapStr;
 
 const remote = struct {
     pub fn add(a: u16, b: u16) u16 {
@@ -45,12 +46,12 @@ pub fn main() !void {
 
     var chunks = [2]chunk{
         chunk{
-            msgpack.wrapStr("hello "),
-            msgpack.wrapStr(""),
+            wrapStr("hello "),
+            wrapStr(""),
         },
         chunk{
-            msgpack.wrapStr("world"),
-            msgpack.wrapStr(""),
+            wrapStr("world"),
+            wrapStr(""),
         },
     };
     try client.call(.nvim_echo, .{
