@@ -15,6 +15,8 @@ const Window = EXT;
 const Tabpage = EXT;
 
 // and exactly, we just need to implementate str and ext ?
+// need a cuntion to convert parameter to a new type and a extra function to convert the  new type value to parameter
+// a function to convert return type to a new type
 
 pub const nvim_get_api_info = struct {
     /// return type
@@ -224,3 +226,5 @@ pub const nvim_eval_statusline = struct {
         hightlights: []hightlight,
     };
 };
+
+pub const nvim_exec_lua = struct {};

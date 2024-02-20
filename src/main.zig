@@ -35,7 +35,7 @@ pub fn main() !void {
     defer client.deinit();
 
     try client.get_api_info(arena_allocator);
-    std.debug.print("channel id id {}\n", .{client.channel_id});
+    std.log.info("channel id id {}, function'nums is {}", .{ client.channel_id, client.metadata.functions.len });
 
     const buffer = try client.call(.nvim_get_current_buf, .{}, allocator);
     std.log.info("current buffer is {any}", .{buffer.data});
@@ -45,7 +45,7 @@ pub fn main() !void {
 
     var chunks = [2]chunk{
         chunk{
-            msgpack.wrapStr("hello"),
+            msgpack.wrapStr("hello "),
             msgpack.wrapStr(""),
         },
         chunk{
