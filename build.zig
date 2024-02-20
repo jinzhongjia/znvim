@@ -10,6 +10,7 @@ pub fn build(b: *Build) void {
 
     // get msgpack
     const msgpack = b.dependency("zig-msgpack", .{});
+
     // create module
     const znvim = b.addModule("znvim", .{
         .root_source_file = .{
@@ -23,6 +24,8 @@ pub fn build(b: *Build) void {
         },
     });
 
+    // create exe
+    // for test
     create_exe(b, target, optimize, znvim);
 }
 
