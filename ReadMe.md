@@ -2,6 +2,8 @@
 
 _znvim_ is a neovim remote rpc client implementation with [`zig`](https://ziglang.org/).
 
+> This package is under developing!
+
 ## Features
 
 - Implementation of multiple remote calling methods(now only support tcp connect)
