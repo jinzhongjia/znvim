@@ -1,22 +1,31 @@
-# ZNVim
+# znvim
 
-znvim is a Neovim Remote RPC client written in Zig. It provides a convenient way to interact with Neovim from Zig programs.
+_znvim_ is a neovim remote rpc client implementation with [`zig`](https://ziglang.org/).
 
 ## Features
 
-- Basic Neovim functionality
-- Ongoing development and improvements
+- Implementation of multiple remote calling methods(now only support tcp connect)
+- Clean API
+- Strict type checking
 
 ## Getting Started
 
-### Prerequisites
+**NOTE**: znvim now only supports zig `nightly`!
 
-- Zig (version X.X.X or higher)
-- Neovim (version X.X.X or higher)
+1. Add to `build.zig.zon`
 
-### Installation
+```sh
+zig fetch --save https://github.com/jinzhongjia/znvim/archive/{commit or branch}.tar.gz
+```
 
-1. Clone the repository:
+2. Config `build.zig`
 
-   ```shell
-   git clone https://github.com/your-username/znvim.git
+```zig
+const znvim = b.dependency("znvim", .{
+    .target = target,
+    .optimize = optimize,
+});
+
+// add module
+exe.root_module.addImport("znvim", znvim.module("znvim"));
+```
