@@ -104,6 +104,8 @@ pub fn Client(pack_type: type, comptime buffer_size: usize) type {
 
         const Self = @This();
 
+        pub const DynamicCall = cT.DynamicCall;
+
         pub fn init(stream: net.Stream, allocator: Allocator) !Self {
             var self: Self = undefined;
             self.c = try cT.init(stream, allocator);
@@ -115,7 +117,12 @@ pub fn Client(pack_type: type, comptime buffer_size: usize) type {
             self.c.deinit();
         }
 
-        pub fn call(self: *Self, comptime method: api_enum, params: get_api_parameters(method), allocator: Allocator) !get_api_return_type(method) {
+        pub fn call(
+            self: Self,
+            comptime method: api_enum,
+            params: get_api_parameters(method),
+            allocator: Allocator,
+        ) !get_api_return_type(method) {
             const name = @tagName(method);
             // This will verify whether the method is available in the current version in debug mode
             if (comptime (builtin.mode == .Debug and !std.mem.eql(u8, name, "nvim_get_api_info"))) {
@@ -139,7 +146,35 @@ pub fn Client(pack_type: type, comptime buffer_size: usize) type {
                 }
             }
 
-            return self.c.call(name, params, error_types, get_api_return_type(method), allocator);
+            return self.c.call(
+                name,
+                params,
+                error_types,
+                get_api_return_type(method),
+                allocator,
+            );
+        }
+
+        /// caller not hold the mem
+        /// this function will not read the value, it will just return a reader for you to read
+        /// for arrary or map
+        pub fn call_with_reader(
+            self: Self,
+            comptime method: api_enum,
+            params: get_api_parameters(method),
+            comptime call_type: DynamicCall,
+            allocator: Allocator,
+        ) !DynamicCall.get_type(call_type, true) {
+            // TODO: add debug detect
+
+            const name = @tagName(method);
+            return self.c.call_with_reader(
+                name,
+                params,
+                error_types,
+                allocator,
+                call_type,
+            );
         }
 
         // this api will call('nvim_get_api_info', [])

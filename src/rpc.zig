@@ -52,7 +52,7 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
             ARRAY,
             MAP,
 
-            fn get_type(call_val: DynamicCall, comptime is_reader: bool) type {
+            pub fn get_type(call_val: DynamicCall, comptime is_reader: bool) type {
                 switch (call_val) {
                     .ARRAY => {
                         return if (is_reader) streamPack.ArrayReader else streamPack.ArrayWriter;
