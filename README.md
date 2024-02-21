@@ -31,3 +31,8 @@ const znvim = b.dependency("znvim", .{
 // add module
 exe.root_module.addImport("znvim", znvim.module("znvim"));
 ```
+
+## TODO
+
+- More api
+- More channels implementation, now only support tcp and unixsocket!
