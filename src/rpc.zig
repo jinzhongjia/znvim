@@ -15,7 +15,7 @@ const MessageType = enum(u2) {
 
 const log = std.log.scoped(.znvim);
 
-pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
+pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
     const type_info = @typeInfo(pack_type);
     if (type_info != .Struct or type_info.Struct.is_tuple) {
         const err_msg = comptimePrint("pack_type ({}) must be a struct", .{});

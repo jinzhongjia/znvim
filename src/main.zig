@@ -13,6 +13,15 @@ const remote = struct {
 const address = "127.0.0.1";
 const port = 9090;
 
+const uid: u16 = 1000;
+const nvim_pid: u16 = 2163;
+const unique_number: u16 = 0;
+
+const unix_socket = std.fmt.comptimePrint(
+    "/run/user/{}//nvim.{}.{}",
+    .{ uid, nvim_pid, unique_number },
+);
+
 const ClientType = znvim.DefaultClientType(struct {});
 
 pub fn main() !void {
@@ -23,6 +32,9 @@ pub fn main() !void {
         const deinit_status = gpa.deinit();
         if (deinit_status == .leak) @panic("memory leak!");
     }
+
+    // const stream = try std.net.connectUnixSocket("/run/user/1000//nvim.2163.0");
+    // defer stream.close();
 
     const stream = try std.net.tcpConnectToAddress(try std.net.Address.parseIp4(address, port));
     defer stream.close();

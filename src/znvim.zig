@@ -117,7 +117,7 @@ pub fn DefaultClientType(pack_type: type) type {
 }
 
 pub fn Client(pack_type: type, comptime buffer_size: usize) type {
-    const RpcClientType = rpc.TCPClient(pack_type, buffer_size);
+    const RpcClientType = rpc.CreateClient(pack_type, buffer_size);
     return struct {
         rpc_client: RpcClientType,
         channel_id: u16,
