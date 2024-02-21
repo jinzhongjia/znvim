@@ -255,10 +255,14 @@ pub const nvim_feedkeys = struct {
 pub const nvim_get_chan_info = struct {
     // TODO:
     /// return type
-    pub const return_type = struct {};
+    pub const return_type = config.NoAutoCall;
 
     pub const parameters = struct {
         // chan id
         u16,
+    };
+
+    const client = struct {
+        name: Str,
     };
 };

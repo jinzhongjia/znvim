@@ -41,10 +41,11 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
         const Self = @This();
 
         id_ptr: *u32,
-        stream: net.Stream,
         pack: streamPack,
 
+        /// just store ptr
         writer_ptr: *BufferedWriter,
+        /// just store ptr
         reader_ptr: *BufferedReader,
         allocator: Allocator,
 
@@ -69,7 +70,6 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
 
             return Self{
                 .id_ptr = id_ptr,
-                .stream = stream,
                 .pack = streamPack.init(
                     writer_ptr,
                     reader_ptr,
@@ -395,6 +395,10 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
                 const ext = try self.pack.read_ext(allocator);
                 return ext;
             }
+
+            pub fn skip(self: Reader) !void {
+                return self.pack.skip();
+            }
         };
 
         fn get_array_reader(self: Self) !ArrayReader {
@@ -454,6 +458,15 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
             pub fn read_str(self: ArrayReader, allocator: Allocator) ![]const u8 {
                 return self.reader.read_str(allocator);
             }
+
+            pub fn read_ext(self: ArrayReader, allocator: Allocator) !msgpack.EXT {
+                const ext = try self.reader.read_ext(allocator);
+                return ext;
+            }
+
+            pub fn skip(self: ArrayReader) !void {
+                return self.reader.skip();
+            }
         };
 
         fn get_map_reader(self: Self) !MapReader {
@@ -483,7 +496,7 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
 
             // get map length
             pub fn len(self: MapReader) u32 {
-                return self.array_reader.len;
+                return self.map_reader.len;
             }
 
             pub fn read(self: MapReader, comptime T: type, allocator: Allocator) !msgpack.read_type_help(T) {
@@ -512,6 +525,15 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
 
             pub fn read_str(self: MapReader, allocator: Allocator) ![]const u8 {
                 return self.reader.read_str(allocator);
+            }
+
+            pub fn read_ext(self: MapReader, allocator: Allocator) !msgpack.EXT {
+                const ext = try self.reader.read_ext(allocator);
+                return ext;
+            }
+
+            pub fn skip(self: MapReader) !void {
+                return self.reader.skip();
             }
         };
     };
