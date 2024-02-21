@@ -302,6 +302,19 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
             return self.read_result(allocator, resultType);
         }
 
+        /// call with a reader
+        /// this function will return a reader for you
+        pub fn call_with_reader(
+            self: Self,
+            method: []const u8,
+            params: anytype,
+            errorType: type,
+            allocator: Allocator,
+        ) !Reader {
+            try self.call_handle(method, params, errorType, allocator);
+            return self.get_reader();
+        }
+
         /// this is event loop
         /// prepare for the client register method
         pub fn loop(self: Self, allocator: Allocator) !void {

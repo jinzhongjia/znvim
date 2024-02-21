@@ -31,9 +31,13 @@ pub fn main() !void {
     defer client.deinit();
     std.log.info("channel id id {}, function'nums is {}", .{ client.channel_id, client.metadata.functions.len });
 
-    const buffer = try client.call(.nvim_get_current_buf, .{}, allocator);
-    defer allocator.free(buffer.data);
-    std.log.info("current buffer is {any}", .{buffer.data});
+    const reader = try client.call_with_reader(.nvim_get_current_buf, .{}, allocator);
+    const res = try reader.read_ext(allocator);
+    defer allocator.free(res.data);
+    std.log.info("current buffer is {any}", .{res.data});
+    // const buffer = try client.call(.nvim_get_current_buf, .{}, allocator);
+    // defer allocator.free(buffer.data);
+    // std.log.info("current buffer is {any}", .{buffer.data});
 
     const chunk = znvim.api.nvim_echo.chunk;
 

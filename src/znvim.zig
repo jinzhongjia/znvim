@@ -167,25 +167,15 @@ pub fn Client(pack_type: type, comptime buffer_size: usize) type {
             );
         }
 
-        /// caller not hold the mem
-        /// this function will not read the value, it will just return a reader for you to read
-        /// for arrary or map
         pub fn call_with_reader(
             self: Self,
             comptime method: api_enum,
             params: get_api_parameters(method),
-            comptime call_type: DynamicCall,
             allocator: Allocator,
-        ) !DynamicCall.get_type(call_type, true) {
+        ) !RpcClientType.Reader {
             const name = @tagName(method);
             try self.method_detect(method);
-            return self.rpc_client.call_with_reader(
-                name,
-                params,
-                error_types,
-                allocator,
-                call_type,
-            );
+            return self.rpc_client.call_with_reader(name, params, error_types, allocator);
         }
 
         /// event loop
