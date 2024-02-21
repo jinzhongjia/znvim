@@ -1,7 +1,8 @@
 const std = @import("std");
-const msgpack = @import("msgpack");
-const rpc = @import("rpc.zig");
 const builtin = @import("builtin");
+const msgpack = @import("msgpack");
+
+const rpc = @import("rpc.zig");
 pub const api = @import("api.zig");
 
 const net = std.net;
@@ -91,38 +92,40 @@ fn get_api_return_type(comptime api_name: api_enum) type {
     return get_api_type_def(api_name).return_type;
 }
 
-pub fn DefaultClient(pack_type: type) type {
+pub fn DefaultClientType(pack_type: type) type {
     return Client(pack_type, 20480);
 }
 
 pub fn Client(pack_type: type, comptime buffer_size: usize) type {
-    const cT = rpc.TCPClient(pack_type, buffer_size);
+    const RpcClientType = rpc.TCPClient(pack_type, buffer_size);
     return struct {
-        c: cT,
+        rpc_client: RpcClientType,
         channel_id: u16,
         metadata: MetaData,
+        allocator: Allocator,
 
         const Self = @This();
 
-        pub const DynamicCall = cT.DynamicCall;
+        pub const DynamicCall = RpcClientType.DynamicCall;
 
         pub fn init(stream: net.Stream, allocator: Allocator) !Self {
             var self: Self = undefined;
-            self.c = try cT.init(stream, allocator);
+            self.rpc_client = try RpcClientType.init(stream, allocator);
+            self.allocator = allocator;
+
+            const result = try self.call(.nvim_get_api_info, .{}, allocator);
+            self.channel_id = result[0];
+            self.metadata = result[1];
 
             return self;
         }
 
         pub fn deinit(self: Self) void {
-            self.c.deinit();
+            self.rpc_client.deinit();
+            self.destory_metadata();
         }
 
-        pub fn call(
-            self: Self,
-            comptime method: api_enum,
-            params: get_api_parameters(method),
-            allocator: Allocator,
-        ) !get_api_return_type(method) {
+        fn method_detect(self: Self, comptime method: api_enum) !void {
             const name = @tagName(method);
             // This will verify whether the method is available in the current version in debug mode
             if (comptime (builtin.mode == .Debug and !std.mem.eql(u8, name, "nvim_get_api_info"))) {
@@ -145,8 +148,17 @@ pub fn Client(pack_type: type, comptime buffer_size: usize) type {
                     return CallErrorSet.NotFindApi;
                 }
             }
+        }
 
-            return self.c.call(
+        pub fn call(
+            self: Self,
+            comptime method: api_enum,
+            params: get_api_parameters(method),
+            allocator: Allocator,
+        ) !get_api_return_type(method) {
+            const name = @tagName(method);
+            try self.method_detect(method);
+            return self.rpc_client.call(
                 name,
                 params,
                 error_types,
@@ -165,10 +177,9 @@ pub fn Client(pack_type: type, comptime buffer_size: usize) type {
             comptime call_type: DynamicCall,
             allocator: Allocator,
         ) !DynamicCall.get_type(call_type, true) {
-            // TODO: add debug detect
-
             const name = @tagName(method);
-            return self.c.call_with_reader(
+            try self.method_detect(method);
+            return self.rpc_client.call_with_reader(
                 name,
                 params,
                 error_types,
@@ -177,16 +188,63 @@ pub fn Client(pack_type: type, comptime buffer_size: usize) type {
             );
         }
 
-        // this api will call('nvim_get_api_info', [])
-        pub fn get_api_info(self: *Self, allocator: Allocator) !void {
-            const result = try self.call(.nvim_get_api_info, .{}, allocator);
-            self.channel_id = result[0];
-            self.metadata = result[1];
-        }
-
         /// event loop
         pub fn loop(self: Self, allocator: Allocator) !void {
-            return self.c.loop(allocator);
+            return self.rpc_client.loop(allocator);
+        }
+
+        fn destory_metadata(self: Self) void {
+            const allocator = self.allocator;
+            const metadata = self.metadata;
+            // free version
+            {
+                const version = metadata.version;
+                defer allocator.free(version.build.value());
+            }
+            // free functions
+            {
+                const functions = metadata.functions;
+                defer allocator.free(functions);
+                for (functions) |function| {
+                    defer allocator.free(function.return_type.value());
+                    defer allocator.free(function.parameters);
+                    for (function.parameters) |parameter| {
+                        for (parameter) |val| {
+                            allocator.free(val.value());
+                        }
+                    }
+                    defer allocator.free(function.name.value());
+                }
+            }
+            // free ui_events
+            {
+                const ui_events = metadata.ui_events;
+                defer allocator.free(ui_events);
+                for (ui_events) |ui_event| {
+                    defer allocator.free(ui_event.name.value());
+                    defer allocator.free(ui_event.parameters);
+                    for (ui_event.parameters) |parameter| {
+                        for (parameter) |val| {
+                            allocator.free(val.value());
+                        }
+                    }
+                }
+            }
+            // free ui_options
+            {
+                const ui_options = metadata.ui_options;
+                defer allocator.free(ui_options);
+                for (ui_options) |val| {
+                    allocator.free(val.value());
+                }
+            }
+            // free types
+            {
+                const types = metadata.types;
+                allocator.free(types.Buffer.prefix.value());
+                allocator.free(types.Window.prefix.value());
+                allocator.free(types.Tabpage.prefix.value());
+            }
         }
     };
 }
