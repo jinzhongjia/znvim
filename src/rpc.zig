@@ -86,7 +86,7 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
             self.allocator.destroy(self.id_ptr);
         }
 
-        fn read(self: Self, T: type, allocator: Allocator) !T {
+        fn read(self: Self, T: type, allocator: Allocator) !msgpack.read_type_help(T) {
             return self.pack.read(T, allocator);
         }
 
@@ -121,13 +121,13 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
 
         /// this function will get the method result
         /// NOTE: the result's mem need to free
-        fn read_result(self: Self, allocator: Allocator, resultT: type) !resultT {
+        fn read_result(self: Self, allocator: Allocator, resultT: type) !msgpack.read_type_help(resultT) {
             return self.read(resultT, allocator);
         }
 
         /// this function will get the method error
         /// NOTE: the result's mem need to free
-        fn read_error(self: Self, allocator: Allocator, errorT: type) !?errorT {
+        fn read_error(self: Self, allocator: Allocator, errorT: type) !msgpack.read_type_help(?errorT) {
             return self.read(?errorT, allocator);
         }
 
@@ -324,6 +324,183 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
                 },
             }
         }
+
+        fn get_reader(self: Self) Reader {
+            return Reader.init(self);
+        }
+
+        pub const Reader = struct {
+            pack: streamPack,
+            s: Self,
+
+            fn init(c: Self) Reader {
+                return Reader{
+                    .pack = c.pack,
+                    .s = c,
+                };
+            }
+
+            pub fn subArrayReader(self: Reader) !ArrayReader {
+                return self.s.get_array_reader();
+            }
+
+            pub fn subMapReader(self: Reader) !MapReader {
+                return self.s.get_map_reader();
+            }
+
+            pub fn read(self: Reader, comptime T: type, allocator: Allocator) !msgpack.read_type_help(T) {
+                return self.pack.read(T, allocator);
+            }
+
+            pub fn read_no_alloc(self: Reader, comptime T: type) !msgpack.read_type_help_no_alloc(T) {
+                return self.pack.readNoAlloc(T);
+            }
+
+            pub fn read_bool(self: Reader) !bool {
+                return self.pack.read_bool();
+            }
+
+            pub fn read_int(self: Reader) !i64 {
+                return try self.pack.read_i64();
+            }
+
+            pub fn read_uint(self: Reader) !u64 {
+                return self.pack.read_u64();
+            }
+
+            pub fn read_float(self: Reader) !f64 {
+                return self.pack.read_float();
+            }
+
+            /// read str
+            pub fn read_str(self: Reader, allocator: Allocator) ![]const u8 {
+                const str = try self.pack.read_str(allocator);
+                return str.value();
+            }
+
+            pub fn read_ext(self: Reader, allocator: Allocator) !msgpack.EXT {
+                const ext = try self.pack.read_ext(allocator);
+                return ext;
+            }
+        };
+
+        fn get_array_reader(self: Self) !ArrayReader {
+            const reader = self.get_reader();
+            return ArrayReader.init(reader);
+        }
+
+        pub const ArrayReader = struct {
+            reader: Reader,
+            array_reader: streamPack.ArrayReader,
+
+            fn init(reader: Reader) !ArrayReader {
+                const array_reader = try reader.pack.getArrayReader();
+                return ArrayReader{
+                    .reader = reader,
+                    .array_reader = array_reader,
+                };
+            }
+
+            pub fn subArrayReader(self: ArrayReader) !ArrayReader {
+                return self.reader.subArrayReader();
+            }
+
+            pub fn subMapReader(self: ArrayReader) !MapReader {
+                return self.reader.subMapReader();
+            }
+
+            // get array length
+            pub fn len(self: ArrayReader) u32 {
+                return self.array_reader.len;
+            }
+
+            pub fn read_element(self: ArrayReader, comptime T: type, allocator: Allocator) !msgpack.read_type_help(T) {
+                return self.reader.read(T, allocator);
+            }
+
+            pub fn read_element_no_alloc(self: ArrayReader, comptime T: type) !msgpack.read_type_help_no_alloc(T) {
+                return self.reader.read_no_alloc(T);
+            }
+
+            pub fn read_bool(self: ArrayReader) !bool {
+                return self.reader.read_bool();
+            }
+
+            pub fn read_int(self: ArrayReader) !i64 {
+                return self.reader.read_int();
+            }
+
+            pub fn read_uint(self: ArrayReader) !u64 {
+                return self.reader.read_uint();
+            }
+
+            pub fn read_float(self: ArrayReader) !f64 {
+                return self.reader.read_float();
+            }
+
+            pub fn read_str(self: ArrayReader, allocator: Allocator) ![]const u8 {
+                return self.reader.read_str(allocator);
+            }
+        };
+
+        fn get_map_reader(self: Self) !MapReader {
+            const reader = self.get_reader();
+            return MapReader.init(reader);
+        }
+
+        pub const MapReader = struct {
+            reader: Reader,
+            map_reader: streamPack.MapReader,
+
+            fn init(reader: Reader) !MapReader {
+                const map_reader = try reader.pack.getMapReader();
+                return MapReader{
+                    .reader = reader,
+                    .map_reader = map_reader,
+                };
+            }
+
+            pub fn subArrayReader(self: MapReader) !ArrayReader {
+                return self.reader.subArrayReader();
+            }
+
+            pub fn subMapReader(self: MapReader) !MapReader {
+                return self.reader.subMapReader();
+            }
+
+            // get map length
+            pub fn len(self: MapReader) u32 {
+                return self.array_reader.len;
+            }
+
+            pub fn read(self: MapReader, comptime T: type, allocator: Allocator) !msgpack.read_type_help(T) {
+                return self.reader.read(T, allocator);
+            }
+
+            pub fn read_no_alloc(self: MapReader, comptime T: type) !msgpack.read_type_help_no_alloc(T) {
+                return self.reader.read_no_alloc(T);
+            }
+
+            pub fn read_bool(self: MapReader) !bool {
+                return self.reader.read_bool();
+            }
+
+            pub fn read_int(self: MapReader) !i64 {
+                return self.reader.read_int();
+            }
+
+            pub fn read_uint(self: MapReader) !u64 {
+                return self.reader.read_uint();
+            }
+
+            pub fn read_float(self: MapReader) !f64 {
+                return self.reader.read_float();
+            }
+
+            pub fn read_str(self: MapReader, allocator: Allocator) ![]const u8 {
+                return self.reader.read_str(allocator);
+            }
+        };
     };
 }
 
