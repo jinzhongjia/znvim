@@ -48,22 +48,6 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
         reader_ptr: *BufferedReader,
         allocator: Allocator,
 
-        pub const DynamicCall = enum {
-            ARRAY,
-            MAP,
-
-            pub fn get_type(call_val: DynamicCall, comptime is_reader: bool) type {
-                switch (call_val) {
-                    .ARRAY => {
-                        return if (is_reader) streamPack.ArrayReader else streamPack.ArrayWriter;
-                    },
-                    .MAP => {
-                        return if (is_reader) streamPack.MapReader else streamPack.MapWriter;
-                    },
-                }
-            }
-        };
-
         // allocator will create a buffered writer and a buffered reader
         pub fn init(stream: net.Stream, allocator: Allocator) !Self {
             const writer_ptr = try allocator.create(BufferedWriter);
@@ -102,6 +86,10 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
             self.allocator.destroy(self.id_ptr);
         }
 
+        fn read(self: Self, T: type, allocator: Allocator) !T {
+            return self.pack.read(T, allocator);
+        }
+
         /// this function will get the type of message
         fn read_type(self: Self) !MessageType {
             const marker_u8 = try self.pack.read_type_marker_u8();
@@ -134,13 +122,13 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
         /// this function will get the method result
         /// NOTE: the result's mem need to free
         fn read_result(self: Self, allocator: Allocator, resultT: type) !resultT {
-            return self.pack.read(resultT, allocator);
+            return self.read(resultT, allocator);
         }
 
         /// this function will get the method error
         /// NOTE: the result's mem need to free
         fn read_error(self: Self, allocator: Allocator, errorT: type) !?errorT {
-            return self.pack.read(?errorT, allocator);
+            return self.read(?errorT, allocator);
         }
 
         /// this function will handle request
@@ -312,21 +300,6 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
             try self.call_handle(method, params, errorType, allocator);
 
             return self.read_result(allocator, resultType);
-        }
-
-        /// caller not hold the mem
-        /// this function will not read the value, it will just return a reader for you to read
-        /// for arrary or map
-        pub fn call_with_reader(self: Self, method: []const u8, params: anytype, errorType: type, allocator: Allocator, comptime call_type: DynamicCall) !DynamicCall.get_type(call_type, true) {
-            try self.call_handle(method, params, errorType, allocator);
-
-            if (call_type == .ARRAY) {
-                return self.pack.getArrayReader();
-            } else if (call_type == .MAP) {
-                return self.pack.getMapReader();
-            } else {
-                @compileError("this is unreachable");
-            }
         }
 
         /// this is event loop
