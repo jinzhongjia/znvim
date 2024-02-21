@@ -3,17 +3,18 @@ const builtin = @import("builtin");
 const msgpack = @import("msgpack");
 
 const rpc = @import("rpc.zig");
-pub const api = @import("api.zig");
+const config = @import("config.zig");
+pub const api_defs = @import("api_defs.zig");
 
 const net = std.net;
 const Type = std.builtin.Type;
 const Allocator = std.mem.Allocator;
-const MetaData = api.nvim_get_api_info.MetaData;
+const MetaData = api_defs.nvim_get_api_info.MetaData;
 
 const comptimePrint = std.fmt.comptimePrint;
 pub const wrapStr = msgpack.wrapStr;
 
-const api_info = @typeInfo(api).Struct;
+const api_info = @typeInfo(api_defs).Struct;
 
 const CallErrorSet = error{
     APIDeprecated,
@@ -21,15 +22,9 @@ const CallErrorSet = error{
 };
 
 /// Error types for neovim result
-pub const error_types = struct {
-    enum {
-        Exception,
-        Validation,
-    },
-    msgpack.Str,
-};
+pub const error_types = config.error_types;
 
-pub const api_enum = blk: {
+pub const api_enum: type = blk: {
     var fields: [api_info.decls.len]Type.EnumField = undefined;
 
     for (api_info.decls, 0..) |decl, i| {
@@ -47,11 +42,11 @@ pub const api_enum = blk: {
     });
 };
 
-inline fn get_api_type_def(comptime api_name: api_enum) type {
-    const name = @tagName(api_name);
+inline fn get_api_type_def(comptime api: api_enum) type {
+    const api_name = @tagName(api);
     for (api_info.decls) |decl| {
-        if (decl.name.len == name.len and std.mem.eql(u8, decl.name, name)) {
-            return @field(api, decl.name);
+        if (decl.name.len == api_name.len and std.mem.eql(u8, decl.name, api_name)) {
+            return @field(api_defs, decl.name);
         }
     }
     const err_msg = comptimePrint("not found the api ({s})", .{api_name});
@@ -59,12 +54,16 @@ inline fn get_api_type_def(comptime api_name: api_enum) type {
 }
 
 /// used to get api parameters
-fn get_api_parameters(comptime api_name: api_enum) type {
-    const api_def = get_api_type_def(api_name);
+fn get_api_parameters(comptime api: api_enum) type {
+    const api_name = @tagName(api);
+    const api_def = get_api_type_def(api);
     if (comptime !@hasDecl(api_def, "parameters")) {
-        @compileError(comptimePrint("not found {} in api ({})", .{ "parameters", api_name }));
+        @compileError(comptimePrint(
+            "not found {} in api ({})",
+            .{ "parameters", api_name },
+        ));
     }
-    const api_params_def = @field(api_def, "parameters");
+    const api_params_def: type = @field(api_def, "parameters");
     const api_params_def_type_info = @typeInfo(api_params_def);
     if (api_params_def_type_info == .Struct) {
         if (api_params_def_type_info.Struct.is_tuple) {
@@ -79,17 +78,38 @@ fn get_api_parameters(comptime api_name: api_enum) type {
                 },
             });
         } else {
-            const err_msg = comptimePrint("type ({}) is invalid, it must be tuple", .{api_params_def});
+            const err_msg = comptimePrint(
+                "api ({})'s parameters ({}) is invalid, it must be tuple",
+                .{ api_name, api_params_def },
+            );
             @compileError(err_msg);
         }
     } else {
-        @compileError(comptimePrint("api ({})'s parameters should be tuple", .{api_name}));
+        @compileError(comptimePrint(
+            "api ({s})'s parameters should be tuple",
+            .{api_name},
+        ));
     }
 }
 
 /// used to get api return_type
-fn get_api_return_type(comptime api_name: api_enum) type {
-    return get_api_type_def(api_name).return_type;
+fn get_api_return_type(comptime api: api_enum) type {
+    const api_name = @tagName(api);
+    const api_def = get_api_type_def(api);
+    if (comptime !@hasDecl(api_def, "return_type")) {
+        @compileError(comptimePrint(
+            "not found {} in api ({s})",
+            .{ "return_type", api_name },
+        ));
+    }
+    const api_return_type_def: type = @field(api_def, "return_type");
+    if (api_return_type_def == config.NoAutoCall) {
+        @compileError(comptimePrint(
+            "api ({s}) can not be used in call, please use call_with_reader",
+            .{api_name},
+        ));
+    }
+    return api_return_type_def;
 }
 
 pub fn DefaultClientType(pack_type: type) type {
@@ -126,13 +146,13 @@ pub fn Client(pack_type: type, comptime buffer_size: usize) type {
         }
 
         fn method_detect(self: Self, comptime method: api_enum) !void {
-            const name = @tagName(method);
+            const method_name = @tagName(method);
             // This will verify whether the method is available in the current version in debug mode
-            if (comptime (builtin.mode == .Debug and !std.mem.eql(u8, name, "nvim_get_api_info"))) {
+            if (comptime (builtin.mode == .Debug and !std.mem.eql(u8, method_name, "nvim_get_api_info"))) {
                 var if_find: bool = false;
                 for (self.metadata.functions) |function| {
                     const function_name = function.name.value();
-                    if (name.len == function_name.len and std.mem.eql(u8, name, function_name)) {
+                    if (method_name.len == function_name.len and std.mem.eql(u8, method_name, function_name)) {
                         if_find = true;
                         if (function.deprecated_since) |deprecated_since| {
                             if (deprecated_since >= self.metadata.version.api_level) {
@@ -156,10 +176,10 @@ pub fn Client(pack_type: type, comptime buffer_size: usize) type {
             params: get_api_parameters(method),
             allocator: Allocator,
         ) !get_api_return_type(method) {
-            const name = @tagName(method);
+            const method_name = @tagName(method);
             try self.method_detect(method);
             return self.rpc_client.call(
-                name,
+                method_name,
                 params,
                 error_types,
                 get_api_return_type(method),
@@ -173,9 +193,9 @@ pub fn Client(pack_type: type, comptime buffer_size: usize) type {
             params: get_api_parameters(method),
             allocator: Allocator,
         ) !RpcClientType.Reader {
-            const name = @tagName(method);
+            const method_name = @tagName(method);
             try self.method_detect(method);
-            return self.rpc_client.call_with_reader(name, params, error_types, allocator);
+            return self.rpc_client.call_with_reader(method_name, params, error_types, allocator);
         }
 
         /// event loop

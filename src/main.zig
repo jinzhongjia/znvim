@@ -39,7 +39,7 @@ pub fn main() !void {
     // defer allocator.free(buffer.data);
     // std.log.info("current buffer is {any}", .{buffer.data});
 
-    const chunk = znvim.api.nvim_echo.chunk;
+    const chunk = znvim.api_defs.nvim_echo.chunk;
 
     var chunks = [2]chunk{
         chunk{ wrapStr("hello "), wrapStr("") },
@@ -50,6 +50,8 @@ pub fn main() !void {
         .{ &chunks, true, .{ .verbose = false } },
         allocator,
     );
+
+    // try client.call(.nvim_exec_lua, .{wrapStr("local kk=5")}, allocator);
 
     // while (true) {
     //     try client.loop(allocator);

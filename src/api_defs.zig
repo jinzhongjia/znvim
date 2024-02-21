@@ -6,6 +6,7 @@
 //! more info: https://neovim.io/doc/user/api.html
 
 const msgpack = @import("msgpack");
+const config = @import("config.zig");
 const EXT = msgpack.EXT;
 const Str = msgpack.Str;
 const Bin = msgpack.Bin;
@@ -227,4 +228,12 @@ pub const nvim_eval_statusline = struct {
     };
 };
 
-pub const nvim_exec_lua = struct {};
+pub const nvim_exec_lua = struct {
+    /// return type
+    pub const return_type = config.NoAutoCall;
+
+    /// parameters
+    pub const parameters = struct {
+        Str,
+    };
+};
