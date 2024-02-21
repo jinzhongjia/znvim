@@ -48,6 +48,22 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
         reader_ptr: *BufferedReader,
         allocator: Allocator,
 
+        pub const DynamicCall = enum {
+            ARRAY,
+            MAP,
+
+            fn get_type(call_val: DynamicCall, comptime is_reader: bool) type {
+                switch (call_val) {
+                    .ARRAY => {
+                        return if (is_reader) streamPack.ArrayReader else streamPack.ArrayWriter;
+                    },
+                    .MAP => {
+                        return if (is_reader) streamPack.MapReader else streamPack.MapWriter;
+                    },
+                }
+            }
+        };
+
         // allocator will create a buffered writer and a buffered reader
         pub fn init(stream: net.Stream, allocator: Allocator) !Self {
             const writer_ptr = try allocator.create(BufferedWriter);
@@ -227,10 +243,15 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
             return msgid;
         }
 
+        /// flush write
+        pub fn flushWrite(self: Self) !void {
+            try self.pack.writeContext.flush();
+        }
+
         /// remote call
         pub fn call(self: Self, method: []const u8, params: anytype, errorType: type, resultType: type, allocator: Allocator) !resultType {
             const send_id = try self.send_request(method, params);
-            try self.pack.writeContext.flush();
+            try self.flushWrite();
             // This logic is to prevent a request from the server from being received when sending a request.
             while (true) {
                 const t = try self.read_type();
@@ -276,6 +297,65 @@ pub fn TCPClient(pack_type: type, comptime buffer_size: usize) type {
             return self.read_result(allocator, resultType);
         }
 
+        /// caller not hold the mem
+        /// this function will not read the value, it will just return a reader for you to read
+        /// for arrary or map
+        pub fn call_with_reader(self: Self, method: []const u8, params: anytype, errorType: type, allocator: Allocator, comptime call_type: DynamicCall) !DynamicCall.get_type(call_type, true) {
+            const send_id = try self.send_request(method, params);
+            try self.flushWrite();
+            // This logic is to prevent a request from the server from being received when sending a request.
+            while (true) {
+                const t = try self.read_type();
+                switch (t) {
+                    .Request => {
+                        const msgid = try self.read_msgid();
+                        const method_name = try self.read_method(allocator);
+                        try self.handleRequest(msgid, method_name, allocator);
+                        // free method name
+                        allocator.free(method_name);
+                    },
+                    .Response => {
+                        const msgid = try self.read_msgid();
+                        if (msgid != send_id) {
+                            log.err("send_id ({}) is not eql msgid ({})", .{ send_id, msgid });
+                            @panic("error");
+                        }
+                        break;
+                    },
+                    .Notification => {
+                        const method_name = try self.read_method(allocator);
+                        try self.handleNotification(method_name, allocator);
+                        allocator.free(method_name);
+                    },
+                }
+            }
+
+            var arena = std.heap.ArenaAllocator.init(allocator);
+            defer arena.deinit();
+            const arena_allocator = arena.allocator();
+
+            const err = try self.read_error(arena_allocator, errorType);
+            if (err) |err_value| {
+                log.err("request method ({s}) failed, error id is ({}), msg is ({s})", .{
+                    method,
+                    @intFromEnum(err_value[0]),
+                    err_value[1].value(),
+                });
+                try self.pack.skip();
+                return error.MSGID_INVALID;
+            }
+
+            if (call_type == .ARRAY) {
+                return self.pack.getArrayReader();
+            } else if (call_type == .MAP) {
+                return self.pack.getMapReader();
+            } else {
+                @compileError("this is unreachable");
+            }
+        }
+
+        /// this is event loop
+        /// prepare for the client register method
         pub fn loop(self: Self, allocator: Allocator) !void {
             const t = try self.read_type();
             switch (t) {
