@@ -237,3 +237,28 @@ pub const nvim_exec_lua = struct {
         Str,
     };
 };
+
+pub const nvim_feedkeys = struct {
+    /// return type
+    pub const return_type = void;
+
+    pub const parameters = struct {
+        /// keys
+        Str,
+        /// mode
+        Str,
+        /// escape_ks
+        bool,
+    };
+};
+
+pub const nvim_get_chan_info = struct {
+    // TODO:
+    /// return type
+    pub const return_type = struct {};
+
+    pub const parameters = struct {
+        // chan id
+        u16,
+    };
+};
