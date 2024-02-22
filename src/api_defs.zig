@@ -253,7 +253,6 @@ pub const nvim_feedkeys = struct {
 };
 
 pub const nvim_get_chan_info = struct {
-    // TODO:
     /// return type
     pub const return_type = config.NoAutoCall;
 
@@ -265,4 +264,11 @@ pub const nvim_get_chan_info = struct {
     const client = struct {
         name: Str,
     };
+};
+
+pub const nvim_get_color_map = struct {
+    /// return type
+    pub const return_type = config.NoAutoCall;
+
+    pub const parameters = struct {};
 };
