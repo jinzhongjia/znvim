@@ -347,7 +347,7 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
             return writer;
         }
 
-        pub fn get_res_with_writer(
+        pub fn get_result_with_writer(
             self: Self,
             writer: Writer,
             errorType: type,
@@ -365,7 +365,7 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
             return self.read_result(allocator, resultType);
         }
 
-        pub fn get_reader_with_reader(
+        pub fn get_reader_with_writer(
             self: Self,
             writer: Writer,
             errorType: type,

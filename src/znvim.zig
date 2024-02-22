@@ -118,6 +118,8 @@ pub fn DefaultClientType(pack_type: type) type {
 
 pub fn Client(pack_type: type, comptime buffer_size: usize) type {
     const RpcClientType = rpc.CreateClient(pack_type, buffer_size);
+    const Writer = RpcClientType.Writer;
+    const Reader = RpcClientType.Reader;
     return struct {
         rpc_client: RpcClientType,
         channel_id: u16,
@@ -192,10 +194,37 @@ pub fn Client(pack_type: type, comptime buffer_size: usize) type {
             comptime method: api_enum,
             params: get_api_parameters(method),
             allocator: Allocator,
-        ) !RpcClientType.Reader {
+        ) !Reader {
             const method_name = @tagName(method);
             try self.method_detect(method);
             return self.rpc_client.call_with_reader(method_name, params, error_types, allocator);
+        }
+
+        pub fn call_with_writer(self: Self, comptime method: api_enum) !Writer {
+            const method_name = @tagName(method);
+            return self.rpc_client.call_with_writer(method_name);
+        }
+
+        pub fn get_result_with_writer(
+            self: Self,
+            comptime method: api_enum,
+            writer: Writer,
+            allocator: Allocator,
+        ) !get_api_return_type(method) {
+            return self.rpc_client.get_result_with_writer(
+                writer,
+                error_types,
+                get_api_return_type(method),
+                allocator,
+            );
+        }
+
+        pub fn get_reader_with_writer(
+            self: Self,
+            writer: Writer,
+            allocator: Allocator,
+        ) !Reader {
+            return self.rpc_client.get_reader_with_writer(writer, error_types, allocator);
         }
 
         /// event loop
