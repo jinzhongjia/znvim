@@ -47,6 +47,7 @@ pub fn main() !void {
     const res = try reader.read_ext(allocator);
     defer allocator.free(res.data);
     std.log.info("current buffer is {any}", .{res.data});
+
     // const buffer = try client.call(.nvim_get_current_buf, .{}, allocator);
     // defer allocator.free(buffer.data);
     // std.log.info("current buffer is {any}", .{buffer.data});
@@ -63,9 +64,26 @@ pub fn main() !void {
         allocator,
     );
 
-    // try client.call(.nvim_exec_lua, .{wrapStr("local kk=5")}, allocator);
+    const read = try client.call_with_reader(
+        .nvim_get_chan_info,
+        .{client.channel_id},
+        allocator,
+    );
+    const map_Len = try read.read_map_len();
 
-    // while (true) {
-    //     try client.loop(allocator);
-    // }
+    for (map_Len) |_| {
+        const key = try read.read_str(allocator);
+        defer allocator.free(key);
+        if (std.mem.eql(u8, key, "mode")) {
+            const mode = try read.read_str(allocator);
+            defer allocator.free(mode);
+            std.log.info("mode is {s}", .{mode});
+        } else {
+            try read.skip();
+        }
+    }
+
+    while (true) {
+        try client.loop(allocator);
+    }
 }
