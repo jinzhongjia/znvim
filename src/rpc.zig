@@ -343,24 +343,16 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
         }
 
         pub const Writer = struct {
-            s: Self,
+            client: Self,
 
             fn init(c: Self) Writer {
                 return Writer{
-                    .s = c,
+                    .client = c,
                 };
             }
 
-            pub fn subArrayWriter(self: Writer, len: u32) !ArrayWriter {
-                return self.s.get_array_writer(len);
-            }
-
-            pub fn subMapWriter(self: Writer, len: u32) !MapWriter {
-                return self.s.get_map_writer(len);
-            }
-
             pub fn write(self: Writer, val: anytype) !void {
-                return self.s.pack.write(val);
+                return self.client.pack.write(val);
             }
 
             pub fn write_bool(self: Writer, val: bool) !void {
@@ -383,128 +375,20 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
                 return self.write(wrapStr(val));
             }
 
+            pub fn write_array_header(self: Writer, len: u32) !void {
+                _ = try self.client.pack.getArrayWriter(len);
+            }
+
+            pub fn write_map_header(self: Writer, len: u32) !void {
+                _ = try self.client.pack.getMapWriter(len);
+            }
+
             pub fn write_ext(self: Writer, val: msgpack.EXT) !void {
                 return self.write(val);
             }
 
             pub fn flush(self: Writer) !void {
-                try self.s.flushWrite();
-            }
-        };
-
-        fn get_array_writer(self: Self, len: u32) !ArrayWriter {
-            const writer = self.get_writer();
-            return ArrayWriter.init(writer, len);
-        }
-
-        pub const ArrayWriter = struct {
-            writer: Writer,
-            len: u32,
-
-            fn init(writer: Writer, len: u32) !ArrayWriter {
-                _ = try writer.s.pack.getArrayWriter(len);
-                return ArrayWriter{
-                    .writer = writer,
-                    .len = len,
-                };
-            }
-
-            pub fn subArrayWriter(self: ArrayWriter, len: u32) !ArrayWriter {
-                return self.writer.subArrayWriter(len);
-            }
-
-            pub fn subMapWriter(self: ArrayWriter, len: u32) !MapWriter {
-                return self.writer.subMapWriter(len);
-            }
-
-            pub fn write_element(self: ArrayWriter, val: anytype) !void {
-                return self.writer.write(val);
-            }
-
-            pub fn write_bool(self: ArrayWriter, val: bool) !void {
-                return self.write_element(val);
-            }
-
-            pub fn write_int(self: ArrayWriter, val: i64) !void {
-                return self.write_element(val);
-            }
-
-            pub fn write_uint(self: ArrayWriter, val: u64) !void {
-                return self.write_element(val);
-            }
-
-            pub fn write_float(self: ArrayWriter, val: f64) !void {
-                return self.write_element(val);
-            }
-
-            pub fn write_str(self: ArrayWriter, val: []const u8) !void {
-                return self.write_element(wrapStr(val));
-            }
-
-            pub fn write_ext(self: ArrayWriter, val: msgpack.EXT) !void {
-                return self.write_element(val);
-            }
-
-            pub fn flush(self: ArrayWriter) !void {
-                try self.writer.flush();
-            }
-        };
-
-        fn get_map_writer(self: Self, len: u32) !MapWriter {
-            const writer = self.get_writer();
-            return MapWriter.init(writer, len);
-        }
-
-        pub const MapWriter = struct {
-            writer: Writer,
-            len: u32,
-
-            fn init(writer: Writer, len: u32) !MapWriter {
-                _ = try writer.s.pack.getMapWriter(len);
-                return MapWriter{
-                    .writer = writer,
-                    .len = len,
-                };
-            }
-
-            pub fn subArrayWriter(self: MapWriter, len: u32) !ArrayWriter {
-                return self.writer.subArrayWriter(len);
-            }
-
-            pub fn subMapWriter(self:MapWriter,len:u32) !MapWriter {
-                return self.writer.subMapWriter(len);
-            }
-
-            pub fn write(self: MapWriter, val: anytype) !void {
-                return self.writer.write(val);
-            }
-
-            pub fn write_bool(self: MapWriter, val: bool) !void {
-                return self.write(val);
-            }
-
-            pub fn write_int(self: MapWriter, val: i64) !void {
-                return self.write(val);
-            }
-
-            pub fn write_uint(self: MapWriter, val: u64) !void {
-                return self.write(val);
-            }
-
-            pub fn write_float(self: MapWriter, val: f64) !void {
-                return self.write(val);
-            }
-
-            pub fn write_str(self: MapWriter, val: []const u8) !void {
-                return self.write(wrapStr(val));
-            }
-
-            pub fn write_ext(self: MapWriter, val: msgpack.EXT) !void {
-                return self.write(val);
-            }
-
-            pub fn flush(self: MapWriter) !void {
-                try self.writer.flush();
+                try self.client.flushWrite();
             }
         };
 
@@ -513,185 +397,61 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
         }
 
         pub const Reader = struct {
-            s: Self,
+            client: Self,
 
             fn init(c: Self) Reader {
                 return Reader{
-                    .s = c,
+                    .client = c,
                 };
             }
 
-            pub fn subArrayReader(self: Reader) !ArrayReader {
-                return self.s.get_array_reader();
-            }
-
-            pub fn subMapReader(self: Reader) !MapReader {
-                return self.s.get_map_reader();
-            }
-
             pub fn read(self: Reader, comptime T: type, allocator: Allocator) !msgpack.read_type_help(T) {
-                return self.s.pack.read(T, allocator);
+                return self.client.pack.read(T, allocator);
             }
 
             pub fn read_no_alloc(self: Reader, comptime T: type) !msgpack.read_type_help_no_alloc(T) {
-                return self.s.pack.readNoAlloc(T);
+                return self.client.pack.readNoAlloc(T);
             }
 
             pub fn read_bool(self: Reader) !bool {
-                return self.s.pack.read_bool();
+                return self.read_no_alloc(bool);
             }
 
             pub fn read_int(self: Reader) !i64 {
-                return try self.s.pack.read_i64();
+                return self.read_no_alloc(i64);
             }
 
             pub fn read_uint(self: Reader) !u64 {
-                return self.s.pack.read_u64();
+                return self.read_no_alloc(u64);
             }
 
             pub fn read_float(self: Reader) !f64 {
-                return self.s.pack.read_float();
+                return self.read_no_alloc(f64);
             }
 
             /// read str
             pub fn read_str(self: Reader, allocator: Allocator) ![]const u8 {
-                const str = try self.s.pack.read_str(allocator);
+                const str: msgpack.Str = try self.read(msgpack.Str, allocator);
                 return str.value();
             }
 
+            pub fn read_array_len(self: Reader) !u32 {
+                const array_reader = try self.client.pack.getArrayReader();
+                return array_reader.len;
+            }
+
+            pub fn read_map_len(self: Reader) !u32 {
+                const map_reader = try self.client.pack.getMapReader();
+                return map_reader.len;
+            }
+
             pub fn read_ext(self: Reader, allocator: Allocator) !msgpack.EXT {
-                const ext = try self.s.pack.read_ext(allocator);
+                const ext: msgpack.EXT = try self.read(msgpack.EXT, allocator);
                 return ext;
             }
 
             pub fn skip(self: Reader) !void {
-                return self.s.pack.skip();
-            }
-        };
-
-        fn get_array_reader(self: Self) !ArrayReader {
-            const reader = self.get_reader();
-            return ArrayReader.init(reader);
-        }
-
-        pub const ArrayReader = struct {
-            reader: Reader,
-            len: u32,
-
-            fn init(reader: Reader) !ArrayReader {
-                const array_reader = try reader.s.pack.getArrayReader();
-                return ArrayReader{
-                    .reader = reader,
-                    .len = array_reader.len,
-                };
-            }
-
-            pub fn subArrayReader(self: ArrayReader) !ArrayReader {
-                return self.reader.subArrayReader();
-            }
-
-            pub fn subMapReader(self: ArrayReader) !MapReader {
-                return self.reader.subMapReader();
-            }
-
-            pub fn read_element(self: ArrayReader, comptime T: type, allocator: Allocator) !msgpack.read_type_help(T) {
-                return self.reader.read(T, allocator);
-            }
-
-            pub fn read_element_no_alloc(self: ArrayReader, comptime T: type) !msgpack.read_type_help_no_alloc(T) {
-                return self.reader.read_no_alloc(T);
-            }
-
-            pub fn read_bool(self: ArrayReader) !bool {
-                return self.reader.read_bool();
-            }
-
-            pub fn read_int(self: ArrayReader) !i64 {
-                return self.reader.read_int();
-            }
-
-            pub fn read_uint(self: ArrayReader) !u64 {
-                return self.reader.read_uint();
-            }
-
-            pub fn read_float(self: ArrayReader) !f64 {
-                return self.reader.read_float();
-            }
-
-            pub fn read_str(self: ArrayReader, allocator: Allocator) ![]const u8 {
-                return self.reader.read_str(allocator);
-            }
-
-            pub fn read_ext(self: ArrayReader, allocator: Allocator) !msgpack.EXT {
-                const ext = try self.reader.read_ext(allocator);
-                return ext;
-            }
-
-            pub fn skip(self: ArrayReader) !void {
-                return self.reader.skip();
-            }
-        };
-
-        fn get_map_reader(self: Self) !MapReader {
-            const reader = self.get_reader();
-            return MapReader.init(reader);
-        }
-
-        pub const MapReader = struct {
-            reader: Reader,
-            len: u32,
-
-            fn init(reader: Reader) !MapReader {
-                const map_reader = try reader.s.pack.getMapReader();
-                return MapReader{
-                    .reader = reader,
-                    .len = map_reader.len,
-                };
-            }
-
-            pub fn subArrayReader(self: MapReader) !ArrayReader {
-                return self.reader.subArrayReader();
-            }
-
-            pub fn subMapReader(self: MapReader) !MapReader {
-                return self.reader.subMapReader();
-            }
-
-            pub fn read(self: MapReader, comptime T: type, allocator: Allocator) !msgpack.read_type_help(T) {
-                return self.reader.read(T, allocator);
-            }
-
-            pub fn read_no_alloc(self: MapReader, comptime T: type) !msgpack.read_type_help_no_alloc(T) {
-                return self.reader.read_no_alloc(T);
-            }
-
-            pub fn read_bool(self: MapReader) !bool {
-                return self.reader.read_bool();
-            }
-
-            pub fn read_int(self: MapReader) !i64 {
-                return self.reader.read_int();
-            }
-
-            pub fn read_uint(self: MapReader) !u64 {
-                return self.reader.read_uint();
-            }
-
-            pub fn read_float(self: MapReader) !f64 {
-                return self.reader.read_float();
-            }
-
-            pub fn read_str(self: MapReader, allocator: Allocator) ![]const u8 {
-                return self.reader.read_str(allocator);
-            }
-
-            pub fn read_ext(self: MapReader, allocator: Allocator) !msgpack.EXT {
-                const ext = try self.reader.read_ext(allocator);
-                return ext;
-            }
-
-            pub fn skip(self: MapReader) !void {
-                return self.reader.skip();
+                return self.client.pack.skip();
             }
         };
     };
