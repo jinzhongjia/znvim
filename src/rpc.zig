@@ -343,12 +343,10 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
         }
 
         pub const Reader = struct {
-            pack: streamPack,
             s: Self,
 
             fn init(c: Self) Reader {
                 return Reader{
-                    .pack = c.pack,
                     .s = c,
                 };
             }
@@ -362,42 +360,42 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
             }
 
             pub fn read(self: Reader, comptime T: type, allocator: Allocator) !msgpack.read_type_help(T) {
-                return self.pack.read(T, allocator);
+                return self.s.pack.read(T, allocator);
             }
 
             pub fn read_no_alloc(self: Reader, comptime T: type) !msgpack.read_type_help_no_alloc(T) {
-                return self.pack.readNoAlloc(T);
+                return self.s.pack.readNoAlloc(T);
             }
 
             pub fn read_bool(self: Reader) !bool {
-                return self.pack.read_bool();
+                return self.s.pack.read_bool();
             }
 
             pub fn read_int(self: Reader) !i64 {
-                return try self.pack.read_i64();
+                return try self.s.pack.read_i64();
             }
 
             pub fn read_uint(self: Reader) !u64 {
-                return self.pack.read_u64();
+                return self.s.pack.read_u64();
             }
 
             pub fn read_float(self: Reader) !f64 {
-                return self.pack.read_float();
+                return self.s.pack.read_float();
             }
 
             /// read str
             pub fn read_str(self: Reader, allocator: Allocator) ![]const u8 {
-                const str = try self.pack.read_str(allocator);
+                const str = try self.s.pack.read_str(allocator);
                 return str.value();
             }
 
             pub fn read_ext(self: Reader, allocator: Allocator) !msgpack.EXT {
-                const ext = try self.pack.read_ext(allocator);
+                const ext = try self.s.pack.read_ext(allocator);
                 return ext;
             }
 
             pub fn skip(self: Reader) !void {
-                return self.pack.skip();
+                return self.s.pack.skip();
             }
         };
 
@@ -408,13 +406,13 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
 
         pub const ArrayReader = struct {
             reader: Reader,
-            array_reader: streamPack.ArrayReader,
+            len: u32,
 
             fn init(reader: Reader) !ArrayReader {
-                const array_reader = try reader.pack.getArrayReader();
+                const array_reader = try reader.s.pack.getArrayReader();
                 return ArrayReader{
                     .reader = reader,
-                    .array_reader = array_reader,
+                    .len = array_reader.len,
                 };
             }
 
@@ -424,11 +422,6 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
 
             pub fn subMapReader(self: ArrayReader) !MapReader {
                 return self.reader.subMapReader();
-            }
-
-            // get array length
-            pub fn len(self: ArrayReader) u32 {
-                return self.array_reader.len;
             }
 
             pub fn read_element(self: ArrayReader, comptime T: type, allocator: Allocator) !msgpack.read_type_help(T) {
@@ -476,13 +469,13 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
 
         pub const MapReader = struct {
             reader: Reader,
-            map_reader: streamPack.MapReader,
+            len: u32,
 
             fn init(reader: Reader) !MapReader {
-                const map_reader = try reader.pack.getMapReader();
+                const map_reader = try reader.s.pack.getMapReader();
                 return MapReader{
                     .reader = reader,
-                    .map_reader = map_reader,
+                    .len = map_reader.len,
                 };
             }
 
@@ -492,11 +485,6 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
 
             pub fn subMapReader(self: MapReader) !MapReader {
                 return self.reader.subMapReader();
-            }
-
-            // get map length
-            pub fn len(self: MapReader) u32 {
-                return self.map_reader.len;
             }
 
             pub fn read(self: MapReader, comptime T: type, allocator: Allocator) !msgpack.read_type_help(T) {
