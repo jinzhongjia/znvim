@@ -131,6 +131,36 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
             return self.read(?errorT, allocator);
         }
 
+        fn send_request(self: Self, method: []const u8, params: anytype) !u32 {
+            const id_ptr = self.id_ptr;
+            const msgid = id_ptr.*;
+            const paramsT = @TypeOf(params);
+            const params_type_info = @typeInfo(paramsT);
+            if (params_type_info != .Struct or !params_type_info.Struct.is_tuple) {
+                @compileError("params must be tuple type!");
+            }
+            try self.pack.write(.{
+                @intFromEnum(MessageType.Request),
+                msgid,
+                wrapStr(method),
+                params,
+            });
+            id_ptr.* += 1;
+            return msgid;
+        }
+
+        /// this function is used to sendd result
+        fn send_result(self: Self, id: u32, err: anytype, result: anytype) !void {
+            try self.pack.write(.{
+                @intFromEnum(MessageType.Response),
+                id,
+                err,
+                result,
+            });
+        }
+
+        // TODO: add send_notification support
+
         /// this function will handle request
         fn handleRequest(self: Self, id: u32, method_name: []const u8, allocator: Allocator) !void {
             inline for (decls) |decl| {
@@ -208,43 +238,18 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
             }
         }
 
-        /// this function is used to sendd result
-        fn send_result(self: Self, id: u32, err: anytype, result: anytype) !void {
-            try self.pack.write(.{
-                @intFromEnum(MessageType.Response),
-                id,
-                err,
-                result,
-            });
-        }
-
-        fn send_request(self: Self, method: []const u8, params: anytype) !u32 {
-            const id_ptr = self.id_ptr;
-            const msgid = id_ptr.*;
-            const paramsT = @TypeOf(params);
-            const params_type_info = @typeInfo(paramsT);
-            if (params_type_info != .Struct or !params_type_info.Struct.is_tuple) {
-                @compileError("params must be tuple type!");
-            }
-            try self.pack.write(.{ @intFromEnum(MessageType.Request), msgid, wrapStr(method), params });
-            id_ptr.* += 1;
-            return msgid;
-        }
-
         /// flush write
         pub fn flushWrite(self: Self) !void {
             try self.pack.writeContext.flush();
         }
 
-        fn call_handle(
+        fn call_res_header_handle(
             self: Self,
             method: []const u8,
-            params: anytype,
+            send_id: u32,
             errorType: type,
             allocator: Allocator,
         ) !void {
-            const send_id = try self.send_request(method, params);
-            try self.flushWrite();
             // This logic is to prevent a request from the server from being received when sending a request.
             while (true) {
                 const t = try self.read_type();
@@ -297,7 +302,14 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
             resultType: type,
             allocator: Allocator,
         ) !resultType {
-            try self.call_handle(method, params, errorType, allocator);
+            const send_id = try self.send_request(method, params);
+            try self.flushWrite();
+            try self.call_res_header_handle(
+                method,
+                send_id,
+                errorType,
+                allocator,
+            );
 
             return self.read_result(allocator, resultType);
         }
@@ -311,7 +323,56 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
             errorType: type,
             allocator: Allocator,
         ) !Reader {
-            try self.call_handle(method, params, errorType, allocator);
+            const send_id = try self.send_request(method, params);
+            try self.flushWrite();
+            try self.call_res_header_handle(
+                method,
+                send_id,
+                errorType,
+                allocator,
+            );
+
+            return self.get_reader();
+        }
+
+        pub fn call_with_writer(self: Self, method: []const u8) !Writer {
+            const id_ptr = self.id_ptr;
+            const msgid = id_ptr.*;
+            const writer = self.get_writer(msgid, method);
+            try writer.write_array_header(4);
+            try writer.write_uint(@intFromEnum(MessageType.Request));
+            try writer.write_uint(msgid);
+            try writer.write_str(method);
+
+            return writer;
+        }
+
+        pub fn get_res_with_writer(
+            self: Self,
+            writer: Writer,
+            errorType: type,
+            resultType: type,
+            allocator: Allocator,
+        ) !resultType {
+            try self.flushWrite();
+            try self.call_res_header_handle(
+                writer.method,
+                writer.msg_id,
+                errorType,
+                allocator,
+            );
+
+            return self.read_result(allocator, resultType);
+        }
+
+        pub fn get_reader_with_reader(
+            self: Self,
+            writer: Writer,
+            errorType: type,
+            allocator: Allocator,
+        ) !Reader {
+            try self.flushWrite();
+            try self.call_res_header_handle(writer.method, writer.msg_id, errorType, allocator);
             return self.get_reader();
         }
 
@@ -338,16 +399,20 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
             }
         }
 
-        fn get_writer(self: Self) Writer {
-            return Writer.init(self);
+        fn get_writer(self: Self, msg_id: u32, method: []const u8) Writer {
+            return Writer.init(self, msg_id, method);
         }
 
         pub const Writer = struct {
             client: Self,
+            msg_id: u32,
+            method: []const u8,
 
-            fn init(c: Self) Writer {
+            fn init(c: Self, msg_id: u32, method: []const u8) Writer {
                 return Writer{
                     .client = c,
+                    .msg_id = msg_id,
+                    .method = method,
                 };
             }
 
@@ -385,10 +450,6 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
 
             pub fn write_ext(self: Writer, val: msgpack.EXT) !void {
                 return self.write(val);
-            }
-
-            pub fn flush(self: Writer) !void {
-                try self.client.flushWrite();
             }
         };
 
