@@ -338,6 +338,176 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
             }
         }
 
+        fn get_writer(self: Self) Writer {
+            return Writer.init(self);
+        }
+
+        pub const Writer = struct {
+            s: Self,
+
+            fn init(c: Self) Writer {
+                return Writer{
+                    .s = c,
+                };
+            }
+
+            pub fn subArrayWriter(self: Writer, len: u32) !ArrayWriter {
+                return self.s.get_array_writer(len);
+            }
+
+            pub fn subMapWriter(self: Writer, len: u32) !MapWriter {
+                return self.s.get_map_writer(len);
+            }
+
+            pub fn write(self: Writer, val: anytype) !void {
+                return self.s.pack.write(val);
+            }
+
+            pub fn write_bool(self: Writer, val: bool) !void {
+                return self.write(val);
+            }
+
+            pub fn write_int(self: Writer, val: i64) !void {
+                return self.write(val);
+            }
+
+            pub fn write_uint(self: Writer, val: u64) !void {
+                return self.write(val);
+            }
+
+            pub fn write_float(self: Writer, val: f64) !void {
+                return self.write(val);
+            }
+
+            pub fn write_str(self: Writer, val: []const u8) !void {
+                return self.write(wrapStr(val));
+            }
+
+            pub fn write_ext(self: Writer, val: msgpack.EXT) !void {
+                return self.write(val);
+            }
+
+            pub fn flush(self: Writer) !void {
+                try self.s.flushWrite();
+            }
+        };
+
+        fn get_array_writer(self: Self, len: u32) !ArrayWriter {
+            const writer = self.get_writer();
+            return ArrayWriter.init(writer, len);
+        }
+
+        pub const ArrayWriter = struct {
+            writer: Writer,
+            len: u32,
+
+            fn init(writer: Writer, len: u32) !ArrayWriter {
+                _ = try writer.s.pack.getArrayWriter(len);
+                return ArrayWriter{
+                    .writer = writer,
+                    .len = len,
+                };
+            }
+
+            pub fn subArrayWriter(self: ArrayWriter, len: u32) !ArrayWriter {
+                return self.writer.subArrayWriter(len);
+            }
+
+            pub fn subMapWriter(self: ArrayWriter, len: u32) !MapWriter {
+                return self.writer.subMapWriter(len);
+            }
+
+            pub fn write_element(self: ArrayWriter, val: anytype) !void {
+                return self.writer.write(val);
+            }
+
+            pub fn write_bool(self: ArrayWriter, val: bool) !void {
+                return self.write_element(val);
+            }
+
+            pub fn write_int(self: ArrayWriter, val: i64) !void {
+                return self.write_element(val);
+            }
+
+            pub fn write_uint(self: ArrayWriter, val: u64) !void {
+                return self.write_element(val);
+            }
+
+            pub fn write_float(self: ArrayWriter, val: f64) !void {
+                return self.write_element(val);
+            }
+
+            pub fn write_str(self: ArrayWriter, val: []const u8) !void {
+                return self.write_element(wrapStr(val));
+            }
+
+            pub fn write_ext(self: ArrayWriter, val: msgpack.EXT) !void {
+                return self.write_element(val);
+            }
+
+            pub fn flush(self: ArrayWriter) !void {
+                try self.writer.flush();
+            }
+        };
+
+        fn get_map_writer(self: Self, len: u32) !MapWriter {
+            const writer = self.get_writer();
+            return MapWriter.init(writer, len);
+        }
+
+        pub const MapWriter = struct {
+            writer: Writer,
+            len: u32,
+
+            fn init(writer: Writer, len: u32) !MapWriter {
+                _ = try writer.s.pack.getMapWriter(len);
+                return MapWriter{
+                    .writer = writer,
+                    .len = len,
+                };
+            }
+
+            pub fn subArrayWriter(self: MapWriter, len: u32) !ArrayWriter {
+                return self.writer.subArrayWriter(len);
+            }
+
+            pub fn subMapWriter(self:MapWriter,len:u32) !MapWriter {
+                return self.writer.subMapWriter(len);
+            }
+
+            pub fn write(self: MapWriter, val: anytype) !void {
+                return self.writer.write(val);
+            }
+
+            pub fn write_bool(self: MapWriter, val: bool) !void {
+                return self.write(val);
+            }
+
+            pub fn write_int(self: MapWriter, val: i64) !void {
+                return self.write(val);
+            }
+
+            pub fn write_uint(self: MapWriter, val: u64) !void {
+                return self.write(val);
+            }
+
+            pub fn write_float(self: MapWriter, val: f64) !void {
+                return self.write(val);
+            }
+
+            pub fn write_str(self: MapWriter, val: []const u8) !void {
+                return self.write(wrapStr(val));
+            }
+
+            pub fn write_ext(self: MapWriter, val: msgpack.EXT) !void {
+                return self.write(val);
+            }
+
+            pub fn flush(self: MapWriter) !void {
+                try self.writer.flush();
+            }
+        };
+
         fn get_reader(self: Self) Reader {
             return Reader.init(self);
         }
