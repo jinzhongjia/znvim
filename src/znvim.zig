@@ -112,11 +112,11 @@ fn get_api_return_type(comptime api: api_enum) type {
     return api_return_type_def;
 }
 
-pub fn DefaultClientType(pack_type: type) type {
+pub fn DefaultClientType(comptime pack_type: type) type {
     return Client(pack_type, 20480);
 }
 
-pub fn Client(pack_type: type, comptime buffer_size: usize) type {
+pub fn Client(comptime pack_type: type, comptime buffer_size: usize) type {
     const RpcClientType = rpc.CreateClient(pack_type, buffer_size);
     const Writer = RpcClientType.Writer;
     const Reader = RpcClientType.Reader;

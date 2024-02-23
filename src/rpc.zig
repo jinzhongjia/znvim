@@ -15,7 +15,7 @@ const MessageType = enum(u2) {
 
 const log = std.log.scoped(.znvim);
 
-pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
+pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type {
     const type_info = @typeInfo(pack_type);
     if (type_info != .Struct or type_info.Struct.is_tuple) {
         const err_msg = comptimePrint("pack_type ({}) must be a struct", .{});
@@ -86,7 +86,7 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
             self.allocator.destroy(self.id_ptr);
         }
 
-        fn read(self: Self, T: type, allocator: Allocator) !msgpack.read_type_help(T) {
+        fn read(self: Self, comptime T: type, allocator: Allocator) !msgpack.read_type_help(T) {
             return self.pack.read(T, allocator);
         }
 
@@ -115,19 +115,19 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
 
         /// this function will get the method params
         /// NOTE: the params's mem need to free
-        fn read_params(self: Self, allocator: Allocator, paramsT: type) !paramsT {
+        fn read_params(self: Self, allocator: Allocator, comptime paramsT: type) !paramsT {
             return self.pack.read_tuple(paramsT, allocator);
         }
 
         /// this function will get the method result
         /// NOTE: the result's mem need to free
-        fn read_result(self: Self, allocator: Allocator, resultT: type) !msgpack.read_type_help(resultT) {
+        fn read_result(self: Self, allocator: Allocator, comptime resultT: type) !msgpack.read_type_help(resultT) {
             return self.read(resultT, allocator);
         }
 
         /// this function will get the method error
         /// NOTE: the result's mem need to free
-        fn read_error(self: Self, allocator: Allocator, errorT: type) !msgpack.read_type_help(?errorT) {
+        fn read_error(self: Self, allocator: Allocator, comptime errorT: type) !msgpack.read_type_help(?errorT) {
             return self.read(?errorT, allocator);
         }
 
@@ -247,7 +247,7 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
             self: Self,
             method: []const u8,
             send_id: u32,
-            errorType: type,
+            comptime errorType: type,
             allocator: Allocator,
         ) !void {
             // This logic is to prevent a request from the server from being received when sending a request.
@@ -298,8 +298,8 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
             self: Self,
             method: []const u8,
             params: anytype,
-            errorType: type,
-            resultType: type,
+            comptime errorType: type,
+            comptime resultType: type,
             allocator: Allocator,
         ) !resultType {
             const send_id = try self.send_request(method, params);
@@ -320,7 +320,7 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
             self: Self,
             method: []const u8,
             params: anytype,
-            errorType: type,
+            comptime errorType: type,
             allocator: Allocator,
         ) !Reader {
             const send_id = try self.send_request(method, params);
@@ -350,8 +350,8 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
         pub fn get_result_with_writer(
             self: Self,
             writer: Writer,
-            errorType: type,
-            resultType: type,
+            comptime errorType: type,
+            comptime resultType: type,
             allocator: Allocator,
         ) !resultType {
             try self.flushWrite();
@@ -368,7 +368,7 @@ pub fn CreateClient(pack_type: type, comptime buffer_size: usize) type {
         pub fn get_reader_with_writer(
             self: Self,
             writer: Writer,
-            errorType: type,
+            comptime errorType: type,
             allocator: Allocator,
         ) !Reader {
             try self.flushWrite();
@@ -547,7 +547,7 @@ pub fn fnParamsToTuple(comptime params: []const std.builtin.Type.Fn.Param) type 
 }
 
 /// make res tuple type
-fn makeResTupleT(errorType: type, resType: type) type {
+fn makeResTupleT(comptime errorType: type, comptime resType: type) type {
     return @Type(std.builtin.Type{
         .Struct = .{
             .layout = .Auto,

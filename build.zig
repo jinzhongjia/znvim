@@ -1,54 +1,23 @@
 const std = @import("std");
-const Build = std.Build;
-const ResolvedTarget = Build.ResolvedTarget;
-const OptimizeMode = std.builtin.OptimizeMode;
-const Module = Build.Module;
+const builtin = @import("builtin");
 
-pub fn build(b: *Build) void {
-    const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
+const min_zig_string = "0.11.0";
 
-    // get msgpack
-    const msgpack = b.dependency("zig-msgpack", .{});
+const current_zig = builtin.zig_version;
 
-    // create module
-    const znvim = b.addModule("znvim", .{
-        .root_source_file = .{
-            .path = "src/znvim.zig",
-        },
-        .imports = &.{
-            .{
-                .name = "msgpack",
-                .module = msgpack.module("msgpack"),
-            },
-        },
-    });
-
-    // create exe
-    // for test
-    create_exe(b, target, optimize, znvim);
-}
-
-fn create_exe(b: *Build, target: ResolvedTarget, optimize: OptimizeMode, znvim: *Module) void {
-    const exe = b.addExecutable(.{
-        .name = "znvim",
-        .root_source_file = .{ .path = "src/main.zig" },
-        .target = target,
-        .optimize = optimize,
-    });
-
-    exe.root_module.addImport("znvim", znvim);
-
-    b.installArtifact(exe);
-
-    const run_cmd = b.addRunArtifact(exe);
-
-    run_cmd.step.dependOn(b.getInstallStep());
-
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
+comptime {
+    const min_zig = std.SemanticVersion.parse(min_zig_string) catch unreachable;
+    if (current_zig.order(min_zig) == .lt) {
+        const err_msg = std.fmt.comptimePrint(
+            "Your Zig version v{} does not meet the minimum build requirement of v{}",
+            .{ current_zig, min_zig },
+        );
+        @compileError(err_msg);
     }
-
-    const run_step = b.step("run", "Run the app");
-    run_step.dependOn(&run_cmd.step);
 }
+
+pub const build =
+    if (current_zig.minor == 11)
+    @import("build_11.zig").build
+else
+    @import("build_12.zig").build;
