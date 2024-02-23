@@ -22,6 +22,8 @@ pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type 
         @compileError(err_msg);
     }
 
+    // TODO: addfunction to adjust file
+
     const struct_info = type_info.Struct;
     const decls = struct_info.decls;
 
