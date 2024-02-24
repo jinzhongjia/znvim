@@ -15,7 +15,18 @@ const MessageType = enum(u2) {
 
 const log = std.log.scoped(.znvim);
 
-pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type {
+pub const ClientEnum = enum {
+    /// this is for stdio or named pipr
+    file,
+    /// this is for tcp or unix socket
+    socket,
+};
+
+pub fn CreateClient(
+    comptime pack_type: type,
+    comptime buffer_size: usize,
+    comptime client_tag: ClientEnum,
+) type {
     const type_info = @typeInfo(pack_type);
     if (type_info != .Struct or type_info.Struct.is_tuple) {
         const err_msg = comptimePrint("pack_type ({}) must be a struct", .{});
@@ -27,23 +38,33 @@ pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type 
     const struct_info = type_info.Struct;
     const decls = struct_info.decls;
 
-    const BufferedWriter = std.io.BufferedWriter(buffer_size, net.Stream.Writer);
-    const BufferedReader = std.io.BufferedReader(buffer_size, net.Stream.Reader);
-
-    const streamPack = msgpack.Pack(
-        *BufferedWriter,
-        *BufferedReader,
-        BufferedWriter.Error,
-        BufferedReader.Error,
-        BufferedWriter.write,
-        BufferedReader.read,
-    );
-
     return struct {
         const Self = @This();
+        pub const payloadType: type = switch (client_tag) {
+            .file => std.fs.File,
+            .socket => net.Stream,
+        };
+
+        const BufferedWriter = std.io.BufferedWriter(
+            buffer_size,
+            payloadType.Writer,
+        );
+        const BufferedReader = std.io.BufferedReader(
+            buffer_size,
+            payloadType.Reader,
+        );
+
+        const payloadPack = msgpack.Pack(
+            *BufferedWriter,
+            *BufferedReader,
+            BufferedWriter.Error,
+            BufferedReader.Error,
+            BufferedWriter.write,
+            BufferedReader.read,
+        );
 
         id_ptr: *u32,
-        pack: streamPack,
+        payload: payloadPack,
 
         /// just store ptr
         writer_ptr: *BufferedWriter,
@@ -52,7 +73,11 @@ pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type 
         allocator: Allocator,
 
         // allocator will create a buffered writer and a buffered reader
-        pub fn init(stream: net.Stream, allocator: Allocator) !Self {
+        pub fn init(
+            payload_writer: payloadType,
+            payload_reader: payloadType,
+            allocator: Allocator,
+        ) !Self {
             const writer_ptr = try allocator.create(BufferedWriter);
             const reader_ptr = try allocator.create(BufferedReader);
             const id_ptr = try allocator.create(u32);
@@ -60,19 +85,19 @@ pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type 
             writer_ptr.* = .{
                 .buf = undefined,
                 .end = 0,
-                .unbuffered_writer = stream.writer(),
+                .unbuffered_writer = payload_writer.writer(),
             };
 
             reader_ptr.* = .{
                 .buf = undefined,
                 .start = 0,
                 .end = 0,
-                .unbuffered_reader = stream.reader(),
+                .unbuffered_reader = payload_reader.reader(),
             };
 
             return Self{
                 .id_ptr = id_ptr,
-                .pack = streamPack.init(
+                .payload = payloadPack.init(
                     writer_ptr,
                     reader_ptr,
                 ),
@@ -88,48 +113,64 @@ pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type 
             self.allocator.destroy(self.id_ptr);
         }
 
-        fn read(self: Self, comptime T: type, allocator: Allocator) !msgpack.read_type_help(T) {
-            return self.pack.read(T, allocator);
+        fn read(
+            self: Self,
+            comptime T: type,
+            allocator: Allocator,
+        ) !msgpack.read_type_help(T) {
+            return self.payload.read(T, allocator);
         }
 
         /// this function will get the type of message
         fn read_type(self: Self) !MessageType {
-            const marker_u8 = try self.pack.read_type_marker_u8();
+            const marker_u8 = try self.payload.read_type_marker_u8();
             if (marker_u8 != 0b10010100 and marker_u8 != 0b10010011) {
                 return error.marker_error;
             }
 
-            const type_id = try self.pack.read_u8();
+            const type_id = try self.payload.read_u8();
             return @enumFromInt(type_id);
         }
 
         /// this function will get the msgid
         fn read_msgid(self: Self) !u32 {
-            return self.pack.read_u32();
+            return self.payload.read_u32();
         }
 
         /// this function will get the method name
         /// NOTE: the str's mem need to free
         fn read_method(self: Self, allocator: Allocator) ![]const u8 {
-            const str = try self.pack.read_str(allocator);
+            const str = try self.payload.read_str(allocator);
             return str.value();
         }
 
         /// this function will get the method params
         /// NOTE: the params's mem need to free
-        fn read_params(self: Self, allocator: Allocator, comptime paramsT: type) !paramsT {
-            return self.pack.read_tuple(paramsT, allocator);
+        fn read_params(
+            self: Self,
+            allocator: Allocator,
+            comptime paramsT: type,
+        ) !paramsT {
+            return self.payload.read_tuple(paramsT, allocator);
         }
 
         /// this function will get the method result
         /// NOTE: the result's mem need to free
-        fn read_result(self: Self, allocator: Allocator, comptime resultT: type) !msgpack.read_type_help(resultT) {
+        fn read_result(
+            self: Self,
+            allocator: Allocator,
+            comptime resultT: type,
+        ) !msgpack.read_type_help(resultT) {
             return self.read(resultT, allocator);
         }
 
         /// this function will get the method error
         /// NOTE: the result's mem need to free
-        fn read_error(self: Self, allocator: Allocator, comptime errorT: type) !msgpack.read_type_help(?errorT) {
+        fn read_error(
+            self: Self,
+            allocator: Allocator,
+            comptime errorT: type,
+        ) !msgpack.read_type_help(?errorT) {
             return self.read(?errorT, allocator);
         }
 
@@ -138,10 +179,11 @@ pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type 
             const msgid = id_ptr.*;
             const paramsT = @TypeOf(params);
             const params_type_info = @typeInfo(paramsT);
-            if (params_type_info != .Struct or !params_type_info.Struct.is_tuple) {
+            if (params_type_info != .Struct or
+                !params_type_info.Struct.is_tuple)
                 @compileError("params must be tuple type!");
-            }
-            try self.pack.write(.{
+
+            try self.payload.write(.{
                 @intFromEnum(MessageType.Request),
                 msgid,
                 wrapStr(method),
@@ -153,7 +195,7 @@ pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type 
 
         /// this function is used to sendd result
         fn send_result(self: Self, id: u32, err: anytype, result: anytype) !void {
-            try self.pack.write(.{
+            try self.payload.write(.{
                 @intFromEnum(MessageType.Response),
                 id,
                 err,
@@ -164,41 +206,47 @@ pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type 
         // TODO: add send_notification support
 
         /// this function will handle request
-        fn handleRequest(self: Self, id: u32, method_name: []const u8, allocator: Allocator) !void {
+        fn handleRequest(
+            self: Self,
+            id: u32,
+            method_name: []const u8,
+            allocator: Allocator,
+        ) !void {
             inline for (decls) |decl| {
                 const decl_name = decl.name;
-                if (decl_name.len == method_name.len and std.mem.eql(u8, method_name, decl_name)) {
-                    // This branch represents existing method
+                if (decl_name.len != method_name.len or
+                    !std.mem.eql(u8, method_name, decl_name))
+                    continue;
 
-                    // get the method
-                    const method = @field(pack_type, decl_name);
-                    const fn_type = @TypeOf(method);
-                    const fn_type_info = @typeInfo(fn_type).Fn;
-                    const param_tuple_type = fnParamsToTuple(fn_type_info.params);
+                // This branch represents existing method
+                // get the method
+                const method = @field(pack_type, decl_name);
+                const fn_type = @TypeOf(method);
+                const fn_type_info = @typeInfo(fn_type).Fn;
+                const param_tuple_type = fnParamsToTuple(fn_type_info.params);
 
-                    var arena = std.heap.ArenaAllocator.init(allocator);
-                    defer arena.deinit();
-                    const arena_allocator = arena.allocator();
-                    const param = try self.read_params(arena_allocator, param_tuple_type);
+                var arena = std.heap.ArenaAllocator.init(allocator);
+                defer arena.deinit();
+                const arena_allocator = arena.allocator();
+                const param = try self.read_params(arena_allocator, param_tuple_type);
 
-                    const return_type_info = @typeInfo(fn_type_info.return_type);
-                    // when return type is errorunion
-                    if (return_type_info == .ErrorUnion) {
-                        if (@call(.auto, method, param)) |result| {
-                            try self.send_result(id, void{}, result);
-                        } else |err| {
-                            log.err("call ({s}) failed, err is {}", .{ method_name, err });
-                            try self.send_result(id, .{@errorName(err)}, void{});
-                        }
-                    }
-                    // when return type is not errorunion
-                    else {
-                        const result = @call(.auto, method, param);
+                const return_type_info = @typeInfo(fn_type_info.return_type);
+                // when return type is errorunion
+                if (return_type_info == .ErrorUnion) {
+                    if (@call(.auto, method, param)) |result| {
                         try self.send_result(id, void{}, result);
+                    } else |err| {
+                        log.err("call ({s}) failed, err is {}", .{ method_name, err });
+                        try self.send_result(id, .{@errorName(err)}, void{});
                     }
-
-                    return;
                 }
+                // when return type is not errorunion
+                else {
+                    const result = @call(.auto, method, param);
+                    try self.send_result(id, void{}, result);
+                }
+
+                return;
             }
 
             // this represents not existing method
@@ -206,43 +254,51 @@ pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type 
         }
 
         /// this function handle notification
-        fn handleNotification(self: Self, method_name: []const u8, allocator: Allocator) !void {
+        fn handleNotification(
+            self: Self,
+            method_name: []const u8,
+            allocator: Allocator,
+        ) !void {
             inline for (decls) |decl| {
                 const decl_name = decl.name;
-                if (decl_name.len == method_name.len and std.mem.eql(u8, method_name, decl_name)) {
-                    // This branch represents existing method
+                if (decl_name.len != method_name.len or
+                    !std.mem.eql(u8, method_name, decl_name))
+                    continue;
+                // This branch represents existing method
 
-                    // get the method
-                    const method = @field(pack_type, decl_name);
-                    const fn_type = @TypeOf(method);
-                    const fn_type_info = @typeInfo(fn_type).Fn;
-                    const param_tuple_type = fnParamsToTuple(fn_type_info.params);
+                // get the method
+                const method = @field(pack_type, decl_name);
+                const fn_type = @TypeOf(method);
+                const fn_type_info = @typeInfo(fn_type).Fn;
+                const param_tuple_type = fnParamsToTuple(fn_type_info.params);
 
-                    var arena = std.heap.ArenaAllocator.init(allocator);
-                    defer arena.deinit();
-                    const arena_allocator = arena.allocator();
-                    const param = try self.read_params(arena_allocator, param_tuple_type);
+                var arena = std.heap.ArenaAllocator.init(allocator);
+                defer arena.deinit();
+                const arena_allocator = arena.allocator();
+                const param = try self.read_params(arena_allocator, param_tuple_type);
 
-                    const return_type_info = @typeInfo(fn_type_info.return_type);
-                    // when return type is errorunion
-                    if (return_type_info == .ErrorUnion) {
-                        _ = @call(.auto, method, param) catch |err| {
-                            log.err("notification ({s}) failed, err is {}", .{ method_name, err });
-                        };
-                    }
-                    // when return type is not errorunion
-                    else {
-                        _ = @call(.auto, method, param);
-                    }
-
-                    return;
+                const return_type_info = @typeInfo(fn_type_info.return_type);
+                // when return type is errorunion
+                if (return_type_info == .ErrorUnion) {
+                    _ = @call(.auto, method, param) catch |err| {
+                        log.err(
+                            "notification ({s}) failed, err is {}",
+                            .{ method_name, err },
+                        );
+                    };
                 }
+                // when return type is not errorunion
+                else {
+                    _ = @call(.auto, method, param);
+                }
+
+                return;
             }
         }
 
         /// flush write
         pub fn flushWrite(self: Self) !void {
-            try self.pack.writeContext.flush();
+            try self.payload.writeContext.flush();
         }
 
         fn call_res_header_handle(
@@ -266,8 +322,11 @@ pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type 
                     .Response => {
                         const msgid = try self.read_msgid();
                         if (msgid != send_id) {
-                            log.err("send_id ({}) is not eql msgid ({})", .{ send_id, msgid });
-                            @panic("error");
+                            log.err(
+                                "send_id ({}) is not eql msgid ({})",
+                                .{ send_id, msgid },
+                            );
+                            @panic("get response error");
                         }
                         break;
                     },
@@ -290,7 +349,7 @@ pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type 
                     @intFromEnum(err_value[0]),
                     err_value[1].value(),
                 });
-                try self.pack.skip();
+                try self.payload.skip();
                 return error.MSGID_INVALID;
             }
         }
@@ -374,7 +433,12 @@ pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type 
             allocator: Allocator,
         ) !Reader {
             try self.flushWrite();
-            try self.call_res_header_handle(writer.method, writer.msg_id, errorType, allocator);
+            try self.call_res_header_handle(
+                writer.method,
+                writer.msg_id,
+                errorType,
+                allocator,
+            );
             return self.get_reader();
         }
 
@@ -390,8 +454,8 @@ pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type 
                 },
                 .Response => {
                     const msgid = try self.read_msgid();
-                    try self.pack.skip();
-                    try self.pack.skip();
+                    try self.payload.skip();
+                    try self.payload.skip();
                     log.err("Msgid {} is not be handled", .{msgid});
                 },
                 .Notification => {
@@ -419,7 +483,7 @@ pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type 
             }
 
             pub fn write(self: Writer, val: anytype) !void {
-                return self.client.pack.write(val);
+                return self.client.payload.write(val);
             }
 
             pub fn write_bool(self: Writer, val: bool) !void {
@@ -443,11 +507,11 @@ pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type 
             }
 
             pub fn write_array_header(self: Writer, len: u32) !void {
-                _ = try self.client.pack.getArrayWriter(len);
+                _ = try self.client.payload.getArrayWriter(len);
             }
 
             pub fn write_map_header(self: Writer, len: u32) !void {
-                _ = try self.client.pack.getMapWriter(len);
+                _ = try self.client.payload.getMapWriter(len);
             }
 
             pub fn write_ext(self: Writer, val: msgpack.EXT) !void {
@@ -468,12 +532,19 @@ pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type 
                 };
             }
 
-            pub fn read(self: Reader, comptime T: type, allocator: Allocator) !msgpack.read_type_help(T) {
-                return self.client.pack.read(T, allocator);
+            pub fn read(
+                self: Reader,
+                comptime T: type,
+                allocator: Allocator,
+            ) !msgpack.read_type_help(T) {
+                return self.client.payload.read(T, allocator);
             }
 
-            pub fn read_no_alloc(self: Reader, comptime T: type) !msgpack.read_type_help_no_alloc(T) {
-                return self.client.pack.readNoAlloc(T);
+            pub fn read_no_alloc(
+                self: Reader,
+                comptime T: type,
+            ) !msgpack.read_type_help_no_alloc(T) {
+                return self.client.payload.readNoAlloc(T);
             }
 
             pub fn read_bool(self: Reader) !bool {
@@ -499,12 +570,12 @@ pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type 
             }
 
             pub fn read_array_len(self: Reader) !u32 {
-                const array_reader = try self.client.pack.getArrayReader();
+                const array_reader = try self.client.payload.getArrayReader();
                 return array_reader.len;
             }
 
             pub fn read_map_len(self: Reader) !u32 {
-                const map_reader = try self.client.pack.getMapReader();
+                const map_reader = try self.client.payload.getMapReader();
                 return map_reader.len;
             }
 
@@ -514,7 +585,7 @@ pub fn CreateClient(comptime pack_type: type, comptime buffer_size: usize) type 
             }
 
             pub fn skip(self: Reader) !void {
-                return self.client.pack.skip();
+                return self.client.payload.skip();
             }
         };
     };

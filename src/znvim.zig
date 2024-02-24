@@ -4,6 +4,7 @@ const msgpack = @import("msgpack");
 
 const rpc = @import("rpc.zig");
 const config = @import("config.zig");
+const named_pipe = @import("named_pipe.zig");
 pub const api_defs = @import("api_defs.zig");
 
 const net = std.net;
@@ -13,6 +14,10 @@ const MetaData = api_defs.nvim_get_api_info.MetaData;
 
 const comptimePrint = std.fmt.comptimePrint;
 pub const wrapStr = msgpack.wrapStr;
+
+pub const ClientEnum = rpc.ClientEnum;
+
+pub const connectNamedPipe = named_pipe.connectNamedPipe;
 
 const api_info = @typeInfo(api_defs).Struct;
 
@@ -112,12 +117,16 @@ fn get_api_return_type(comptime api: api_enum) type {
     return api_return_type_def;
 }
 
-pub fn DefaultClientType(comptime pack_type: type) type {
-    return Client(pack_type, 20480);
+pub fn DefaultClientType(comptime pack_type: type, comptime client_tag: ClientEnum) type {
+    return Client(pack_type, client_tag, 20480);
 }
 
-pub fn Client(comptime pack_type: type, comptime buffer_size: usize) type {
-    const RpcClientType = rpc.CreateClient(pack_type, buffer_size);
+pub fn Client(
+    comptime pack_type: type,
+    comptime client_tag: ClientEnum,
+    comptime buffer_size: usize,
+) type {
+    const RpcClientType = rpc.CreateClient(pack_type, buffer_size, client_tag);
     const Writer = RpcClientType.Writer;
     const Reader = RpcClientType.Reader;
     return struct {
@@ -127,12 +136,17 @@ pub fn Client(comptime pack_type: type, comptime buffer_size: usize) type {
         allocator: Allocator,
 
         const Self = @This();
+        pub const payloadType = RpcClientType.payloadType;
 
         pub const DynamicCall = RpcClientType.DynamicCall;
 
-        pub fn init(stream: net.Stream, allocator: Allocator) !Self {
+        pub fn init(
+            payload_writer: payloadType,
+            payload_reader: payloadType,
+            allocator: Allocator,
+        ) !Self {
             var self: Self = undefined;
-            self.rpc_client = try RpcClientType.init(stream, allocator);
+            self.rpc_client = try RpcClientType.init(payload_writer, payload_reader, allocator);
             self.allocator = allocator;
 
             const result = try self.call(.nvim_get_api_info, .{}, allocator);
@@ -149,21 +163,26 @@ pub fn Client(comptime pack_type: type, comptime buffer_size: usize) type {
 
         fn method_detect(self: Self, comptime method: api_enum) !void {
             const method_name = @tagName(method);
-            // This will verify whether the method is available in the current version in debug mode
-            if (comptime (builtin.mode == .Debug and !std.mem.eql(u8, method_name, "nvim_get_api_info"))) {
-                var if_find: bool = false;
-                for (self.metadata.functions) |function| {
-                    const function_name = function.name.value();
-                    if (method_name.len == function_name.len and std.mem.eql(u8, method_name, function_name)) {
-                        if_find = true;
-                        if (function.deprecated_since) |deprecated_since| {
-                            if (deprecated_since >= self.metadata.version.api_level) {
-                                std.log.warn("since is {}", .{deprecated_since});
-                                return CallErrorSet.APIDeprecated;
-                            }
+            // This will verify whether the method is available
+            // in the current version in debug mode
+            if (comptime (builtin.mode == .Debug and
+                !std.mem.eql(u8, method_name, "nvim_get_api_info")))
+            {
+                var if_find = false;
+                for (self.metadata.functions) |func| {
+                    const func_name = func.name.value();
+                    if (method_name.len != func_name.len or
+                        !std.mem.eql(u8, method_name, func_name))
+                        continue;
+
+                    if_find = true;
+                    if (func.deprecated_since) |deprecated_since| {
+                        if (deprecated_since >= self.metadata.version.api_level) {
+                            std.log.warn("since is {}", .{deprecated_since});
+                            return CallErrorSet.APIDeprecated;
                         }
-                        break;
                     }
+                    break;
                 }
 
                 if (!if_find) {
@@ -197,7 +216,12 @@ pub fn Client(comptime pack_type: type, comptime buffer_size: usize) type {
         ) !Reader {
             const method_name = @tagName(method);
             try self.method_detect(method);
-            return self.rpc_client.call_with_reader(method_name, params, error_types, allocator);
+            return self.rpc_client.call_with_reader(
+                method_name,
+                params,
+                error_types,
+                allocator,
+            );
         }
 
         pub fn call_with_writer(self: Self, comptime method: api_enum) !Writer {
@@ -235,55 +259,50 @@ pub fn Client(comptime pack_type: type, comptime buffer_size: usize) type {
         fn destory_metadata(self: Self) void {
             const allocator = self.allocator;
             const metadata = self.metadata;
+
             // free version
-            {
-                const version = metadata.version;
-                defer allocator.free(version.build.value());
-            }
+            const version = metadata.version;
+            defer allocator.free(version.build.value());
+
             // free functions
-            {
-                const functions = metadata.functions;
-                defer allocator.free(functions);
-                for (functions) |function| {
-                    defer allocator.free(function.return_type.value());
-                    defer allocator.free(function.parameters);
-                    for (function.parameters) |parameter| {
-                        for (parameter) |val| {
-                            allocator.free(val.value());
-                        }
+            const functions = metadata.functions;
+            defer allocator.free(functions);
+            for (functions) |function| {
+                allocator.free(function.return_type.value());
+                defer allocator.free(function.parameters);
+                for (function.parameters) |parameter| {
+                    for (parameter) |val| {
+                        allocator.free(val.value());
                     }
-                    defer allocator.free(function.name.value());
                 }
+                allocator.free(function.name.value());
             }
+
             // free ui_events
-            {
-                const ui_events = metadata.ui_events;
-                defer allocator.free(ui_events);
-                for (ui_events) |ui_event| {
-                    defer allocator.free(ui_event.name.value());
-                    defer allocator.free(ui_event.parameters);
-                    for (ui_event.parameters) |parameter| {
-                        for (parameter) |val| {
-                            allocator.free(val.value());
-                        }
+            const ui_events = metadata.ui_events;
+            defer allocator.free(ui_events);
+            for (ui_events) |ui_event| {
+                allocator.free(ui_event.name.value());
+                defer allocator.free(ui_event.parameters);
+                for (ui_event.parameters) |parameter| {
+                    for (parameter) |val| {
+                        allocator.free(val.value());
                     }
                 }
             }
+
             // free ui_options
-            {
-                const ui_options = metadata.ui_options;
-                defer allocator.free(ui_options);
-                for (ui_options) |val| {
-                    allocator.free(val.value());
-                }
+            const ui_options = metadata.ui_options;
+            defer allocator.free(ui_options);
+            for (ui_options) |val| {
+                allocator.free(val.value());
             }
+
             // free types
-            {
-                const types = metadata.types;
-                allocator.free(types.Buffer.prefix.value());
-                allocator.free(types.Window.prefix.value());
-                allocator.free(types.Tabpage.prefix.value());
-            }
+            const types = metadata.types;
+            allocator.free(types.Buffer.prefix.value());
+            allocator.free(types.Window.prefix.value());
+            allocator.free(types.Tabpage.prefix.value());
         }
     };
 }

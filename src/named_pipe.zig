@@ -18,7 +18,7 @@ extern "kernel32" fn WaitNamedPipeW(
 
 /// this function will try to connect named pipe on windows
 /// no need to free the mem
-pub fn connectNamedPipe(path: []const u8, allocator: std.mem.Allocator) windows.Win32Error!std.fs.File {
+pub fn connectNamedPipe(path: []const u8, allocator: std.mem.Allocator) !std.fs.File {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
     const arena_allocator = arena.allocator();
@@ -34,7 +34,7 @@ pub fn connectNamedPipe(path: []const u8, allocator: std.mem.Allocator) windows.
         null,
     );
     if (handle == windows.INVALID_HANDLE_VALUE) {
-        return windows.kernel32.GetLastError();
+        return windows.unexpectedError(windows.kernel32.GetLastError());
     }
 
     return std.fs.File{
