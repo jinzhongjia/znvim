@@ -1,18 +1,17 @@
 # znvim
 
-_znvim_ is a neovim remote rpc client implementation with [`zig`](https://ziglang.org/).
+_znvim_ is a [neovim remote rpc](https://neovim.io/doc/user/api.html#rpc-connecting) client implementation with [`zig`](https://ziglang.org/).
 
 > This package is under developing!
 
 ## Features
 
-- Implementation of multiple remote calling methods(now only support tcp connect)
-- Clean API
+- Implementation of multiple remote calling methods
+- Support `latest release` and `nightly`
 - Strict type checking
+- Support all neovim [channels](https://neovim.io/doc/user/channel.html#channel-intro)
 
 ## Getting Started
-
-**NOTE**: znvim now only supports zig `nightly`!
 
 1. Add to `build.zig.zon`
 
@@ -34,5 +33,4 @@ exe.root_module.addImport("znvim", znvim.module("znvim"));
 
 ## TODO
 
-- More api
-- More channels implementation, now only support tcp and unixsocket!
+- More complete static api binding
