@@ -26,6 +26,8 @@ pub fn main() !void {
     nvim.stdin_behavior = .Pipe;
     // set to use pipe
     nvim.stdout_behavior = .Pipe;
+    // set ignore
+    nvim.stderr_behavior = .Ignore;
 
     // try spwan
     try nvim.spawn();
