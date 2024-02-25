@@ -1,15 +1,13 @@
 const std = @import("std");
 const znvim = @import("znvim");
-const wrapStr = znvim.wrapStr;
-const net = std.net;
+
 const ChildProcess = std.ChildProcess;
+const wrapStr = znvim.wrapStr;
 
-const address = "127.0.0.1";
-const port = 9090;
+/// get znvim client_type
+const ClientType = znvim.DefaultClientType(struct {}, .file);
 
-const uid: u16 = 1000;
-const nvim_pid: u16 = 4076;
-const unique_number: u16 = 0;
+const args = [_][]const u8{ "nvim", "--embed" };
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -36,20 +34,14 @@ pub fn main() !void {
     const nvim_stdin = if (nvim.stdin) |val| val else @panic("not get nvim stdin!");
     const nvim_stdout = if (nvim.stdout) |val| val else @panic("not get nvim stdout!");
 
-    // const stream = try std.net.connectUnixSocket("/run/user/1000//nvim.2163.0");
-    // defer stream.close();
-
-    // const stream = try std.net.tcpConnectToAddress(try std.net.Address.parseIp4(address, port));
-    // defer stream.close();
-
-    // const file = try znvim.connectNamedPipe(named_pipe, allocator);
-
     const client = try ClientType.init(
         nvim_stdin,
         nvim_stdout,
         allocator,
+        true,
     );
     defer client.deinit();
+
     std.log.info(
         "channel id id {}, function'nums is {}",
         .{ client.channel_id, client.metadata.functions.len },
@@ -113,18 +105,3 @@ pub fn main() !void {
         },
     }
 }
-
-/// get znvim client_type
-const ClientType = znvim.DefaultClientType(struct {}, .file);
-
-const args = [_][]const u8{ "nvim", "--embed" };
-
-const unix_socket = std.fmt.comptimePrint(
-    "/run/user/{}//nvim.{}.{}",
-    .{ uid, nvim_pid, unique_number },
-);
-
-const named_pipe = std.fmt.comptimePrint(
-    "\\\\.\\pipe\\nvim.{}.{}",
-    .{ nvim_pid, unique_number },
-);

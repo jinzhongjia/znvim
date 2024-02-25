@@ -44,7 +44,7 @@ pub fn build(b: *Build) void {
 fn create_exe(b: *Build, target: CrossTarget, optimize: OptimizeMode, znvim: *Module) void {
     const exe = b.addExecutable(.{
         .name = "znvim",
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = .{ .path = "examples/main.zig" },
         .target = target,
         .optimize = optimize,
     });
