@@ -1,6 +1,6 @@
 const std = @import("std");
 const Build = std.Build;
-const CrossTarget  = std.zig.CrossTarget;
+const CrossTarget = std.zig.CrossTarget;
 const Module = Build.Module;
 const OptimizeMode = std.builtin.OptimizeMode;
 
@@ -24,6 +24,20 @@ pub fn build(b: *Build) void {
         },
     });
 
+    const unit_tests = b.addTest(.{
+        .root_source_file = .{ .path = "src/main.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+    unit_tests.addModule("znvim", znvim);
+
+    const run_unit_tests = b.addRunArtifact(unit_tests);
+    run_unit_tests.skip_foreign_checks = true;
+
+    const test_step = b.step("test", "Run unit tests");
+    test_step.dependOn(&run_unit_tests.step);
+
+    // create exe
     create_exe(b, target, optimize, znvim);
 }
 

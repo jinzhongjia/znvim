@@ -24,8 +24,20 @@ pub fn build(b: *Build) void {
         },
     });
 
+    const unit_tests = b.addTest(.{
+        .root_source_file = .{ .path = "test/test.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+    unit_tests.root_module.addImport("znvim", znvim);
+
+    const run_unit_tests = b.addRunArtifact(unit_tests);
+    run_unit_tests.skip_foreign_checks = true;
+
+    const test_step = b.step("test", "Run unit tests");
+    test_step.dependOn(&run_unit_tests.step);
+
     // create exe
-    // for test
     create_exe(b, target, optimize, znvim);
 }
 

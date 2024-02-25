@@ -128,9 +128,3 @@ const named_pipe = std.fmt.comptimePrint(
     "\\\\.\\pipe\\nvim.{}.{}",
     .{ nvim_pid, unique_number },
 );
-
-const remote = struct {
-    pub fn add(a: u16, b: u16) u16 {
-        return a + b;
-    }
-};
