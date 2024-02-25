@@ -5,11 +5,12 @@
 
 name: CI
 on:
-  push:
-    paths-ignore: ['**/*.md']
-  pull_request:
-    branches: [main]
-    paths-ignore: ['**/*.md']
+  # push:
+  #   paths-ignore: ['**/*.md']
+  # pull_request:
+  #   branches: [main]
+  #   paths-ignore: ['**/*.md']
+  workflow_call:
 
 jobs:
   linux:
