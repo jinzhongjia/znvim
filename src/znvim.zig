@@ -1,3 +1,4 @@
+//! This file is used to expose the api to the outside world and briefly package rpc
 const std = @import("std");
 const builtin = @import("builtin");
 const msgpack = @import("msgpack");
@@ -5,6 +6,8 @@ const msgpack = @import("msgpack");
 const rpc = @import("rpc.zig");
 const config = @import("config.zig");
 const named_pipe = @import("named_pipe.zig");
+
+/// api define
 pub const api_defs = @import("api_defs.zig");
 
 const net = std.net;
@@ -15,12 +18,15 @@ const MetaData = api_defs.nvim_get_api_info.MetaData;
 const EnumLiteral = @TypeOf(.EnumLiteral);
 
 const comptimePrint = std.fmt.comptimePrint;
+
+/// wrap str
 pub const wrapStr = msgpack.wrapStr;
-
+/// client enum
 pub const ClientEnum = rpc.ClientEnum;
-
+/// connect named pipe, only for windows
 pub const connectNamedPipe = named_pipe.connectNamedPipe;
 
+/// this is api infos
 const api_info = @typeInfo(api_defs).Struct;
 
 const CallErrorSet = error{
@@ -31,6 +37,7 @@ const CallErrorSet = error{
 /// Error types for neovim result
 pub const error_types = config.error_types;
 
+/// get all available api enum
 pub const api_enum: type = blk: {
     var fields: [api_info.decls.len]Type.EnumField = undefined;
 
@@ -49,6 +56,7 @@ pub const api_enum: type = blk: {
     });
 };
 
+/// get api type define
 inline fn get_api_type_def(comptime api: api_enum) type {
     const api_name = @tagName(api);
     for (api_info.decls) |decl| {
@@ -119,10 +127,15 @@ fn get_api_return_type(comptime api: api_enum) type {
     return api_return_type_def;
 }
 
+/// default client type, buffer size is 20480 bytes
 pub fn DefaultClientType(comptime pack_type: type, comptime client_tag: ClientEnum) type {
     return Client(pack_type, client_tag, 20480);
 }
 
+/// create a client type
+/// pack_type is the struct which contain methods
+/// client_tag is the client enum
+/// buffer_size is the size of buffer
 pub fn Client(
     comptime pack_type: type,
     comptime client_tag: ClientEnum,
@@ -132,16 +145,22 @@ pub fn Client(
     const Writer = RpcClientType.Writer;
     const Reader = RpcClientType.Reader;
     return struct {
+        /// rpc client instance
         rpc_client: RpcClientType,
+        /// channel id, when connect to neovim, it will assign client an id
         channel_id: u16,
+        /// the api infos
         metadata: MetaData,
         allocator: Allocator,
 
         const Self = @This();
+
+        /// the client payloadType
+        /// only can be `std.net.Stream` or std.fs.File
         pub const payloadType = RpcClientType.payloadType;
 
-        pub const DynamicCall = RpcClientType.DynamicCall;
-
+        /// init the client
+        /// After use, need to call deinit
         pub fn init(
             payload_writer: payloadType,
             payload_reader: payloadType,
@@ -166,11 +185,15 @@ pub fn Client(
             return self;
         }
 
+        /// cleanup the environment
         pub fn deinit(self: Self) void {
             self.rpc_client.deinit();
             self.destory_metadata();
         }
 
+        /// detect the method whether exist
+        /// this will use neovim's api info(MetaData)
+        /// Only useful under Debug
         fn method_detect(self: Self, comptime method: anytype) !void {
             const m_type = @TypeOf(method);
             const m_type_info = @typeInfo(m_type);
@@ -207,6 +230,7 @@ pub fn Client(
             }
         }
 
+        /// call method
         pub fn call(
             self: Self,
             comptime method: api_enum,
@@ -224,6 +248,7 @@ pub fn Client(
             );
         }
 
+        /// call method, will return a reader, you can use the reader to read response
         pub fn call_with_reader(
             self: Self,
             comptime method: api_enum,
@@ -240,12 +265,14 @@ pub fn Client(
             );
         }
 
+        /// call method, return a writer to write params
         pub fn call_with_writer(self: Self, comptime method: EnumLiteral) !Writer {
             const method_name = @tagName(method);
             try self.method_detect(method);
             return self.rpc_client.call_with_writer(method_name);
         }
 
+        /// get result through writer
         pub fn get_result_with_writer(
             self: Self,
             comptime method: api_enum,
@@ -261,6 +288,7 @@ pub fn Client(
             );
         }
 
+        /// get reader through writer,  you can use the reader to read response
         pub fn get_reader_with_writer(
             self: Self,
             writer: Writer,
@@ -270,10 +298,12 @@ pub fn Client(
         }
 
         /// event loop
+        /// please use for wrap this
         pub fn loop(self: Self, allocator: Allocator) !void {
             return self.rpc_client.loop(allocator);
         }
 
+        /// destory the metadata
         fn destory_metadata(self: Self) void {
             const allocator = self.allocator;
             const metadata = self.metadata;

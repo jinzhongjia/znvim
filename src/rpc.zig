@@ -16,7 +16,7 @@ const MessageType = enum(u2) {
 const log = std.log.scoped(.znvim);
 
 pub const ClientEnum = enum {
-    /// this is for stdio or named pipr
+    /// this is for stdio or named pipe
     file,
     /// this is for tcp or unix socket
     socket,
