@@ -16,6 +16,7 @@ test "basic embed connect" {
         nvim.stdin.?,
         nvim.stdout.?,
         allocator,
+        true,
     );
     defer client.deinit();
     _ = try nvim.kill();
@@ -28,6 +29,7 @@ test "call with reader" {
         nvim.stdin.?,
         nvim.stdout.?,
         allocator,
+        true,
     );
     defer client.deinit();
 
@@ -45,6 +47,7 @@ test "call" {
         nvim.stdin.?,
         nvim.stdout.?,
         allocator,
+        true,
     );
     defer client.deinit();
 
@@ -61,6 +64,7 @@ test "call with writer (get reader with writer)" {
         nvim.stdin.?,
         nvim.stdout.?,
         allocator,
+        true,
     );
     defer client.deinit();
 
@@ -81,6 +85,7 @@ test "call with writer (get result with writer)" {
         nvim.stdin.?,
         nvim.stdout.?,
         allocator,
+        true,
     );
     defer client.deinit();
 

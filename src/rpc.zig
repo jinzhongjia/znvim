@@ -72,11 +72,14 @@ pub fn CreateClient(
         reader_ptr: *BufferedReader,
         allocator: Allocator,
 
+        if_log: bool,
+
         // allocator will create a buffered writer and a buffered reader
         pub fn init(
             payload_writer: payloadType,
             payload_reader: payloadType,
             allocator: Allocator,
+            if_log: bool,
         ) !Self {
             const writer_ptr = try allocator.create(BufferedWriter);
             const reader_ptr = try allocator.create(BufferedReader);
@@ -104,6 +107,7 @@ pub fn CreateClient(
                 .writer_ptr = writer_ptr,
                 .reader_ptr = reader_ptr,
                 .allocator = allocator,
+                .if_log = if_log,
             };
         }
 
@@ -236,7 +240,8 @@ pub fn CreateClient(
                     if (@call(.auto, method, param)) |result| {
                         try self.send_result(id, void{}, result);
                     } else |err| {
-                        log.err("call ({s}) failed, err is {}", .{ method_name, err });
+                        if (self.if_log) log.err("call ({s}) failed, err is {}", .{ method_name, err });
+
                         try self.send_result(id, .{@errorName(err)}, void{});
                     }
                 }
@@ -281,10 +286,11 @@ pub fn CreateClient(
                 // when return type is errorunion
                 if (return_type_info == .ErrorUnion) {
                     _ = @call(.auto, method, param) catch |err| {
-                        log.err(
-                            "notification ({s}) failed, err is {}",
-                            .{ method_name, err },
-                        );
+                        if (self.if_log)
+                            log.err(
+                                "notification ({s}) failed, err is {}",
+                                .{ method_name, err },
+                            );
                     };
                 }
                 // when return type is not errorunion
@@ -322,10 +328,11 @@ pub fn CreateClient(
                     .Response => {
                         const msgid = try self.read_msgid();
                         if (msgid != send_id) {
-                            log.err(
-                                "send_id ({}) is not eql msgid ({})",
-                                .{ send_id, msgid },
-                            );
+                            if (self.if_log)
+                                log.err(
+                                    "send_id ({}) is not eql msgid ({})",
+                                    .{ send_id, msgid },
+                                );
                             @panic("get response error");
                         }
                         break;
@@ -344,11 +351,12 @@ pub fn CreateClient(
 
             const err = try self.read_error(arena_allocator, errorType);
             if (err) |err_value| {
-                log.err("request method ({s}) failed, error id is ({}), msg is ({s})", .{
-                    method,
-                    @intFromEnum(err_value[0]),
-                    err_value[1].value(),
-                });
+                if (self.if_log)
+                    log.err("request method ({s}) failed, error id is ({}), msg is ({s})", .{
+                        method,
+                        @intFromEnum(err_value[0]),
+                        err_value[1].value(),
+                    });
                 try self.payload.skip();
                 return error.MSGID_INVALID;
             }
@@ -456,7 +464,8 @@ pub fn CreateClient(
                     const msgid = try self.read_msgid();
                     try self.payload.skip();
                     try self.payload.skip();
-                    log.err("Msgid {} is not be handled", .{msgid});
+                    if (self.if_log)
+                        log.err("Msgid {} is not be handled", .{msgid});
                 },
                 .Notification => {
                     const method_name = try self.read_method(allocator);

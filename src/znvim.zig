@@ -146,9 +146,15 @@ pub fn Client(
             payload_writer: payloadType,
             payload_reader: payloadType,
             allocator: Allocator,
+            if_log: bool,
         ) !Self {
             var self: Self = undefined;
-            const rpc_client = try RpcClientType.init(payload_writer, payload_reader, allocator);
+            const rpc_client = try RpcClientType.init(
+                payload_writer,
+                payload_reader,
+                allocator,
+                if_log,
+            );
             errdefer rpc_client.deinit();
             self.rpc_client = rpc_client;
             self.allocator = allocator;
@@ -189,7 +195,6 @@ pub fn Client(
                     if_find = true;
                     if (func.deprecated_since) |deprecated_since| {
                         if (deprecated_since >= self.metadata.version.api_level) {
-                            std.log.warn("since is {}", .{deprecated_since});
                             return CallErrorSet.APIDeprecated;
                         }
                     }
