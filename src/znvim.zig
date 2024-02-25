@@ -12,6 +12,8 @@ const Type = std.builtin.Type;
 const Allocator = std.mem.Allocator;
 const MetaData = api_defs.nvim_get_api_info.MetaData;
 
+const EnumLiteral = @TypeOf(.EnumLiteral);
+
 const comptimePrint = std.fmt.comptimePrint;
 pub const wrapStr = msgpack.wrapStr;
 
@@ -233,7 +235,7 @@ pub fn Client(
             );
         }
 
-        pub fn call_with_writer(self: Self, comptime method: api_enum) !Writer {
+        pub fn call_with_writer(self: Self, comptime method: EnumLiteral) !Writer {
             const method_name = @tagName(method);
             try self.method_detect(method);
             return self.rpc_client.call_with_writer(method_name);
