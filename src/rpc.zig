@@ -273,7 +273,7 @@ pub fn CreateClient(
                             try self.send_result(id, void{}, result);
                         } else |err| {
                             if (self.if_log) log.err(
-                                "call ({s}) failed, err is {}",
+                                "handle request ({s}) failed, err is {}",
                                 .{ method_name, err },
                             );
 
@@ -283,7 +283,6 @@ pub fn CreateClient(
                     // when return type is not errorunion
                     else {
                         const result: return_type = @call(.auto, method, param);
-                        log.info("send result is {} ", .{result});
                         try self.send_result(id, void{}, result);
                     }
 
@@ -328,21 +327,27 @@ pub fn CreateClient(
                     else
                         void;
 
-                    const return_type_info = @typeInfo(return_type);
+                    if (return_type != void) {
+                        const return_type_info = @typeInfo(return_type);
 
-                    // when return type is errorunion
-                    if (return_type_info == .ErrorUnion) {
-                        _ = @call(.auto, method, param) catch |err| {
+                        // when return type is errorunion
+                        if (return_type_info == .ErrorUnion and return_type_info.ErrorUnion.payload == void) {
+                            @call(.auto, method, param) catch |err| {
+                                if (self.if_log)
+                                    log.err(
+                                        "notification method ({s}) failed, err is {}",
+                                        .{ method_name, err },
+                                    );
+                            };
+                        } else {
                             if (self.if_log)
-                                log.err(
-                                    "notification ({s}) failed, err is {}",
-                                    .{ method_name, err },
+                                log.warn(
+                                    "receive a notification, and the return type of this method ({s}) is not void or !void",
+                                    .{method_name},
                                 );
-                        };
-                    }
-                    // when return type is not errorunion
-                    else {
-                        _ = @call(.auto, method, param);
+                        }
+                    } else {
+                        @call(.auto, method, param);
                     }
 
                     return;
