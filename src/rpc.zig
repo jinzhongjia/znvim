@@ -232,40 +232,47 @@ pub fn CreateClient(
         ) !void {
             inline for (decls) |decl| {
                 const decl_name = decl.name;
-                if (decl_name.len != method_name.len or
-                    comptime !std.mem.eql(u8, method_name, decl_name))
-                    continue;
+                if (decl_name.len == method_name.len and
+                    std.mem.eql(u8, method_name, decl_name))
+                {
 
-                // This branch represents existing method
-                // get the method
-                const method = @field(pack_type, decl_name);
-                const fn_type = @TypeOf(method);
-                const fn_type_info = @typeInfo(fn_type).Fn;
-                const param_tuple_type = fnParamsToTuple(fn_type_info.params);
+                    // This branch represents existing method
+                    // get the method
+                    const method = @field(pack_type, decl_name);
+                    const fn_type = @TypeOf(method);
+                    const fn_type_info = @typeInfo(fn_type).Fn;
+                    const param_tuple_type = fnParamsToTuple(fn_type_info.params);
 
-                var arena = std.heap.ArenaAllocator.init(allocator);
-                defer arena.deinit();
-                const arena_allocator = arena.allocator();
-                const param = try self.read_params(arena_allocator, param_tuple_type);
+                    var arena = std.heap.ArenaAllocator.init(allocator);
+                    defer arena.deinit();
+                    const arena_allocator = arena.allocator();
+                    const param = try self.read_params(
+                        arena_allocator,
+                        param_tuple_type,
+                    );
 
-                const return_type_info = @typeInfo(fn_type_info.return_type);
-                // when return type is errorunion
-                if (return_type_info == .ErrorUnion) {
-                    if (@call(.auto, method, param)) |result| {
-                        try self.send_result(id, void{}, result);
-                    } else |err| {
-                        if (self.if_log) log.err("call ({s}) failed, err is {}", .{ method_name, err });
+                    const return_type_info = @typeInfo(fn_type_info.return_type);
+                    // when return type is errorunion
+                    if (return_type_info == .ErrorUnion) {
+                        if (@call(.auto, method, param)) |result| {
+                            try self.send_result(id, void{}, result);
+                        } else |err| {
+                            if (self.if_log) log.err(
+                                "call ({s}) failed, err is {}",
+                                .{ method_name, err },
+                            );
 
-                        try self.send_result(id, .{@errorName(err)}, void{});
+                            try self.send_result(id, .{@errorName(err)}, void{});
+                        }
                     }
-                }
-                // when return type is not errorunion
-                else {
-                    const result = @call(.auto, method, param);
-                    try self.send_result(id, void{}, result);
-                }
+                    // when return type is not errorunion
+                    else {
+                        const result = @call(.auto, method, param);
+                        try self.send_result(id, void{}, result);
+                    }
 
-                return;
+                    return;
+                }
             }
 
             // this represents not existing method
@@ -280,39 +287,43 @@ pub fn CreateClient(
         ) !void {
             inline for (decls) |decl| {
                 const decl_name = decl.name;
-                if (decl_name.len != method_name.len or
-                    comptime !std.mem.eql(u8, method_name, decl_name))
-                    continue;
-                // This branch represents existing method
+                if (decl_name.len == method_name.len and
+                    std.mem.eql(u8, method_name, decl_name))
+                {
+                    // This branch represents existing method
 
-                // get the method
-                const method = @field(pack_type, decl_name);
-                const fn_type = @TypeOf(method);
-                const fn_type_info = @typeInfo(fn_type).Fn;
-                const param_tuple_type = fnParamsToTuple(fn_type_info.params);
+                    // get the method
+                    const method = @field(pack_type, decl_name);
+                    const fn_type = @TypeOf(method);
+                    const fn_type_info = @typeInfo(fn_type).Fn;
+                    const param_tuple_type = fnParamsToTuple(fn_type_info.params);
 
-                var arena = std.heap.ArenaAllocator.init(allocator);
-                defer arena.deinit();
-                const arena_allocator = arena.allocator();
-                const param = try self.read_params(arena_allocator, param_tuple_type);
+                    var arena = std.heap.ArenaAllocator.init(allocator);
+                    defer arena.deinit();
+                    const arena_allocator = arena.allocator();
+                    const param = try self.read_params(
+                        arena_allocator,
+                        param_tuple_type,
+                    );
 
-                const return_type_info = @typeInfo(fn_type_info.return_type);
-                // when return type is errorunion
-                if (return_type_info == .ErrorUnion) {
-                    _ = @call(.auto, method, param) catch |err| {
-                        if (self.if_log)
-                            log.err(
-                                "notification ({s}) failed, err is {}",
-                                .{ method_name, err },
-                            );
-                    };
+                    const return_type_info = @typeInfo(fn_type_info.return_type);
+                    // when return type is errorunion
+                    if (return_type_info == .ErrorUnion) {
+                        _ = @call(.auto, method, param) catch |err| {
+                            if (self.if_log)
+                                log.err(
+                                    "notification ({s}) failed, err is {}",
+                                    .{ method_name, err },
+                                );
+                        };
+                    }
+                    // when return type is not errorunion
+                    else {
+                        _ = @call(.auto, method, param);
+                    }
+
+                    return;
                 }
-                // when return type is not errorunion
-                else {
-                    _ = @call(.auto, method, param);
-                }
-
-                return;
             }
         }
 
