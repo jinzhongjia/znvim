@@ -161,7 +161,14 @@ pub fn Client(
             self.destory_metadata();
         }
 
-        fn method_detect(self: Self, comptime method: api_enum) !void {
+        fn method_detect(self: Self, comptime method: anytype) !void {
+            const m_type = @TypeOf(method);
+            const m_type_info = @typeInfo(m_type);
+            if (m_type_info != .Enum and m_type_info != .EnumLiteral) {
+                const err_msg = comptimePrint("sorry, method ({}) must be enum or enumliteral", .{m_type});
+                @compileError(err_msg);
+            }
+
             const method_name = @tagName(method);
             // This will verify whether the method is available
             // in the current version in debug mode
@@ -226,6 +233,7 @@ pub fn Client(
 
         pub fn call_with_writer(self: Self, comptime method: api_enum) !Writer {
             const method_name = @tagName(method);
+            try self.method_detect(method);
             return self.rpc_client.call_with_writer(method_name);
         }
 
@@ -235,6 +243,7 @@ pub fn Client(
             writer: Writer,
             allocator: Allocator,
         ) !get_api_return_type(method) {
+            try self.method_detect(method);
             return self.rpc_client.get_result_with_writer(
                 writer,
                 error_types,
