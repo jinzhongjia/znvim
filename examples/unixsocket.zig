@@ -1,3 +1,5 @@
+//! This file demonstrates how to use unixsocket to connect neovim under the unix platform
+//! Neovim will listen to a unixsocket for communication by default when it is started on the unix platform.
 const std = @import("std");
 const znvim = @import("znvim");
 

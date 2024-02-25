@@ -1,3 +1,4 @@
+//! This file is not an example, it is a file that is retained for testing during the development of this package.
 const std = @import("std");
 const znvim = @import("znvim");
 
@@ -31,5 +32,10 @@ pub fn main() !void {
 const remote = struct {
     pub fn add(a: u16, b: u16) u16 {
         return a + b;
+    }
+
+    pub fn print() !void {
+        std.log.info("hello, world!", .{});
+        return error.kkkl;
     }
 };

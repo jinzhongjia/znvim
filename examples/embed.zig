@@ -1,3 +1,4 @@
+//! This file demonstrates how to execute nvim in embedded mode, usually used for testing
 const std = @import("std");
 const znvim = @import("znvim");
 const ChildProcess = std.ChildProcess;

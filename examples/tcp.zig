@@ -1,3 +1,5 @@
+//! This file demonstrates how to connect with neovim via tcp
+//! Generally used for remote connection between different machines
 const std = @import("std");
 const znvim = @import("znvim");
 

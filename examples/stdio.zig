@@ -1,15 +1,6 @@
-//! This file demonstrates how to connect to neovim on the Windows platform through named pipes
-//! When neovim starts on the windows platform, a named pipe is created by default for rpc communication.
+//! This file demonstrates how to communicate with neovim through stdio and is generally used for plug-in development started using jobstart.
 const std = @import("std");
 const znvim = @import("znvim");
-
-const nvim_pid: u16 = 28484;
-const unique_number: u16 = 0;
-
-const named_pipe = std.fmt.comptimePrint(
-    "\\\\.\\pipe\\nvim.{}.{}",
-    .{ nvim_pid, unique_number },
-);
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -20,14 +11,15 @@ pub fn main() !void {
         if (deinit_status == .leak) @panic("memory leak!");
     }
 
-    const pipe = try znvim.connectNamedPipe(named_pipe, allocator);
-    defer pipe.close();
+    const stdin = std.io.getStdIn();
+    const stdout = std.io.getStdOut();
+
     // get znvim client_type
     const ClientType = znvim.DefaultClientType(struct {}, .file);
 
     const client = try ClientType.init(
-        pipe,
-        pipe,
+        stdout,
+        stdin,
         allocator,
         true,
     );
