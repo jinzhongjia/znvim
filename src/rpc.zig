@@ -233,7 +233,7 @@ pub fn CreateClient(
             inline for (decls) |decl| {
                 const decl_name = decl.name;
                 if (decl_name.len != method_name.len or
-                    !std.mem.eql(u8, method_name, decl_name))
+                    comptime !std.mem.eql(u8, method_name, decl_name))
                     continue;
 
                 // This branch represents existing method
@@ -281,7 +281,7 @@ pub fn CreateClient(
             inline for (decls) |decl| {
                 const decl_name = decl.name;
                 if (decl_name.len != method_name.len or
-                    !std.mem.eql(u8, method_name, decl_name))
+                    comptime !std.mem.eql(u8, method_name, decl_name))
                     continue;
                 // This branch represents existing method
 
