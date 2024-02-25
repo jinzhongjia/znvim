@@ -1,0 +1,29 @@
+# http://webui.me
+# https://github.com/webui-dev/zig-webui
+# Licensed under MIT License.
+# All rights reserved.
+
+name: Linux
+on:
+  workflow_call:
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: MunifTanjim/setup-neovim-action@v1
+      - uses: goto-bus-stop/setup-zig@v2
+      - name: test
+        run: zig build test
+
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: MunifTanjim/setup-neovim-action@v1
+      - uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.11.0
+      - name: test
+        run: zig build test
