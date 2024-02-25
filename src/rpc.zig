@@ -33,8 +33,6 @@ pub fn CreateClient(
         @compileError(err_msg);
     }
 
-    // TODO: addfunction to adjust file
-
     const struct_info = type_info.Struct;
     const decls = struct_info.decls;
 
@@ -197,7 +195,23 @@ pub fn CreateClient(
             return msgid;
         }
 
-        /// this function is used to sendd result
+        /// this function is used to send notification
+        /// This function seems useless at the moment
+        fn send_notification(self: Self, method: []const u8, params: anytype) !void {
+            const paramsT = @TypeOf(params);
+            const params_type_info = @typeInfo(paramsT);
+            if (params_type_info != .Struct or
+                !params_type_info.Struct.is_tuple)
+                @compileError("params must be tuple type!");
+
+            try self.payload.write(.{
+                @intFromEnum(MessageType.Notification),
+                wrapStr(method),
+                params,
+            });
+        }
+
+        /// this function is used to send result
         fn send_result(self: Self, id: u32, err: anytype, result: anytype) !void {
             try self.payload.write(.{
                 @intFromEnum(MessageType.Response),
