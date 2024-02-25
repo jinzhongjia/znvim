@@ -25,7 +25,7 @@ pub fn build(b: *Build) void {
     });
 
     const unit_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = .{ .path = "test/test.zig" },
         .target = target,
         .optimize = optimize,
     });
