@@ -13,6 +13,32 @@ _znvim_ is a [neovim remote rpc](https://neovim.io/doc/user/api.html#rpc-connect
 
 ## Getting Started
 
+### `0.11`
+
+1. Add to `build.zig.zon`
+
+```zig
+.znvim = .{
+        // It is recommended to replace the following branch with commit id
+        .url = "https://github.com/jinzhongjia/znvim/archive/{commit or branch}.tar.gz",
+        .hash = <hash value>,
+    },
+```
+
+2. Config `build.zig`
+
+```zig
+const znvim = b.dependency("znvim", .{
+    .target = target,
+    .optimize = optimize,
+});
+
+// add module
+exe.addModule("znvim", znvim.module("znvim"));
+```
+
+### `nightly`
+
 1. Add to `build.zig.zon`
 
 ```sh
