@@ -176,6 +176,7 @@ pub fn CreateClient(
             return self.read(?errorT, allocator);
         }
 
+        /// this function is used to send request
         fn send_request(self: Self, method: []const u8, params: anytype) !u32 {
             const id_ptr = self.id_ptr;
             const msgid = id_ptr.*;
@@ -192,6 +193,7 @@ pub fn CreateClient(
                 params,
             });
             id_ptr.* += 1;
+            try self.flushWrite();
             return msgid;
         }
 
@@ -209,6 +211,7 @@ pub fn CreateClient(
                 wrapStr(method),
                 params,
             });
+            try self.flushWrite();
         }
 
         /// this function is used to send result
@@ -219,6 +222,7 @@ pub fn CreateClient(
                 err,
                 result,
             });
+            try self.flushWrite();
         }
 
         // TODO: add send_notification support
@@ -240,6 +244,10 @@ pub fn CreateClient(
                     // get the method
                     const method = @field(pack_type, decl_name);
                     const fn_type = @TypeOf(method);
+                    if (@typeInfo(fn_type) != .Fn) {
+                        const err_msg = comptimePrint("pack_type must be a struct will all function", .{pack_type});
+                        @compileError(err_msg);
+                    }
                     const fn_type_info = @typeInfo(fn_type).Fn;
                     const param_tuple_type = fnParamsToTuple(fn_type_info.params);
 
@@ -251,7 +259,14 @@ pub fn CreateClient(
                         param_tuple_type,
                     );
 
-                    const return_type_info = @typeInfo(fn_type_info.return_type);
+                    const return_type =
+                        if (fn_type_info.return_type) |val|
+                        val
+                    else
+                        void;
+
+                    const return_type_info = @typeInfo(return_type);
+
                     // when return type is errorunion
                     if (return_type_info == .ErrorUnion) {
                         if (@call(.auto, method, param)) |result| {
@@ -267,7 +282,8 @@ pub fn CreateClient(
                     }
                     // when return type is not errorunion
                     else {
-                        const result = @call(.auto, method, param);
+                        const result: return_type = @call(.auto, method, param);
+                        log.info("send result is {} ", .{result});
                         try self.send_result(id, void{}, result);
                     }
 
@@ -306,7 +322,14 @@ pub fn CreateClient(
                         param_tuple_type,
                     );
 
-                    const return_type_info = @typeInfo(fn_type_info.return_type);
+                    const return_type =
+                        if (fn_type_info.return_type) |val|
+                        val
+                    else
+                        void;
+
+                    const return_type_info = @typeInfo(return_type);
+
                     // when return type is errorunion
                     if (return_type_info == .ErrorUnion) {
                         _ = @call(.auto, method, param) catch |err| {
@@ -397,7 +420,6 @@ pub fn CreateClient(
             allocator: Allocator,
         ) !resultType {
             const send_id = try self.send_request(method, params);
-            try self.flushWrite();
             try self.call_res_header_handle(
                 method,
                 send_id,
@@ -418,7 +440,6 @@ pub fn CreateClient(
             allocator: Allocator,
         ) !Reader {
             const send_id = try self.send_request(method, params);
-            try self.flushWrite();
             try self.call_res_header_handle(
                 method,
                 send_id,
@@ -479,6 +500,7 @@ pub fn CreateClient(
         /// prepare for the client register method
         pub fn loop(self: Self, allocator: Allocator) !void {
             const t = try self.read_type();
+            log.info("get message, type is {}", .{t});
             switch (t) {
                 .Request => {
                     const msgid = try self.read_msgid();

@@ -168,6 +168,7 @@ pub fn Client(
             if_log: bool,
         ) !Self {
             var self: Self = undefined;
+
             const rpc_client = try RpcClientType.init(
                 payload_writer,
                 payload_reader,
@@ -300,7 +301,7 @@ pub fn Client(
         /// event loop
         /// please use for wrap this
         pub fn loop(self: Self, allocator: Allocator) !void {
-            return self.rpc_client.loop(allocator);
+            try self.rpc_client.loop(allocator);
         }
 
         /// destory the metadata
