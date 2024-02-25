@@ -146,7 +146,9 @@ pub fn Client(
             allocator: Allocator,
         ) !Self {
             var self: Self = undefined;
-            self.rpc_client = try RpcClientType.init(payload_writer, payload_reader, allocator);
+            const rpc_client = try RpcClientType.init(payload_writer, payload_reader, allocator);
+            errdefer rpc_client.deinit();
+            self.rpc_client = rpc_client;
             self.allocator = allocator;
 
             const result = try self.call(.nvim_get_api_info, .{}, allocator);
