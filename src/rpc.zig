@@ -22,6 +22,10 @@ pub const ClientEnum = enum {
     socket,
 };
 
+const ErrorSet = error{
+    NotFindAPI,
+};
+
 pub fn CreateClient(
     comptime pack_type: type,
     comptime buffer_size: usize,
@@ -127,6 +131,7 @@ pub fn CreateClient(
         fn read_type(self: Self) !MessageType {
             const marker_u8 = try self.payload.read_type_marker_u8();
             if (marker_u8 != 0b10010100 and marker_u8 != 0b10010011) {
+                std.log.err("val is {b}", .{marker_u8});
                 return error.marker_error;
             }
 
@@ -225,8 +230,6 @@ pub fn CreateClient(
             try self.flushWrite();
         }
 
-        // TODO: add send_notification support
-
         /// this function will handle request
         fn handleRequest(
             self: Self,
@@ -277,7 +280,9 @@ pub fn CreateClient(
                                 .{ method_name, err },
                             );
 
-                            try self.send_result(id, .{@errorName(err)}, void{});
+                            const err_msg = try std.fmt.allocPrint(allocator, "method {s} exec failed, error name is {s}", .{ method_name, @errorName(err) });
+                            defer allocator.free(err_msg);
+                            try self.send_result(id, err_msg, void{});
                         }
                     }
                     // when return type is not errorunion
@@ -290,8 +295,11 @@ pub fn CreateClient(
                 }
             }
 
+            // when not find the api, we need to skip the params
+            try self.payload.skip();
             // this represents not existing method
             try self.send_result(id, void{}, msgpack.wrapStr("not found method!"));
+            return ErrorSet.NotFindAPI;
         }
 
         /// this function handle notification
@@ -510,7 +518,10 @@ pub fn CreateClient(
                 .Request => {
                     const msgid = try self.read_msgid();
                     const method_name = try self.read_method(allocator);
-                    try self.handleRequest(msgid, method_name, allocator);
+                    defer allocator.free(method_name);
+                    self.handleRequest(msgid, method_name, allocator) catch |err| {
+                        if (err != ErrorSet.NotFindAPI) return err;
+                    };
                 },
                 .Response => {
                     const msgid = try self.read_msgid();
@@ -521,6 +532,7 @@ pub fn CreateClient(
                 },
                 .Notification => {
                     const method_name = try self.read_method(allocator);
+                    defer allocator.free(method_name);
                     try self.handleNotification(method_name, allocator);
                 },
             }
