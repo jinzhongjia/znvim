@@ -21,12 +21,7 @@ pub fn main() !void {
         stdout,
         stdin,
         allocator,
-        true,
+        false,
     );
     defer client.deinit();
-
-    std.log.info(
-        "channel id id {}, function'nums is {}",
-        .{ client.channel_id, client.metadata.functions.len },
-    );
 }
