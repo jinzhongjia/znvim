@@ -274,17 +274,17 @@ pub fn Client(
         }
 
         /// get result through writer
+        /// NOTE: the result type check will not be checked for the method
         pub fn get_result_with_writer(
             self: Self,
-            comptime method: api_enum,
+            comptime resultType: type,
             writer: Writer,
             allocator: Allocator,
-        ) !get_api_return_type(method) {
-            try self.method_detect(method);
+        ) !resultType {
             return self.rpc_client.get_result_with_writer(
                 writer,
                 error_types,
-                get_api_return_type(method),
+                resultType,
                 allocator,
             );
         }
