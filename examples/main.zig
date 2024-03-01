@@ -13,18 +13,23 @@ pub fn main() !void {
         const deinit_status = gpa.deinit();
         if (deinit_status == .leak) @panic("memory leak!");
     }
-    const stdin = std.io.getStdIn();
-    const stdout = std.io.getStdOut();
+
+    const stream = try std.net.tcpConnectToAddress(try std.net.Address.parseIp4(address, port));
+    defer stream.close();
 
     // get znvim client_type
-    const ClientType = znvim.DefaultClientType(remote, .file);
+    const ClientType = znvim.DefaultClientType(remote, .socket);
 
+    std.log.info("begin to connect neovim", .{});
     const client = try ClientType.init(
-        stdout,
-        stdin,
+        stream,
+        stream,
         allocator,
         false,
     );
+
+    std.log.info("channel id is {}", .{client.channel_id});
+
     defer client.deinit();
 
     while (true) {
