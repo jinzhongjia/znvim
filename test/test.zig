@@ -92,7 +92,7 @@ test "call with writer (get result with writer)" {
     const writer = try client.call_with_writer(.nvim_get_current_buf);
     try writer.write_array_header(0);
 
-    const buffer = try client.get_result_with_writer(.nvim_get_current_buf, writer, allocator);
+    const buffer = try client.get_result_with_writer(znvim.Buffer, writer, allocator);
     defer allocator.free(buffer.data);
 
     _ = try nvim.kill();

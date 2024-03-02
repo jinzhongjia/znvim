@@ -26,6 +26,10 @@ pub const ClientEnum = rpc.ClientEnum;
 /// connect named pipe, only for windows
 pub const connectNamedPipe = named_pipe.connectNamedPipe;
 
+pub const Buffer = msgpack.EXT;
+pub const Window =msgpack.EXT;
+pub const Tabpage = msgpack.EXT;
+
 /// this is api infos
 const api_info = @typeInfo(api_defs).Struct;
 
