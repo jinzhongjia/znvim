@@ -7,6 +7,8 @@ const Allocator = std.mem.Allocator;
 pub const ClientType = rpc.ClientType;
 pub const Payload = rpc.Payload;
 pub const ResultType = rpc.ResultType;
+pub const ReqMethodType = rpc.ReqMethodType;
+pub const NotifyMethodType = rpc.NotifyMethodType;
 
 const ErrorSet = error{
     ApiNotFound,
@@ -77,6 +79,21 @@ pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType) type
             return false;
         }
 
+        fn paramsCheck() !void {}
+
+        /// register method
+        pub fn registerMethod(self: *Self, method_name: []const u8, func: ReqMethodType) !void {
+            try self.rpc_client.registerMethod(method_name, func);
+        }
+
+        /// register notify method
+        pub fn registerNotifyMethod(self: *Self, method_name: []const u8, func: NotifyMethodType) !void {
+            try self.rpc_client.registerNotifyMethod(method_name, func);
+        }
+
+        // TODO:
+        // add register for req and notify
+
         fn getApiLevel(self: Self) !u32 {
             const api_infos = self.getApiInfos().map;
             const version = (api_infos.get("version") orelse return ErrorSet.NotGetVersion).map;
@@ -112,6 +129,10 @@ pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType) type
 
         pub fn getChannelID(self: Self) u32 {
             return @intCast(self.nvim_info.arr[0].uint);
+        }
+
+        pub fn loop(self:*Self) !void {
+            try self.rpc_client.loop();
         }
     };
 }
