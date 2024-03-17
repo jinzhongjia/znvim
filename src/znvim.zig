@@ -15,6 +15,8 @@ const ErrorSet = error{
     ApiDeprecated,
     NotGetVersion,
     NotGetApiLevel,
+    NotGetFunctions,
+    NotGetFuncName,
 };
 
 // current build mode
@@ -63,11 +65,31 @@ pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType) type
             return self.nvim_info.arr[1];
         }
 
+        fn getApiLevel(self: Self) !u32 {
+            const api_infos = self.getApiInfos().map;
+            const version = (api_infos.get("version") orelse return ErrorSet.NotGetVersion).map;
+            const api_level = (version.get("api_level") orelse return ErrorSet.NotGetApiLevel).uint;
+            return @intCast(api_level);
+        }
+
+        fn getFunc(self: Self, api_name: []const u8) !?Payload {
+            const api_infos = self.getApiInfos().map;
+            const funcs = (api_infos.get("functions") orelse return ErrorSet.NotGetFunctions).arr;
+            for (funcs) |val| {
+                const func = val.map;
+                const func_name = (func.get("name") orelse return ErrorSet.NotGetFuncName).str.value();
+                if (u8Eql(func_name, api_name)) {
+                    return val;
+                }
+            }
+            return null;
+        }
+
         fn checkApiAvailable(self: Self, api_name: []const u8) !bool {
             const api_infos = self.getApiInfos().map;
             const funcs = (api_infos.get("functions") orelse return false).arr;
             for (funcs) |func| {
-                const func_name = (func.map.get("name") orelse continue).str.value();
+                const func_name = (func.map.get("name") orelse return ErrorSet.NotGetFuncName).str.value();
                 if (api_name.len == func_name.len and u8Eql(func_name, api_name)) {
                     if (func.map.get("deprecated_since")) |deprecated_since| {
                         if (deprecated_since.uint <= try self.getApiLevel())
@@ -79,8 +101,6 @@ pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType) type
             return false;
         }
 
-        fn paramsCheck() !void {}
-
         /// register method
         pub fn registerMethod(self: *Self, method_name: []const u8, func: ReqMethodType) !void {
             try self.rpc_client.registerMethod(method_name, func);
@@ -91,20 +111,11 @@ pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType) type
             try self.rpc_client.registerNotifyMethod(method_name, func);
         }
 
-        // TODO:
-        // add register for req and notify
-
-        fn getApiLevel(self: Self) !u32 {
-            const api_infos = self.getApiInfos().map;
-            const version = (api_infos.get("version") orelse return ErrorSet.NotGetVersion).map;
-            const api_level = (version.get("api_level") orelse return ErrorSet.NotGetApiLevel).uint;
-            return @intCast(api_level);
-        }
-
         pub fn call(self: *Self, api_name: []const u8, params: rpc.Payload) !rpc.ResultType {
             if ((comptime build_mode == .Debug) and
                 !try self.checkApiAvailable(api_name))
                 return ErrorSet.ApiNotFound;
+
             return self.rpc_client.call(api_name, params);
         }
 
@@ -131,12 +142,15 @@ pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType) type
             return @intCast(self.nvim_info.arr[0].uint);
         }
 
-        pub fn loop(self:*Self) !void {
+        pub fn loop(self: *Self) !void {
             try self.rpc_client.loop();
         }
     };
 }
 
 fn u8Eql(a: []const u8, b: []const u8) bool {
+    if (a.len != b.len) {
+        return false;
+    }
     return std.mem.eql(u8, a, b);
 }
