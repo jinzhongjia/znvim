@@ -9,8 +9,8 @@ const ReqFifo = std.fifo.LinearFifo(Payload, .Dynamic);
 /// this fifo restore res
 const ResFifo = std.fifo.LinearFifo(Payload, .Dynamic);
 
-pub const ReqMethodType = *const fn (allocator: Allocator, param: Payload) ResultType;
-pub const NotifyMethodType = *const fn (allocator: Allocator, param: Payload) void;
+pub const ReqMethodType = *const fn (params: Payload, allocator: Allocator) ResultType;
+pub const NotifyMethodType = *const fn (params: Payload, allocator: Allocator) void;
 
 const Method = union(enum) {
     req: ReqMethodType,
@@ -152,8 +152,7 @@ pub fn rpcClientType(
             }
             try self.req_fifo.writeItem(payload);
 
-            for (self.req_fifo.readableSlice(0), 0..) |val, i| {
-                // get the message type
+            while (self.req_fifo.readItem()) |val| {
                 const message_type: MessageType = @enumFromInt(val.arr[0].uint);
                 if (message_type == .Request) {
                     try self.handleMethodReq(val);
@@ -162,9 +161,6 @@ pub fn rpcClientType(
                 } else {
                     @panic("res appeared in req fifo");
                 }
-                // remove from the req fifo
-                self.req_fifo.discard(i);
-                // free payload
                 self.freePayload(val);
             }
         }
@@ -189,7 +185,7 @@ pub fn rpcClientType(
 
             if (self.method_hash_map.get(method_name.value())) |method| {
                 if (method == .req) {
-                    const result = method.req(self.allocator, params);
+                    const result = method.req(params, self.allocator);
                     defer self.freeResultType(result);
 
                     if (result == .result) {
@@ -202,10 +198,11 @@ pub fn rpcClientType(
                         .str = msgpack.wrapStr("this method should use notify"),
                     }, Payload.nilToPayload());
                 }
+            } else {
+                try self.sendResponse(@intCast(msg_id), Payload{
+                    .str = msgpack.wrapStr("method not exists"),
+                }, Payload.nilToPayload());
             }
-            try self.sendResponse(@intCast(msg_id), Payload{
-                .str = msgpack.wrapStr("method not exists"),
-            }, Payload.nilToPayload());
             try self.flush();
         }
 
@@ -215,7 +212,7 @@ pub fn rpcClientType(
             const params = arr[2];
             if (self.method_hash_map.get(method_name.value())) |method| {
                 if (method == .notify) {
-                    method.notify(self.allocator, params);
+                    method.notify(params, self.allocator);
                 }
             }
         }
@@ -241,27 +238,36 @@ pub fn rpcClientType(
 
             try self.pack.write(Payload{ .arr = &req_arr });
             try self.flush();
+
+            // TODO: This can be optimized and using a two-way queue is more efficient.
             while (true) {
                 try self.loop();
-                // this index will not be 0
-                const latest_index = self.res_fifo.readableLength() - 1;
-                var lastest_res = self.res_fifo.peekItem(latest_index);
-                if (lastest_res.arr[1].uint == self.msg_id) {
-                    self.res_fifo.discard(latest_index);
-                    const res_err = lastest_res.arr[2];
-                    const res_result = lastest_res.arr[3];
-                    lastest_res.arr[2] = Payload.nilToPayload();
-                    lastest_res.arr[3] = Payload.nilToPayload();
-                    lastest_res.free(self.allocator);
-                    if (res_err != .nil) {
-                        return ResultType{
-                            .err = res_err,
-                        };
-                    } else {
-                        return ResultType{
-                            .result = res_result,
-                        };
+                for (0..self.res_fifo.readableLength()) |_| {
+                    var lastest_res = self.res_fifo.readItem().?;
+
+                    if (lastest_res.arr[1].uint == self.msg_id) {
+                        const res_err = lastest_res.arr[2];
+                        const res_result = lastest_res.arr[3];
+                        {
+                            lastest_res.arr[2] = Payload.nilToPayload();
+                            lastest_res.arr[3] = Payload.nilToPayload();
+                            lastest_res.free(self.allocator);
+                        }
+
+                        if (res_err != .nil) {
+                            res_result.free(self.allocator);
+                            return ResultType{
+                                .err = res_err,
+                            };
+                        } else {
+                            res_err.free(self.allocator);
+                            return ResultType{
+                                .result = res_result,
+                            };
+                        }
                     }
+
+                    try self.res_fifo.writeItem(lastest_res);
                 }
             }
         }
