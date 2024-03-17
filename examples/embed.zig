@@ -30,19 +30,19 @@ pub fn main() !void {
     const nvim_stdout = if (nvim.stdout) |val| val else @panic("not get nvim stdout!");
 
     // get znvim client_type
-    const ClientType = znvim.DefaultClientType(struct {}, .file);
+    const ClientType = znvim.DefaultClient(.file);
 
-    const client = try ClientType.init(
+    var client = try ClientType.init(
         nvim_stdin,
         nvim_stdout,
         allocator,
-        true,
     );
+
     defer client.deinit();
 
     std.log.info(
-        "channel id id {}, function'nums is {}",
-        .{ client.channel_id, client.metadata.functions.len },
+        "channel id id {}",
+        .{client.getChannelID()},
     );
 
     const nvim_term = try nvim.kill();

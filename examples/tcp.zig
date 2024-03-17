@@ -19,18 +19,17 @@ pub fn main() !void {
     defer stream.close();
 
     // get znvim client_type
-    const ClientType = znvim.DefaultClientType(struct {}, .socket);
+    const ClientType = znvim.DefaultClient(.socket);
 
-    const client = try ClientType.init(
+    var client = try ClientType.init(
         stream,
         stream,
         allocator,
-        true,
     );
     defer client.deinit();
 
     std.log.info(
-        "channel id id {}, function'nums is {}",
-        .{ client.channel_id, client.metadata.functions.len },
+        "channel id id {}",
+        .{client.getChannelID()},
     );
 }

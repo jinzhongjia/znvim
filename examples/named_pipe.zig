@@ -23,18 +23,17 @@ pub fn main() !void {
     const pipe = try znvim.connectNamedPipe(named_pipe, allocator);
     defer pipe.close();
     // get znvim client_type
-    const ClientType = znvim.DefaultClientType(struct {}, .file);
+    const ClientType = znvim.DefaultClient(struct {}, .file);
 
-    const client = try ClientType.init(
+    var client = try ClientType.init(
         pipe,
         pipe,
         allocator,
-        true,
     );
     defer client.deinit();
 
     std.log.info(
-        "channel id id {}, function'nums is {}",
-        .{ client.channel_id, client.metadata.functions.len },
+        "channel id id {}",
+        .{ client.getChannelID() },
     );
 }

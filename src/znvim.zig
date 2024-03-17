@@ -22,6 +22,10 @@ const ErrorSet = error{
 // current build mode
 const build_mode = builtin.mode;
 
+pub fn DefaultClient(comptime client_tag: ClientType) type {
+    return Client(20480, client_tag);
+}
+
 pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType) type {
     const RpcClientType = rpc.rpcClientType(buffer_size, client_tag);
 
