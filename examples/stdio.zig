@@ -15,13 +15,12 @@ pub fn main() !void {
     const stdout = std.io.getStdOut();
 
     // get znvim client_type
-    const ClientType = znvim.DefaultClientType(struct {}, .file);
+    const ClientType = znvim.DefaultClient(.file);
 
-    const client = try ClientType.init(
+    var client = try ClientType.init(
         stdout,
         stdin,
         allocator,
-        false,
     );
     defer client.deinit();
 }
