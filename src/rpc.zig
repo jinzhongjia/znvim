@@ -9,12 +9,12 @@ const ReqFifo = std.fifo.LinearFifo(Payload, .Dynamic);
 /// this fifo restore res
 const ResFifo = std.fifo.LinearFifo(Payload, .Dynamic);
 
-pub const ReqMethodType = fn (allocator: Allocator, param: Payload) Payload;
-pub const NotMethodType = fn (allocator: Allocator, param: Payload) void;
+pub const ReqMethodType = *const fn (allocator: Allocator, param: Payload) ResultType;
+pub const NotifyMethodType = *const fn (allocator: Allocator, param: Payload) void;
 
 const Method = union(enum) {
-    req: *ReqMethodType,
-    res: *NotMethodType,
+    req: ReqMethodType,
+    notify: NotifyMethodType,
 };
 
 const MessageType = enum(u2) {
@@ -148,14 +148,89 @@ pub fn rpcClientType(
             const t: MessageType = @enumFromInt(arr[0].uint);
             if (t == .Response) {
                 try self.res_fifo.writeItem(payload);
-            } else {
-                try self.req_fifo.writeItem(payload);
+                return;
+            }
+            try self.req_fifo.writeItem(payload);
+
+            for (self.req_fifo.readableSlice(0), 0..) |val, i| {
+                // get the message type
+                const message_type: MessageType = @enumFromInt(val.arr[0].uint);
+                if (message_type == .Request) {
+                    try self.handleMethodReq(val);
+                } else if (message_type == .Notification) {
+                    self.handleMethodNotify(val);
+                } else {
+                    @panic("res appeared in req fifo");
+                }
+                // remove from the req fifo
+                self.req_fifo.discard(i);
+                // free payload
+                self.freePayload(val);
             }
         }
 
-        fn handleMethodReq() !void {}
+        fn sendResponse(self: Self, msg_id: u32, err: Payload, result: Payload) !void {
+            var req_arr: [4]Payload = undefined;
+            req_arr[0] = Payload.uintToPayload(
+                @intFromEnum(MessageType.Response),
+            );
+            req_arr[1] = Payload.uintToPayload(msg_id);
+            req_arr[2] = err;
+            req_arr[3] = result;
 
-        fn handleMethodNotify() !void {}
+            try self.pack.write(Payload{ .arr = &req_arr });
+        }
+
+        fn handleMethodReq(self: *Self, payload: Payload) !void {
+            const arr = payload.arr;
+            const msg_id = arr[1].uint;
+            const method_name = arr[2].str;
+            const params = arr[3];
+
+            if (self.method_hash_map.get(method_name.value())) |method| {
+                if (method == .req) {
+                    const result = method.req(self.allocator, params);
+                    defer self.freeResultType(result);
+
+                    if (result == .result) {
+                        try self.sendResponse(@intCast(msg_id), Payload.nilToPayload(), result.result);
+                    } else {
+                        try self.sendResponse(@intCast(msg_id), result.err, Payload.nilToPayload());
+                    }
+                } else {
+                    try self.sendResponse(@intCast(msg_id), Payload{
+                        .str = msgpack.wrapStr("this method should use notify"),
+                    }, Payload.nilToPayload());
+                }
+            }
+            try self.sendResponse(@intCast(msg_id), Payload{
+                .str = msgpack.wrapStr("method not exists"),
+            }, Payload.nilToPayload());
+            try self.flush();
+        }
+
+        fn handleMethodNotify(self: *Self, payload: Payload) void {
+            const arr = payload.arr;
+            const method_name = arr[1].str;
+            const params = arr[2];
+            if (self.method_hash_map.get(method_name.value())) |method| {
+                if (method == .notify) {
+                    method.notify(self.allocator, params);
+                }
+            }
+        }
+
+        pub fn registerMethod(self: *Self, method_name: []const u8, func: ReqMethodType) !void {
+            try self.method_hash_map.put(method_name, Method{
+                .req = func,
+            });
+        }
+
+        pub fn registerNotifyMethod(self: *Self, method_name: []const u8, func: NotifyMethodType) !void {
+            try self.method_hash_map.put(method_name, Method{
+                .notify = func,
+            });
+        }
 
         pub fn call(self: *Self, method_name: []const u8, payload: Payload) !ResultType {
             var req_arr: [4]Payload = undefined;
@@ -192,7 +267,7 @@ pub fn rpcClientType(
         }
 
         /// this func to free payload
-        fn freePayload(self: Self, payload: Payload) void {
+        pub fn freePayload(self: Self, payload: Payload) void {
             payload.free(self.allocator);
         }
 
