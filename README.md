@@ -8,7 +8,6 @@ _znvim_ is a [neovim remote rpc](https://neovim.io/doc/user/api.html#rpc-connect
 
 - Implementation of multiple remote calling methods
 - Support `latest release` and `nightly`
-- Strict type checking
 - Support all neovim [channels](https://neovim.io/doc/user/channel.html#channel-intro)
 
 ## Getting Started
@@ -59,4 +58,6 @@ exe.root_module.addImport("znvim", znvim.module("znvim"));
 
 ## TODO
 
-- More complete static api binding
+- Parameter type checking
+- Multi-threading support
+- Docs
