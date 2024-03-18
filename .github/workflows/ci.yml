@@ -1,17 +1,12 @@
-# http://webui.me
-# https://github.com/webui-dev/zig-webui
-# Licensed under MIT License.
-# All rights reserved.
-
 name: CI
 on:
-  # push:
-  #   paths-ignore: ['**/*.md']
-  # pull_request:
-  #   branches: [main]
-  #   paths-ignore: ['**/*.md']
-  # schedule:
-  #   - cron: '0 2 * * *'
+  push:
+    paths-ignore: ['**/*.md']
+  pull_request:
+    branches: [main]
+    paths-ignore: ['**/*.md']
+  schedule:
+    - cron: '0 2 * * *'
   workflow_call:
 
 jobs:
