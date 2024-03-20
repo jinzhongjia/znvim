@@ -286,7 +286,7 @@ pub fn rpcClientType(
             }
         }
 
-        pub fn notify(self: Self, method_name: []const u8, payload: Payload) void {
+        pub fn notify(self: *Self, method_name: []const u8, payload: Payload) !void {
             var req_arr: [4]Payload = undefined;
             req_arr[0] = Payload.uintToPayload(@intFromEnum(MessageType.Request));
             req_arr[1] = Payload.uintToPayload(self.msg_id);

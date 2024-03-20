@@ -41,6 +41,29 @@ test "call" {
     _ = try nvim.kill();
 }
 
+test "notify" {
+    var nvim = try create_nvim_process();
+
+    var client = try ClientFileType.init(
+        nvim.stdin.?,
+        nvim.stdout.?,
+        allocator,
+    );
+    defer client.deinit();
+
+    const params = try ClientFileType.createParams(3, allocator);
+    defer ClientFileType.freeParams(params, allocator);
+
+    params.arr[0] = try znvim.Payload.strToPayload("hello", allocator);
+    params.arr[1] = znvim.Payload.uintToPayload(2);
+    params.arr[2] = znvim.Payload.mapPayload(allocator);
+
+    const res = try client.call("nvim_notify", params);
+    defer client.freeResultType(res);
+
+    _ = try nvim.kill();
+}
+
 fn create_nvim_process() !ChildProcess {
     var nvim = ChildProcess.init(&args, allocator);
 
