@@ -75,7 +75,7 @@ pub fn main() !void {
 
     while (true) {
         client.loop() catch {
-            std.os.exit(0);
+            break;
         };
     }
 }
