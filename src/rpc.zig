@@ -9,8 +9,14 @@ const ReqFifo = std.fifo.LinearFifo(Payload, .Dynamic);
 /// this fifo restore res
 const ResFifo = std.fifo.LinearFifo(Payload, .Dynamic);
 
-pub const ReqMethodType = *const fn (params: Payload, allocator: Allocator) ResultType;
-pub const NotifyMethodType = *const fn (params: Payload, allocator: Allocator) void;
+pub const ReqMethodType = struct {
+    userdata: ?*anyopaque = null,
+    func: *const fn (params: Payload, allocator: Allocator, userdata: ?*anyopaque) ResultType,
+};
+pub const NotifyMethodType = struct {
+    userdata: ?*anyopaque = null,
+    func: *const fn (params: Payload, allocator: Allocator, userdata: ?*anyopaque) void,
+};
 
 const Method = union(enum) {
     req: ReqMethodType,
@@ -185,7 +191,7 @@ pub fn rpcClientType(
 
             if (self.method_hash_map.get(method_name.value())) |method| {
                 if (method == .req) {
-                    const result = method.req(params, self.allocator);
+                    const result = method.req.func(params, self.allocator, method.req.userdata);
                     defer self.freeResultType(result);
 
                     if (result == .result) {
@@ -212,7 +218,7 @@ pub fn rpcClientType(
             const params = arr[2];
             if (self.method_hash_map.get(method_name.value())) |method| {
                 if (method == .notify) {
-                    method.notify(params, self.allocator);
+                    method.notify.func(params, self.allocator, method.notify.userdata);
                 }
             }
         }
