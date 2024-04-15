@@ -131,7 +131,13 @@ pub fn rpcClientType(
         /// deinit
         pub fn deinit(self: *Self) void {
             self.method_hash_map.deinit();
+            while (self.req_fifo.readItem()) |val| {
+                self.freePayload(val);
+            }
             self.req_fifo.deinit();
+            while (self.res_fifo.readItem()) |val| {
+                self.freePayload(val);
+            }
             self.res_fifo.deinit();
             self.allocator.destroy(self.writer_ptr);
             self.allocator.destroy(self.reader_ptr);
