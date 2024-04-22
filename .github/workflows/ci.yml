@@ -1,16 +1,26 @@
 name: CI
+
 on:
-  push:
-    paths-ignore: ['**/*.md']
-  pull_request:
-    branches: [main]
-    paths-ignore: ['**/*.md']
-  schedule:
-    - cron: '0 2 * * *'
-  workflow_call:
+    push:
+        branches:
+            - "*"
+    schedule:
+        - cron: "0 2 * * *"
+    workflow_dispatch:
 
 jobs:
-  linux:
-    uses: ./.github/workflows/linux.yml
-    permissions:
-      contents: write
+    build:
+        strategy:
+            matrix:
+                os: [ubuntu-latest]
+                version: [0.11.0, 0.12.0, ""]
+            fail-fast: false
+        runs-on: ${{ matrix.os }}
+        steps:
+            - name: Setup Zig
+              uses: goto-bus-stop/setup-zig@v2
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - name: Build and test with Zig
+              run: zig build test
