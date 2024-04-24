@@ -4,7 +4,7 @@
     .minimum_zig_version = "0.11.0",
     .dependencies = .{
         .@"zig-msgpack" = .{
-            .url = "https://github.com/zigcc/zig-msgpack/archive/main.tar.gz",
+            .url = "https://github.com/zigcc/zig-msgpack/archive/refs/tags/0.0.3.tar.gz",
             .hash = "1220e9e5fc25524a4cf46de7f52ce78fc9065ee3d640d323ef4db57de482184d443e",
         },
     },
