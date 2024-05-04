@@ -1,0 +1,14 @@
+.{
+    .name = "znvim",
+    .version = "0.0.0",
+    .minimum_zig_version = "0.12.0",
+    .dependencies = .{
+        .@"zig-msgpack" = .{
+            .url = "https://github.com/zigcc/zig-msgpack/archive/refs/tags/0.0.4.tar.gz",
+            .hash = "12204ec362b0784a04825021b1bab2fe62d062db5f07052207363a835af7613bb12e",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}
