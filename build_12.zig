@@ -13,9 +13,7 @@ pub fn build(b: *Build) void {
 
     // create module
     const znvim = b.addModule("znvim", .{
-        .root_source_file = .{
-            .path = "src/znvim.zig",
-        },
+        .root_source_file = b.path("src/znvim.zig"),
         .imports = &.{
             .{
                 .name = "msgpack",
@@ -25,7 +23,7 @@ pub fn build(b: *Build) void {
     });
 
     const unit_tests = b.addTest(.{
-        .root_source_file = .{ .path = "test/test.zig" },
+        .root_source_file = b.path("test/test.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -44,7 +42,7 @@ pub fn build(b: *Build) void {
 fn create_exe(b: *Build, target: ResolvedTarget, optimize: OptimizeMode, znvim: *Module) void {
     const exe = b.addExecutable(.{
         .name = "znvim",
-        .root_source_file = .{ .path = "examples/main.zig" },
+        .root_source_file = b.path("examples/main.zig"),
         .target = target,
         .optimize = optimize,
     });
