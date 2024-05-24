@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const tools = @import("tools.zig");
 const msgpack = @import("msgpack");
 
@@ -15,7 +16,13 @@ const MessageType = enum(u2) {
     Notification = 2,
 };
 
+pub const ErrorSet = error{
+    PayloadTypeError,
+    PayloadLengthError,
+};
+
 const ResQueue = TailQueue(Payload);
+const ReqQueue = TailQueue(Payload);
 
 const SubscribeMap = std.AutoHashMap(u32, *Thread.ResetEvent);
 
@@ -58,7 +65,8 @@ pub fn RpcClientType(
 
         pub const TransType: type = switch (client_tag) {
             .file => std.fs.File,
-            .socket => std.net.Stream,
+            else => std.fs.File,
+            // .socket => std.net.Stream,
         };
 
         const BufferedWriter = std.io.BufferedWriter(
@@ -78,11 +86,10 @@ pub fn RpcClientType(
             BufferedReader.read,
         );
 
-        const ThreadSafePack = tools.ThreadSafe(*Pack);
-
         const ThreadSafeMethodHashMap = tools.ThreadSafe(*MethodHashMap);
         const ThreadSafeId = tools.ThreadSafe(*u32);
         const ThreadSafeResQueue = tools.ThreadSafe(*ResQueue);
+        const ThreadSafeReqQueue = tools.ThreadSafe(*ReqQueue);
         const ThreadsafeSubscribeMap = tools.ThreadSafe(*SubscribeMap);
 
         /// just store ptr
@@ -92,12 +99,20 @@ pub fn RpcClientType(
         allocator: Allocator,
 
         id: ThreadSafeId,
-        pack: ThreadSafePack,
+        pack: Pack,
         method_hash_map: ThreadSafeMethodHashMap,
         res_queue: ThreadSafeResQueue,
+        req_queue: ThreadSafeReqQueue,
         subscribe_map: ThreadsafeSubscribeMap,
 
         thread_pool_ptr: *Thread.Pool,
+
+        trans_writer: TransType,
+        trans_reader: TransType,
+
+        // inter thread communication
+        inform_writer: TransType,
+        inform_reader: TransType,
 
         pub fn init(
             trans_writer: TransType,
@@ -129,10 +144,7 @@ pub fn RpcClientType(
             const id = ThreadSafeId.init(id_ptr);
 
             // init pack
-            const pack_ptr = try allocator.create(Pack);
-            errdefer allocator.destroy(pack_ptr);
-            pack_ptr.* = Pack.init(writer_ptr, reader_ptr);
-            const pack = ThreadSafePack.init(pack_ptr);
+            const pack = Pack.init(writer_ptr, reader_ptr);
 
             // init method hash map
             const method_hash_map_ptr = try allocator.create(MethodHashMap);
@@ -146,6 +158,12 @@ pub fn RpcClientType(
             res_queue_ptr.* = ResQueue{};
             const res_queue = ThreadSafeResQueue.init(res_queue_ptr);
 
+            // init req queue
+            const req_queue_ptr = try allocator.create(ReqQueue);
+            errdefer allocator.destroy(req_queue_ptr);
+            req_queue_ptr.* = ReqQueue{};
+            const req_queue = ThreadSafeReqQueue.init(req_queue_ptr);
+
             // init subscribe map
             const subscribe_map_ptr = try allocator.create(SubscribeMap);
             errdefer allocator.destroy(subscribe_map_ptr);
@@ -157,6 +175,8 @@ pub fn RpcClientType(
             errdefer allocator.destroy(thread_pool_ptr);
             try thread_pool_ptr.init(.{ .allocator = allocator });
 
+            const informs = try makeInform();
+
             return Self{
                 .writer_ptr = writer_ptr,
                 .reader_ptr = reader_ptr,
@@ -165,11 +185,17 @@ pub fn RpcClientType(
                 .pack = pack,
                 .method_hash_map = method_hash_map,
                 .res_queue = res_queue,
+                .req_queue = req_queue,
                 .subscribe_map = subscribe_map,
                 .thread_pool_ptr = thread_pool_ptr,
+                .trans_writer = trans_writer,
+                .trans_reader = trans_reader,
+                .inform_reader = informs[0],
+                .inform_writer = informs[1],
             };
         }
 
+        /// deinit
         pub fn deinit(self: *Self) void {
             const allocator = self.allocator;
             self.thread_pool_ptr.deinit();
@@ -184,14 +210,14 @@ pub fn RpcClientType(
             allocator.destroy(res_queue_ptr);
             self.res_queue.release();
 
+            const req_queue_ptr = self.req_queue.acquire();
+            allocator.destroy(req_queue_ptr);
+            self.req_queue.release();
+
             const method_hash_map_ptr = self.method_hash_map.acquire();
             method_hash_map_ptr.deinit();
             allocator.destroy(method_hash_map_ptr);
             self.method_hash_map.release();
-
-            const pack_ptr = self.pack.acquire();
-            allocator.destroy(pack_ptr);
-            self.pack.release();
 
             const id_ptr = self.id.acquire();
             allocator.destroy(id_ptr);
@@ -199,6 +225,47 @@ pub fn RpcClientType(
 
             allocator.destroy(self.writer_ptr);
             allocator.destroy(self.reader_ptr);
+        }
+
+        /// register request method
+        pub fn registerRequestMethod(self: *Self, method_name: []const u8, func: ReqMethodType) !void {
+            const method_hash_map = self.method_hash_map.acquire();
+            defer self.method_hash_map.release();
+            try method_hash_map.put(method_name, Method{
+                .req = func,
+            });
+        }
+
+        /// register notify method
+        pub fn registerNotifyMethod(self: *Self, method_name: []const u8, func: NotifyMethodType) !void {
+            const method_hash_map = self.method_hash_map.acquire();
+            defer self.method_hash_map.release();
+            try method_hash_map.put(method_name, Method{
+                .notify = func,
+            });
+        }
+
+        /// flush the buffer
+        inline fn flush(self: *Self) !void {
+            try self.pack.write_context.flush();
+        }
+
+        fn makeInform() ![2]TransType {
+            switch (builtin.os.tag) {
+                .windows => {
+                    var res: [2]TransType = undefined;
+                    try std.os.windows.CreatePipe(&res[0].handle, &res[1].handle, &.{
+                        .nLength = @sizeOf(std.os.windows.SECURITY_ATTRIBUTES),
+                        .bInheritHandle = 0,
+                        .lpSecurityDescriptor = null,
+                    });
+
+                    return res;
+                },
+                else => {
+                    @compileError("not support!");
+                },
+            }
         }
     };
 }
