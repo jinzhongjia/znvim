@@ -91,6 +91,7 @@ pub fn RpcClientType(
         const ThreadSafeResQueue = tools.ThreadSafe(*ResQueue);
         const ThreadSafeReqQueue = tools.ThreadSafe(*ReqQueue);
         const ThreadsafeSubscribeMap = tools.ThreadSafe(*SubscribeMap);
+        const ThreadSafeTransType = tools.ThreadSafe(*TransType);
 
         /// just store ptr
         writer_ptr: *BufferedWriter,
@@ -111,9 +112,12 @@ pub fn RpcClientType(
         trans_reader: TransType,
 
         // inter thread communication
-        inform_writer: TransType,
+        inform_writer: ThreadSafeTransType,
         inform_reader: TransType,
 
+        /// init the rpc client
+        /// we should note that the trans writer and reader will not close by deinit
+        /// the owner should close manuallly
         pub fn init(
             trans_writer: TransType,
             trans_reader: TransType,
@@ -177,6 +181,13 @@ pub fn RpcClientType(
 
             const informs = try makeInform();
 
+            const inform_writer_ptr = try allocator.create(TransType);
+            errdefer allocator.destroy(inform_writer_ptr);
+            inform_writer_ptr.* = informs[1];
+            const inform_writer = ThreadSafeTransType.init(inform_writer_ptr);
+
+            const inform_reader = informs[0];
+
             return Self{
                 .writer_ptr = writer_ptr,
                 .reader_ptr = reader_ptr,
@@ -190,8 +201,8 @@ pub fn RpcClientType(
                 .thread_pool_ptr = thread_pool_ptr,
                 .trans_writer = trans_writer,
                 .trans_reader = trans_reader,
-                .inform_reader = informs[0],
-                .inform_writer = informs[1],
+                .inform_writer = inform_writer,
+                .inform_reader = inform_reader,
             };
         }
 
@@ -225,6 +236,12 @@ pub fn RpcClientType(
 
             allocator.destroy(self.writer_ptr);
             allocator.destroy(self.reader_ptr);
+
+            const inform_writer_ptr = self.inform_writer.acquire();
+            allocator.destroy(inform_writer_ptr);
+            self.inform_writer.release();
+
+            self.inform_reader.close();
         }
 
         /// register request method
