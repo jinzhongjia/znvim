@@ -4,11 +4,17 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const msgpack = b.dependency("zig-msgpack", .{ .target = target, .optimize = optimize });
+    const msgpack = b.dependency(
+        "zig-msgpack",
+        .{ .target = target, .optimize = optimize },
+    );
 
     const znvim = b.addModule("znvim", .{
         .root_source_file = b.path("src/znvim.zig"),
-        .imports = &.{.{ .name = "msgpack", .module = msgpack.module("msgpack") }},
+        .imports = &.{.{
+            .name = "msgpack",
+            .module = msgpack.module("msgpack"),
+        }},
     });
 
     const unit_tests = b.addTest(.{
