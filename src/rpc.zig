@@ -19,6 +19,7 @@ const MessageType = enum(u2) {
 pub const ErrorSet = error{
     PayloadTypeError,
     PayloadLengthError,
+    NotFoundRes,
 };
 
 const ResToClientQueue = TailQueue(Payload);
@@ -202,8 +203,8 @@ pub fn RpcClientType(
             allocator.destroy(res_to_client_queue_ptr);
             self.res_to_client_queue.release();
 
-            const req_queue_ptr = self.to_server_queue.acquire();
-            allocator.destroy(req_queue_ptr);
+            const to_server_queue = self.to_server_queue.acquire();
+            allocator.destroy(to_server_queue);
             self.to_server_queue.release();
 
             const method_hash_map_ptr = self.method_hash_map.acquire();
@@ -352,9 +353,9 @@ pub fn RpcClientType(
                 // use semaphore
                 self.to_server_queue_s.wait();
 
-                const req_queue = self.to_server_queue.acquire();
+                const to_server_queue = self.to_server_queue.acquire();
                 defer self.to_server_queue.release();
-                if (req_queue.pop()) |node| {
+                if (to_server_queue.pop()) |node| {
                     // free the payload node
                     defer self.allocator.destroy(node);
                     // collect the payload content
@@ -436,6 +437,94 @@ pub fn RpcClientType(
 
             // try run the handle function
             method.func(params, self.allocator, method.userdata);
+        }
+
+        pub fn call(self: *Self, method_name: []const u8, params: Payload) !ResultType {
+            const node = try self.allocator.create(ResToClientQueue.Node);
+            errdefer self.allocator.destroy(node);
+
+            const req = try Payload.arrPayload(4, self.allocator);
+            errdefer self.freePayload(req);
+
+            try req.setArrElement(0, Payload.uintToPayload(@intFromEnum(MessageType.Request)));
+
+            const id = self.id.acquire().*;
+            self.id.release();
+
+            try req.setArrElement(1, Payload.uintToPayload(id));
+            try req.setArrElement(2, try Payload.strToPayload(method_name, self.allocator));
+            try req.setArrElement(3, params);
+
+            const event = try self.allocator.create(Thread.ResetEvent);
+            defer self.allocator.destroy(event);
+            event.* = Thread.ResetEvent{};
+
+            {
+                const subscribe_map = self.subscribe_map.acquire();
+                defer self.subscribe_map.release();
+                subscribe_map.put(id, event) catch unreachable;
+            }
+
+            const to_server_queue = self.to_server_queue.acquire();
+            {
+                defer self.to_server_queue.release();
+                node.data = req;
+                to_server_queue.append(node);
+            }
+
+            const id_ptr = self.id.acquire();
+            {
+                defer self.id.release();
+                id_ptr.* += 1;
+            }
+
+            event.wait();
+
+            {
+                const subscribe_map = self.subscribe_map.acquire();
+                defer self.subscribe_map.release();
+                subscribe_map.remove(id);
+            }
+
+            const res_to_client_queue = self.res_to_client_queue.acquire();
+            defer self.res_to_client_queue.release();
+
+            const length = res_to_client_queue.len;
+
+            for (0..length) |_| {
+                if (res_to_client_queue.pop()) |val| {
+                    const res_payload = val.data;
+                    if (res_payload != .arr or res_payload.arr[1].uint != id) {
+                        res_to_client_queue.prepend(val);
+                        continue;
+                    }
+                    defer self.allocator.destroy(val);
+                    if (res_payload.arr[2] != .nil) {
+                        return ResultType{ .err = res_payload.arr[2] };
+                    } else {
+                        return ResultType{ .result = res_payload.arr[3] };
+                    }
+                }
+            }
+
+            return ErrorSet.NotFoundRes;
+        }
+
+        pub fn notify(self: *Self, method_name: []const u8, params: Payload) !void {
+            const node = try self.allocator.create(ResToClientQueue.Node);
+            errdefer self.allocator.destroy(node);
+
+            var note = try Payload.arrPayload(3, self.allocator);
+            try note.setArrElement(0, Payload.uintToPayload(@intFromEnum(MessageType.Notification)));
+            try note.setArrElement(1, try Payload.strToPayload(method_name, self.allocator));
+            try note.setArrElement(2, params);
+
+            const to_server_queue = self.to_server_queue.acquire();
+            {
+                defer self.to_server_queue.release();
+                node.data = note;
+                to_server_queue.append(node);
+            }
         }
     };
 }
