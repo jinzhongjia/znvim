@@ -17,9 +17,11 @@ test "basic embed connect" {
         nvim.stdout.?,
         allocator,
     );
-    client.deinit();
 
-    _ = try nvim.kill();
+    defer _ = nvim.kill() catch unreachable;
+    defer client.deinit();
+
+    try client.rpc_client.loop();
 }
 
 fn create_nvim_process() !ChildProcess {

@@ -49,12 +49,12 @@ pub fn RpcClientType(
 
         pub const ReqMethodType = struct {
             userdata: user_data,
-            func: *const fn (params: Payload, allocator: Allocator, userdata: ?*anyopaque) ResultType,
+            func: *const fn (params: Payload, allocator: Allocator, userdata: user_data) ResultType,
         };
 
         pub const NotifyMethodType = struct {
             userdata: user_data,
-            func: *const fn (params: Payload, allocator: Allocator, userdata: ?*anyopaque) void,
+            func: *const fn (params: Payload, allocator: Allocator, userdata: user_data) void,
         };
 
         pub const Method = union(enum) {
@@ -276,16 +276,16 @@ pub fn RpcClientType(
         fn readFromServer(self: *Self) void {
             while (true) {
                 // message from server
-                var payload = try self.pack.read(self.allocator);
+                var payload = self.pack.read(self.allocator) catch unreachable;
                 errdefer payload.free(self.allocator);
 
                 if (payload != .arr) {
-                    return ErrorSet.PayloadTypeError;
+                    continue;
                 }
                 // payload must be an array and its length must be 4 or 3
                 const arr = payload.arr;
                 if (arr.len > 4 or arr.len < 3) {
-                    return ErrorSet.PayloadLengthError;
+                    continue;
                 }
 
                 // get the message type
@@ -297,7 +297,7 @@ pub fn RpcClientType(
                         {
                             const res_queue = self.res_to_client_queue.acquire();
                             defer self.res_to_client_queue.release();
-                            const node = try self.allocator.create(ResToClientQueue.Node);
+                            const node = self.allocator.create(ResToClientQueue.Node) catch unreachable;
                             node.data = payload;
                             res_queue.append(node);
                         }
@@ -367,7 +367,7 @@ pub fn RpcClientType(
             }
         }
 
-        pub fn loop(self: *Self) void {
+        pub fn loop(self: *Self) !void {
             try self.thread_pool_ptr.spawn(readFromServer, .{self});
             try self.thread_pool_ptr.spawn(sendToServer, .{self});
         }
@@ -375,7 +375,7 @@ pub fn RpcClientType(
         /// handle the request from server
         pub fn handleServerRequest(self: *Self, method: ReqMethodType, payload: Payload) void {
             // and we need to free the payload content, that maybe contain allocated memory!
-            defer self.freePayload(payload.*);
+            defer self.freePayload(payload);
 
             // get the array
             const arr = payload.arr;
@@ -388,49 +388,45 @@ pub fn RpcClientType(
             const result = method.func(params, self.allocator, method.userdata);
 
             // create a res node
-            const res_ptr = self.allocator.create(Payload) catch {
+            const node = self.allocator.create(ToServerQueue.Node) catch {
                 return;
             };
-            errdefer self.allocator.destroy(res_ptr);
+            errdefer self.allocator.destroy(node);
 
             // allocator the res memory, if allocator failed, just return, and keep silent
-            res_ptr.* = Payload.arrPayload(4, self.allocator) catch {
+            var res = Payload.arrPayload(4, self.allocator) catch {
                 return;
             };
-            errdefer self.freePayload(res_ptr.*);
+            errdefer self.freePayload(res);
 
             // setting the category code
-            res_ptr.setArrElement(0, Payload.uintToPayload(@intFromEnum(MessageType.Response))) catch unreachable;
+            res.setArrElement(0, Payload.uintToPayload(@intFromEnum(MessageType.Response))) catch unreachable;
 
             // setting the id
-            res_ptr.setArrElement(1, Payload.uintToPayload(msg_id)) catch unreachable;
+            res.setArrElement(1, Payload.uintToPayload(msg_id)) catch unreachable;
 
             // setting the error
-            res_ptr.setArrElement(2, if (result == .err) result.err else Payload.nilToPayload()) catch unreachable;
+            res.setArrElement(2, if (result == .err) result.err else Payload.nilToPayload()) catch unreachable;
 
             // setting the result
-            res_ptr.setArrElement(3, if (result == .result) result.result else Payload.nilToPayload()) catch unreachable;
+            res.setArrElement(3, if (result == .result) result.result else Payload.nilToPayload()) catch unreachable;
 
             // get the right to handle to_server_queue
             const to_server_queue = self.to_server_queue.acquire();
-            defer self.to_server_queue.release();
+            {
+                defer self.to_server_queue.release();
+                node.data = res;
+                // append the res node to queue
+                to_server_queue.append(node);
+            }
 
-            // append the res node to queue
-            to_server_queue.append(res_ptr);
-
-            // get the right to handle the inform writer
-            const inform_writer = self.inform_writer.acquire();
-            defer self.inform_writer.release();
-
-            // write a 1(u8) to inform the loop thread that
-            // a new message which is needed to send to server is coming!
-            inform_writer.writer().writeByte(1) catch unreachable;
+            self.to_server_queue_s.post();
         }
 
         /// handle the notify from server
         pub fn handleServerNotify(self: *Self, method: NotifyMethodType, payload: Payload) void {
             // and we need to free the payload
-            defer self.freePayload(payload.*);
+            defer self.freePayload(payload);
 
             // get param of notify
             const params = payload.arr[2];
