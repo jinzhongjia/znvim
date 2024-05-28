@@ -105,15 +105,9 @@ pub fn RpcClientType(
         res_to_client_queue: ThreadSafeResToClientQueue,
         to_server_queue: ThreadSafeToServerQueue,
         subscribe_map: ThreadsafeSubscribeMap,
+        to_server_queue_s: Thread.Semaphore = .{},
 
         thread_pool_ptr: *Thread.Pool,
-
-        trans_writer: TransType,
-        trans_reader: TransType,
-
-        // inter thread communication
-        inform_writer: ThreadSafeTransType,
-        inform_reader: TransType,
 
         /// init the rpc client
         /// we should note that the trans writer and reader will not close by deinit
@@ -179,15 +173,6 @@ pub fn RpcClientType(
             errdefer allocator.destroy(thread_pool_ptr);
             try thread_pool_ptr.init(.{ .allocator = allocator });
 
-            const informs = try makeInform();
-
-            const inform_writer_ptr = try allocator.create(TransType);
-            errdefer allocator.destroy(inform_writer_ptr);
-            inform_writer_ptr.* = informs[1];
-            const inform_writer = ThreadSafeTransType.init(inform_writer_ptr);
-
-            const inform_reader = informs[0];
-
             return Self{
                 .writer_ptr = writer_ptr,
                 .reader_ptr = reader_ptr,
@@ -199,10 +184,6 @@ pub fn RpcClientType(
                 .to_server_queue = to_server_queue,
                 .subscribe_map = subscribe_map,
                 .thread_pool_ptr = thread_pool_ptr,
-                .trans_writer = trans_writer,
-                .trans_reader = trans_reader,
-                .inform_writer = inform_writer,
-                .inform_reader = inform_reader,
             };
         }
 
@@ -236,12 +217,6 @@ pub fn RpcClientType(
 
             allocator.destroy(self.writer_ptr);
             allocator.destroy(self.reader_ptr);
-
-            const inform_writer_ptr = self.inform_writer.acquire();
-            allocator.destroy(inform_writer_ptr);
-            self.inform_writer.release();
-
-            self.inform_reader.close();
         }
 
         /// register request method
@@ -297,101 +272,99 @@ pub fn RpcClientType(
             }
         }
 
-        pub fn loop(self: *Self) void {
+        fn readFromServer(self: *Self) void {
             while (true) {
-                const index = tools.listenFiles(self.trans_reader, self.inform_reader) catch unreachable;
-                if (index == 0) {
-                    // message from server
-                    var payload = try self.pack.read(self.allocator);
-                    errdefer payload.free(self.allocator);
+                // message from server
+                var payload = try self.pack.read(self.allocator);
+                errdefer payload.free(self.allocator);
 
-                    if (payload != .arr) {
-                        return ErrorSet.PayloadTypeError;
-                    }
-                    // payload must be an array and its length must be 4 or 3
-                    const arr = payload.arr;
-                    if (arr.len > 4 or arr.len < 3) {
-                        return ErrorSet.PayloadLengthError;
-                    }
+                if (payload != .arr) {
+                    return ErrorSet.PayloadTypeError;
+                }
+                // payload must be an array and its length must be 4 or 3
+                const arr = payload.arr;
+                if (arr.len > 4 or arr.len < 3) {
+                    return ErrorSet.PayloadLengthError;
+                }
 
-                    // get the message type
-                    const t: MessageType = @enumFromInt(arr[0].uint);
-                    // when message is response
-                    switch (t) {
-                        .Response => {
-                            const msg_id = arr[1].uint;
-                            {
-                                const res_queue = self.res_to_client_queue.acquire();
-                                defer self.res_to_client_queue.release();
-                                const node = try self.allocator.create(ResToClientQueue.Node);
-                                node.data = payload;
-                                res_queue.append(node);
-                            }
-                            const subscribe_map = self.subscribe_map.acquire();
-                            defer self.subscribe_map.release();
-                            if (subscribe_map.get(@intCast(msg_id))) |val| {
-                                val.set();
-                            }
-                        },
-                        .Request => {
-                            // get method name
-                            const method_name = arr[1].str.value();
-                            // try get the method_hash_map
-                            const method_hash_map = self.method_hash_map.acquire();
-                            // we need to release hash map
-                            defer self.method_hash_map.release();
-
-                            if (method_hash_map.get(method_name)) |method| {
-                                if (method == .req) {
-                                    // when method is req we handle this
-                                    self.thread_pool_ptr.spawn(handleServerRequest, .{
-                                        self,
-                                        method.req,
-                                        payload,
-                                    }) catch unreachable;
-                                }
-                            }
-                        },
-                        .Notification => {
-                            // get method name
-                            const method_name = arr[1].str.value();
-                            // try get the method_hash_map
-                            const method_hash_map = self.method_hash_map.acquire();
-                            // we need to release hash map
-                            defer self.method_hash_map.release();
-
-                            if (method_hash_map.get(method_name)) |method| {
-                                if (method == .notify) {
-                                    self.thread_pool_ptr.spawn(handleServerNotify, .{
-                                        self,
-                                        method.notify,
-                                        payload,
-                                    }) catch unreachable;
-                                }
-                            }
-                        },
-                    }
-                } else {
-                    const val = self.inform_reader.reader().readByte() catch unreachable;
-                    if (val == 0) {
-                        // TODO: should exit
-                        return;
-                    } else if (val == 1) {
-                        const req_queue = self.to_server_queue.acquire();
-                        if (req_queue.pop()) |node| {
-                            // collect the payload content
-                            defer self.freePayload(node.data);
-                            // free the payload node
-                            defer self.allocator.destroy(node);
-                            self.pack.write(node.data) catch unreachable;
-                            // flush the writer buffer
-                            self.flush() catch unreachable;
+                // get the message type
+                const t: MessageType = @enumFromInt(arr[0].uint);
+                // when message is response
+                switch (t) {
+                    .Response => {
+                        const msg_id = arr[1].uint;
+                        {
+                            const res_queue = self.res_to_client_queue.acquire();
+                            defer self.res_to_client_queue.release();
+                            const node = try self.allocator.create(ResToClientQueue.Node);
+                            node.data = payload;
+                            res_queue.append(node);
                         }
-                    } else {
-                        @panic("error when read from inform reader !");
-                    }
+                        const subscribe_map = self.subscribe_map.acquire();
+                        defer self.subscribe_map.release();
+                        if (subscribe_map.get(@intCast(msg_id))) |val| {
+                            val.set();
+                        }
+                    },
+                    .Request => {
+                        // get method name
+                        const method_name = arr[1].str.value();
+                        // try get the method_hash_map
+                        const method_hash_map = self.method_hash_map.acquire();
+                        // we need to release hash map
+                        defer self.method_hash_map.release();
+
+                        if (method_hash_map.get(method_name)) |method| {
+                            if (method == .req) {
+                                // when method is req we handle this
+                                self.thread_pool_ptr.spawn(handleServerRequest, .{
+                                    self,
+                                    method.req,
+                                    payload,
+                                }) catch unreachable;
+                            }
+                        }
+                    },
+                    .Notification => {
+                        // get method name
+                        const method_name = arr[1].str.value();
+                        // try get the method_hash_map
+                        const method_hash_map = self.method_hash_map.acquire();
+                        // we need to release hash map
+                        defer self.method_hash_map.release();
+
+                        if (method_hash_map.get(method_name)) |method| {
+                            if (method == .notify) {
+                                self.thread_pool_ptr.spawn(handleServerNotify, .{
+                                    self,
+                                    method.notify,
+                                    payload,
+                                }) catch unreachable;
+                            }
+                        }
+                    },
                 }
             }
+        }
+
+        fn sendToServer(self: *Self) void {
+            // use semaphore
+            // TODO: check whether there is payload to send
+            const req_queue = self.to_server_queue.acquire();
+            defer self.to_server_queue.release();
+            if (req_queue.pop()) |node| {
+                // free the payload node
+                defer self.allocator.destroy(node);
+                // collect the payload content
+                defer self.freePayload(node.data);
+                self.pack.write(node.data) catch unreachable;
+                // flush the writer buffer
+                self.flush() catch unreachable;
+            }
+        }
+
+        pub fn loop(self: *Self) void {
+            _ = self;
         }
 
         /// handle the request from server
