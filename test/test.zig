@@ -1,7 +1,7 @@
 const std = @import("std");
 const znvim = @import("znvim");
 const File = std.fs.File;
-const ChildProcess = std.ChildProcess;
+const ChildProcess = std.process.Child;
 const allocator = std.testing.allocator;
 const expect = std.testing.expect;
 
