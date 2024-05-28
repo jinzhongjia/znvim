@@ -348,23 +348,27 @@ pub fn RpcClientType(
         }
 
         fn sendToServer(self: *Self) void {
-            // use semaphore
-            // TODO: check whether there is payload to send
-            const req_queue = self.to_server_queue.acquire();
-            defer self.to_server_queue.release();
-            if (req_queue.pop()) |node| {
-                // free the payload node
-                defer self.allocator.destroy(node);
-                // collect the payload content
-                defer self.freePayload(node.data);
-                self.pack.write(node.data) catch unreachable;
-                // flush the writer buffer
-                self.flush() catch unreachable;
+            while (true) {
+                // use semaphore
+                self.to_server_queue_s.wait();
+
+                const req_queue = self.to_server_queue.acquire();
+                defer self.to_server_queue.release();
+                if (req_queue.pop()) |node| {
+                    // free the payload node
+                    defer self.allocator.destroy(node);
+                    // collect the payload content
+                    defer self.freePayload(node.data);
+                    self.pack.write(node.data) catch unreachable;
+                    // flush the writer buffer
+                    self.flush() catch unreachable;
+                }
             }
         }
 
         pub fn loop(self: *Self) void {
-            _ = self;
+            try self.thread_pool_ptr.spawn(readFromServer, .{self});
+            try self.thread_pool_ptr.spawn(sendToServer, .{self});
         }
 
         /// handle the request from server
