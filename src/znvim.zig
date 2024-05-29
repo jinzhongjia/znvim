@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const rpc = @import("rpc.zig");
+const named_pipe = @import("named_pipe.zig");
 
 const Allocator = std.mem.Allocator;
 
@@ -14,6 +15,8 @@ const ErrorSet = error{
     NotGetVersion,
     NotGetApiLevel,
 };
+
+pub const connectNamedPipe = named_pipe.connectNamedPipe;
 
 // current build mode
 const build_mode = builtin.mode;

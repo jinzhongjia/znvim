@@ -6,7 +6,10 @@ const std = @import("std");
 const windows = std.os.windows;
 const LPCWSTR = windows.LPCWSTR;
 const DWORD = windows.DWORD;
+const LPDWORD = *DWORD;
 const BOOL = windows.BOOL;
+const HANDLE = windows.HANDLE;
+const LPVOID = windows.LPVOID;
 const WINAPI = windows.WINAPI;
 
 /// Waits until either a time-out interval elapses or an instance of the specified named pipe is available for connection
@@ -15,6 +18,28 @@ extern "kernel32" fn WaitNamedPipeW(
     lpNamedPipeName: LPCWSTR,
     nTimeOut: DWORD,
 ) callconv(WINAPI) BOOL;
+
+extern "kernel32" fn PeekNamedPipe(
+    hNamedPipe: HANDLE,
+    lpBuffer: ?LPVOID,
+    nBufferSize: DWORD,
+    lpBytesRead: ?LPDWORD,
+    lpTotalBytesAvail: ?LPDWORD,
+    lpBytesLeftThisMessage: ?LPDWORD,
+) callconv(WINAPI) BOOL;
+
+pub fn checkNamePipeData(pipe: std.fs.File) bool {
+    var bytesAvailable: DWORD = undefined;
+    const result = PeekNamedPipe(
+        pipe.handle,
+        null,
+        0,
+        null,
+        &bytesAvailable,
+        null,
+    );
+    return result == windows.TRUE and bytesAvailable > 0;
+}
 
 /// this function will try to connect named pipe on windows
 /// no need to free the mem
