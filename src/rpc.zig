@@ -30,6 +30,8 @@ const ToServerQueue = TailQueue(Payload);
 
 const SubscribeMap = std.AutoHashMap(u32, *Thread.ResetEvent);
 
+const IsAlive = std.atomic.Value(bool);
+
 pub const ResultType = union(enum) {
     err: Payload,
     result: Payload,
@@ -115,6 +117,9 @@ pub fn RpcClientType(
 
         trans_writer: TransType,
         trans_reader: TransType,
+
+        // TODO:this is should be test
+        is_alive: IsAlive = IsAlive.init(true),
 
         /// init the rpc client
         /// we should note that the trans writer and reader will not close by deinit
@@ -282,7 +287,7 @@ pub fn RpcClientType(
         }
 
         fn readFromServer(self: *Self) void {
-            while (true) {
+            while (self.is_alive.load(.monotonic)) {
                 const data_available = named_pipe.checkNamePipeData(self.trans_reader);
                 if (!data_available) {
                     std.time.sleep(5_000_000);
@@ -290,9 +295,9 @@ pub fn RpcClientType(
                 }
 
                 // message from server
-                var payload = self.pack.read(self.allocator) catch unreachable;
+                const payload = self.pack.read(self.allocator) catch unreachable;
                 log.info("get a new message from server", .{});
-                errdefer payload.free(self.allocator);
+                errdefer self.freePayload(payload);
 
                 if (payload != .arr) {
                     log.info("message from server is not an array", .{});
@@ -346,6 +351,12 @@ pub fn RpcClientType(
                     .Notification => {
                         // get method name
                         const method_name = arr[1].str.value();
+
+                        if (std.mem.eql(u8, method_name, "quit_znvim")) {
+                            self.is_alive.store(false, .monotonic);
+                            self.freePayload(payload);
+                            self.to_server_queue_s.post();
+                        }
                         // try get the method_hash_map
                         const method_hash_map = self.method_hash_map.acquire();
                         // we need to release hash map
@@ -366,12 +377,9 @@ pub fn RpcClientType(
         }
 
         fn sendToServer(self: *Self) void {
-            while (true) {
-                log.info("waiting message to send to server", .{});
+            while (self.is_alive.load(.monotonic)) {
                 // use semaphore
                 self.to_server_queue_s.wait();
-
-                log.info("come a message to send to server", .{});
 
                 const to_server_queue = self.to_server_queue.acquire();
                 defer self.to_server_queue.release();
