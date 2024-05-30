@@ -14,7 +14,10 @@ const ErrorSet = error{
     ApiDeprecated,
     NotGetVersion,
     NotGetApiLevel,
+    GetApiInfoFailed,
 };
+
+const infoApiName = "nvim_get_api_info";
 
 pub const connectNamedPipe = named_pipe.connectNamedPipe;
 
@@ -33,8 +36,7 @@ pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType, comp
         pub const TransType = RpcClientType.TransType;
 
         rpc_client: RpcClientType,
-        // TODO: add nvim info support
-        // nvim_info: rpc.Payload,
+        nvim_info: ?rpc.Payload = null,
 
         /// init
         pub fn init(trans_writer: TransType, trans_reader: TransType, allocator: Allocator) !Self {
@@ -45,19 +47,42 @@ pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType, comp
             );
             errdefer rpc_client.deinit();
 
-            // const arr = try Payload.arrPayload(0, allocator);
-            // defer arr.free(allocator);
-            //
-            // const result = try rpc_client.call("nvim_get_api_info", arr);
-
             return Self{
                 .rpc_client = rpc_client,
-                // .nvim_info = result.result,
             };
         }
 
-        pub fn deinit(self: *Self) !void {
-            try self.rpc_client.deinit();
+        pub fn deinit(self: *Self) void {
+            self.rpc_client.deinit();
+        }
+
+        pub fn freePayload(self: Self, payload: Payload) void {
+            self.rpc_client.freePayload(payload);
+        }
+
+        pub fn call(self: *Self, method_name: []const u8, params: Payload) !ResultType {
+            return self.rpc_client.call(method_name, params);
+        }
+
+        inline fn getAllocator(self: Self) Allocator {
+            return self.rpc_client.allocator;
+        }
+
+        pub fn getApiInfo(self: *Self) !void {
+            if (self.nvim_info != null) {
+                return;
+            }
+            const params = try Payload.arrPayload(0, self.getAllocator());
+            defer self.freePayload(params);
+            const result = try self.call(infoApiName, params);
+            if (result == .err) {
+                return ErrorSet.GetApiInfoFailed;
+            }
+            self.nvim_info = result.result;
+        }
+
+        pub fn getChannelID(self: Self) u32 {
+            return @intCast(self.nvim_info.?.arr[0].uint);
         }
     };
 }

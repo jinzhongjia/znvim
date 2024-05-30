@@ -6,6 +6,8 @@ const named_pipe = @import("named_pipe.zig");
 
 const log = std.log.scoped(.znvim);
 
+const delay_time = 3_000_000;
+
 const Thread = std.Thread;
 
 const TailQueue = std.TailQueue;
@@ -23,7 +25,6 @@ pub const ErrorSet = error{
     PayloadTypeError,
     PayloadLengthError,
     NotFoundRes,
-    NotCallExit,
 };
 
 const ResToClientQueue = TailQueue(Payload);
@@ -204,7 +205,7 @@ pub fn RpcClientType(
         }
 
         /// deinit
-        pub fn deinit(self: *Self) !void {
+        pub fn deinit(self: *Self) void {
             self.wait_group.wait();
 
             const allocator = self.allocator;
@@ -307,17 +308,15 @@ pub fn RpcClientType(
             while (self.is_alive.load(.monotonic)) {
                 const data_available = named_pipe.checkNamePipeData(self.trans_reader);
                 if (!data_available) {
-                    std.time.sleep(5_000_000);
+                    std.time.sleep(delay_time);
                     continue;
                 }
 
                 // message from server
                 const payload = self.pack.read(self.allocator) catch unreachable;
-                log.info("get a new message from server", .{});
                 errdefer self.freePayload(payload);
 
                 if (payload != .arr) {
-                    log.info("message from server is not an array", .{});
                     continue;
                 }
                 // payload must be an array and its length must be 4 or 3
@@ -328,7 +327,6 @@ pub fn RpcClientType(
 
                 // get the message type
                 const t: MessageType = @enumFromInt(arr[0].uint);
-                log.info("message type is {s}", .{@tagName(t)});
                 // when message is response
                 switch (t) {
                     .Response => {
@@ -403,9 +401,7 @@ pub fn RpcClientType(
                     defer self.freePayload(node.data);
                     self.pack.write(node.data) catch unreachable;
                     // flush the writer buffer
-                    log.info("try flush the buffer", .{});
                     self.flush() catch unreachable;
-                    log.info("flush buffer successfully", .{});
                 }
             }
             self.wait_group.finish();
@@ -413,7 +409,6 @@ pub fn RpcClientType(
 
         // event loop
         pub fn loop(self: *Self) !void {
-            log.info("try to start read from server and send to server", .{});
             self.wait_group.start();
             try self.thread_pool_ptr.spawn(readFromServer, .{self});
             self.wait_group.start();
@@ -485,7 +480,6 @@ pub fn RpcClientType(
 
         /// this will call function
         pub fn call(self: *Self, method_name: []const u8, params: Payload) !ResultType {
-            log.info("call method {s}", .{method_name});
             const node = try self.allocator.create(ResToClientQueue.Node);
             errdefer self.allocator.destroy(node);
 
@@ -526,7 +520,6 @@ pub fn RpcClientType(
 
             self.to_server_queue_s.post();
 
-            log.info("wait for res of method {s}", .{method_name});
             event.wait();
 
             {

@@ -16,15 +16,20 @@ pub fn main() !void {
     }
 
     const pipe = try znvim.connectNamedPipe(
-        "\\\\.\\pipe\\nvim.21520.0",
+        "\\\\.\\pipe\\nvim.29832.0",
         allocator,
     );
     defer pipe.close();
 
     var client = try ClientType.init(pipe, pipe, allocator);
-    defer client.deinit() catch @panic("not call exit!");
+    defer client.deinit();
 
     try client.rpc_client.loop();
+
+    std.log.info("get api infos", .{});
+    try client.getApiInfo();
+    const channel_id = client.getChannelID();
+    std.log.info("channel id is {}", .{channel_id});
 
     const params = try znvim.Payload.arrPayload(0, allocator);
     defer params.free(allocator);
@@ -34,5 +39,5 @@ pub fn main() !void {
     defer client.rpc_client.freeResultType(res);
     std.log.info("result is {any}", .{res.result});
 
-    client.rpc_client.exit();
+    // client.rpc_client.exit();
 }
