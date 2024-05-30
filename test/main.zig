@@ -22,7 +22,7 @@ pub fn main() !void {
     defer pipe.close();
 
     var client = try ClientType.init(pipe, pipe, allocator);
-    defer client.deinit();
+    defer client.deinit() catch @panic("not call exit!");
 
     try client.rpc_client.loop();
 
@@ -33,4 +33,6 @@ pub fn main() !void {
     const res = try client.rpc_client.call("nvim_get_current_buf", params);
     defer client.rpc_client.freeResultType(res);
     std.log.info("result is {any}", .{res});
+
+    client.rpc_client.exit();
 }

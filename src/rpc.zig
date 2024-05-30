@@ -23,6 +23,7 @@ pub const ErrorSet = error{
     PayloadTypeError,
     PayloadLengthError,
     NotFoundRes,
+    NotCallExit,
 };
 
 const ResToClientQueue = TailQueue(Payload);
@@ -202,7 +203,10 @@ pub fn RpcClientType(
         }
 
         /// deinit
-        pub fn deinit(self: *Self) void {
+        pub fn deinit(self: *Self) !void {
+            if (self.is_alive.load(.monotonic)) {
+                return ErrorSet.NotCallExit;
+            }
             const allocator = self.allocator;
             self.thread_pool_ptr.deinit();
             allocator.destroy(self.thread_pool_ptr);
@@ -213,10 +217,23 @@ pub fn RpcClientType(
             self.subscribe_map.release();
 
             const res_to_client_queue_ptr = self.res_to_client_queue.acquire();
+            for (0..res_to_client_queue_ptr.len) |_| {
+                if (res_to_client_queue_ptr.pop()) |node| {
+                    self.freePayload(node.data);
+                    self.allocator.destroy(node);
+                }
+            }
             allocator.destroy(res_to_client_queue_ptr);
             self.res_to_client_queue.release();
 
             const to_server_queue = self.to_server_queue.acquire();
+            // free the queue data
+            for (0..to_server_queue.len) |_| {
+                if (to_server_queue.pop()) |node| {
+                    self.freePayload(node.data);
+                    self.allocator.destroy(node);
+                }
+            }
             allocator.destroy(to_server_queue);
             self.to_server_queue.release();
 
@@ -352,11 +369,6 @@ pub fn RpcClientType(
                         // get method name
                         const method_name = arr[1].str.value();
 
-                        if (std.mem.eql(u8, method_name, "quit_znvim")) {
-                            self.is_alive.store(false, .monotonic);
-                            self.freePayload(payload);
-                            self.to_server_queue_s.post();
-                        }
                         // try get the method_hash_map
                         const method_hash_map = self.method_hash_map.acquire();
                         // we need to release hash map
@@ -564,6 +576,11 @@ pub fn RpcClientType(
                 node.data = note;
                 to_server_queue.append(node);
             }
+        }
+
+        pub fn exit(self: *Self) void {
+            self.is_alive.store(false, .monotonic);
+            self.to_server_queue_s.post();
         }
     };
 }
