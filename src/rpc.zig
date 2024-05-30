@@ -121,6 +121,8 @@ pub fn RpcClientType(
 
         is_alive: IsAlive = IsAlive.init(true),
 
+        wait_group: Thread.WaitGroup = .{},
+
         /// init the rpc client
         /// we should note that the trans writer and reader will not close by deinit
         /// the owner should close manually
@@ -203,9 +205,8 @@ pub fn RpcClientType(
 
         /// deinit
         pub fn deinit(self: *Self) !void {
-            if (self.is_alive.load(.monotonic)) {
-                return ErrorSet.NotCallExit;
-            }
+            self.wait_group.wait();
+
             const allocator = self.allocator;
             self.thread_pool_ptr.deinit();
             allocator.destroy(self.thread_pool_ptr);
@@ -385,6 +386,7 @@ pub fn RpcClientType(
                     },
                 }
             }
+            self.wait_group.finish();
         }
 
         fn sendToServer(self: *Self) void {
@@ -406,12 +408,15 @@ pub fn RpcClientType(
                     log.info("flush buffer successfully", .{});
                 }
             }
+            self.wait_group.finish();
         }
 
         // event loop
         pub fn loop(self: *Self) !void {
             log.info("try to start read from server and send to server", .{});
+            self.wait_group.start();
             try self.thread_pool_ptr.spawn(readFromServer, .{self});
+            self.wait_group.start();
             try self.thread_pool_ptr.spawn(sendToServer, .{self});
         }
 

@@ -32,7 +32,7 @@ pub fn main() !void {
     std.log.info("try to call nvim_get_current_buf", .{});
     const res = try client.rpc_client.call("nvim_get_current_buf", params);
     defer client.rpc_client.freeResultType(res);
-    std.log.info("result is {any}", .{res});
+    std.log.info("result is {any}", .{res.result});
 
     client.rpc_client.exit();
 }
