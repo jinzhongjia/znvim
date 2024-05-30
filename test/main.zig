@@ -39,5 +39,5 @@ pub fn main() !void {
     defer client.rpc_client.freeResultType(res);
     std.log.info("result is {any}", .{res.result});
 
-    // client.rpc_client.exit();
+    client.rpc_client.exit();
 }

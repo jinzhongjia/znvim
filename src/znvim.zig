@@ -53,6 +53,7 @@ pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType, comp
         }
 
         pub fn deinit(self: *Self) void {
+            self.rpc_client.freePayload(self.nvim_info.?);
             self.rpc_client.deinit();
         }
 
