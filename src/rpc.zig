@@ -119,7 +119,6 @@ pub fn RpcClientType(
         trans_writer: TransType,
         trans_reader: TransType,
 
-        // TODO:this is should be test
         is_alive: IsAlive = IsAlive.init(true),
 
         /// init the rpc client
