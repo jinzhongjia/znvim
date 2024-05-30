@@ -24,7 +24,7 @@ pub fn main() !void {
     var client = try ClientType.init(pipe, pipe, allocator);
     defer client.deinit();
 
-    try client.rpc_client.loop();
+    try client.loop();
 
     std.log.info("get api infos", .{});
     try client.getApiInfo();

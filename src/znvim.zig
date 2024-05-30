@@ -57,6 +57,10 @@ pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType, comp
             self.rpc_client.deinit();
         }
 
+        pub fn loop(self: *Self) !void {
+            try self.rpc_client.loop();
+        }
+
         pub fn freePayload(self: Self, payload: Payload) void {
             self.rpc_client.freePayload(payload);
         }
