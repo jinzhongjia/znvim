@@ -14,10 +14,14 @@ const ErrorSet = error{
     ApiDeprecated,
     NotGetVersion,
     NotGetApiLevel,
+    NotGetApiInfo,
     GetApiInfoFailed,
 };
 
 const infoApiName = "nvim_get_api_info";
+
+pub const ReqMethodType = rpc.ReqMethodType;
+pub const NotifyMethodType = rpc.NotifyMethodType;
 
 pub const connectNamedPipe = named_pipe.connectNamedPipe;
 
@@ -53,7 +57,9 @@ pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType, comp
         }
 
         pub fn deinit(self: *Self) void {
-            self.rpc_client.freePayload(self.nvim_info.?);
+            if (self.nvim_info) |info| {
+                self.rpc_client.freePayload(info);
+            }
             self.rpc_client.deinit();
         }
 
@@ -65,8 +71,24 @@ pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType, comp
             self.rpc_client.freePayload(payload);
         }
 
+        pub fn freeResultType(self: Self, result_type: ResultType) void {
+            self.rpc_client.freeResultType(result_type);
+        }
+
+        pub fn registerRequestMethod(self: *Self, method_name: []const u8, func: ReqMethodType) !void {
+            return self.rpc_client.registerRequestMethod(method_name, func);
+        }
+
+        pub fn registerNotifyMethod(self: *Self, method_name: []const u8, func: NotifyMethodType) !void {
+            return self.rpc_client.registerNotifyMethod(method_name, func);
+        }
+
         pub fn call(self: *Self, method_name: []const u8, params: Payload) !ResultType {
             return self.rpc_client.call(method_name, params);
+        }
+
+        pub fn notify(self: *Self, method_name: []const u8, params: Payload) !void {
+            return self.rpc_client.notify(method_name, params);
         }
 
         inline fn getAllocator(self: Self) Allocator {
@@ -86,8 +108,11 @@ pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType, comp
             self.nvim_info = result.result;
         }
 
-        pub fn getChannelID(self: Self) u32 {
-            return @intCast(self.nvim_info.?.arr[0].uint);
+        pub fn getChannelID(self: Self) !u32 {
+            if (self.nvim_info) |info| {
+                return @intCast(info.arr[0].uint);
+            }
+            return ErrorSet.NotGetApiInfo;
         }
     };
 }

@@ -28,7 +28,7 @@ pub fn main() !void {
 
     std.log.info("get api infos", .{});
     try client.getApiInfo();
-    const channel_id = client.getChannelID();
+    const channel_id = try client.getChannelID();
     std.log.info("channel id is {}", .{channel_id});
 
     const params = try znvim.Payload.arrPayload(0, allocator);
