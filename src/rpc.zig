@@ -5,6 +5,7 @@ const msgpack = @import("msgpack");
 const named_pipe = @import("named_pipe.zig");
 
 const posix = std.posix;
+const windows = std.os.windows;
 
 const log = std.log.scoped(.znvim);
 
@@ -41,11 +42,20 @@ pub const ResultType = union(enum) {
     result: Payload,
 };
 
-pub const ClientType = enum {
-    /// this is for stdio or named pipe
-    file,
-    /// this is for tcp or unix socket
-    socket,
+pub const ClientType = switch (builtin.target.os.tag) {
+    .linux => enum {
+        stdio,
+        socket,
+    },
+    .windows => enum {
+        stdio,
+        named_pipe,
+        socket,
+    },
+    else => @compileError(std.fmt.comptimePrint(
+        "not support current os {s}",
+        .{@tagName(builtin.target.os.tag)},
+    )),
 };
 
 pub fn RpcClientType(
@@ -74,7 +84,7 @@ pub fn RpcClientType(
         const MethodHashMap = std.StringHashMap(Method);
 
         pub const TransType: type = switch (client_tag) {
-            .file => std.fs.File,
+            .named_pipe, .stdio => std.fs.File,
             .socket => std.net.Stream,
         };
 
@@ -287,41 +297,53 @@ pub fn RpcClientType(
             }
         }
 
-        fn makeInform() ![2]TransType {
-            switch (builtin.os.tag) {
-                .windows => {
-                    var res: [2]TransType = undefined;
-                    try std.os.windows.CreatePipe(&res[0].handle, &res[1].handle, &.{
-                        .nLength = @sizeOf(std.os.windows.SECURITY_ATTRIBUTES),
-                        .bInheritHandle = 0,
-                        .lpSecurityDescriptor = null,
-                    });
-
-                    return res;
-                },
-                else => {
-                    @compileError("not support!");
-                },
-            }
-        }
-
         fn readFromServer(self: *Self) void {
             while (self.is_alive.load(.monotonic)) {
-                if (builtin.os.tag == .windows) {
-                    const data_available = named_pipe.checkNamePipeData(self.trans_reader);
-                    if (!data_available) {
-                        std.time.sleep(delay_time);
-                        continue;
-                    }
-                } else {
-                    var pollfd: [1]posix.pollfd = undefined;
-                    pollfd[0].fd = self.trans_reader.handle;
-                    pollfd[0].events = posix.POLL.IN;
-                    const res = std.posix.poll(pollfd, delay_time) catch unreachable;
-                    if (res == 0) {
-                        std.time.sleep(delay_time);
-                        continue;
-                    }
+                switch (comptime builtin.target.os.tag) {
+                    .windows => {
+                        if (client_tag == .named_pipe) {
+                            const data_available = named_pipe
+                                .checkNamePipeData(self.trans_reader);
+                            if (!data_available) {
+                                std.time.sleep(delay_time);
+                                continue;
+                            }
+                        } else if (client_tag == .socket) {
+                            // TODO: this needs test
+                            var sockfds: [1]windows.ws2_32.pollfd = undefined;
+
+                            sockfds[0].fd = self.trans_reader.handle;
+                            sockfds[0].events = tools.POLLwin.POLLIN;
+
+                            const res = windows.poll(&sockfds, 1, 0);
+                            if (res == 0) {
+                                std.time.sleep(delay_time);
+                                continue;
+                            } else if (res < 0) {
+                                @panic("wsapoll error!");
+                            }
+                        }
+                    },
+
+                    .linux => {
+                        // TODO: this need test
+                        var pollfd: [1]posix.pollfd = undefined;
+                        pollfd[0].fd = self.trans_reader.handle;
+                        pollfd[0].events = posix.POLL.IN;
+                        const res = std.posix.poll(
+                            pollfd,
+                            0,
+                        ) catch
+                            unreachable;
+                        if (res == 0) {
+                            std.time.sleep(delay_time);
+                            continue;
+                        }
+                    },
+                    else => @compileError(std.fmt.comptimePrint(
+                        "not support current os {s}",
+                        .{@tagName(builtin.target.os.tag)},
+                    )),
                 }
 
                 // message from server
