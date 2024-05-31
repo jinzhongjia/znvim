@@ -4,6 +4,8 @@ const tools = @import("tools.zig");
 const msgpack = @import("msgpack");
 const named_pipe = @import("named_pipe.zig");
 
+const posix = std.posix;
+
 const log = std.log.scoped(.znvim);
 
 const delay_time = 3_000_000;
@@ -73,8 +75,7 @@ pub fn RpcClientType(
 
         pub const TransType: type = switch (client_tag) {
             .file => std.fs.File,
-            else => std.fs.File,
-            // .socket => std.net.Stream,
+            .socket => std.net.Stream,
         };
 
         const BufferedWriter = std.io.BufferedWriter(
@@ -306,10 +307,21 @@ pub fn RpcClientType(
 
         fn readFromServer(self: *Self) void {
             while (self.is_alive.load(.monotonic)) {
-                const data_available = named_pipe.checkNamePipeData(self.trans_reader);
-                if (!data_available) {
-                    std.time.sleep(delay_time);
-                    continue;
+                if (builtin.os.tag == .windows) {
+                    const data_available = named_pipe.checkNamePipeData(self.trans_reader);
+                    if (!data_available) {
+                        std.time.sleep(delay_time);
+                        continue;
+                    }
+                } else {
+                    var pollfd: [1]posix.pollfd = undefined;
+                    pollfd[0].fd = self.trans_reader.handle;
+                    pollfd[0].events = posix.POLL.IN;
+                    const res = std.posix.poll(pollfd, delay_time) catch unreachable;
+                    if (res == 0) {
+                        std.time.sleep(delay_time);
+                        continue;
+                    }
                 }
 
                 // message from server
