@@ -7,7 +7,7 @@ const expect = std.testing.expect;
 
 const args = [_][]const u8{ "nvim", "--embed" };
 
-const ClientType = znvim.Client(20480, .file, u32);
+const ClientType = znvim.Client(20480, .stdio, u32);
 
 test "basic embed connect" {
     var nvim = try create_nvim_process();
@@ -21,7 +21,17 @@ test "basic embed connect" {
     defer _ = nvim.kill() catch unreachable;
     defer client.deinit();
 
-    try client.rpc_client.loop();
+    try client.loop();
+
+    const params = try znvim.Payload.arrPayload(0, allocator);
+    defer params.free(allocator);
+
+    const res = try client.rpc_client.call("nvim_get_current_buf", params);
+    defer client.rpc_client.freeResultType(res);
+
+    try expect(res.result.ext.data[0] == 1);
+
+    client.exit();
 }
 
 fn create_nvim_process() !ChildProcess {

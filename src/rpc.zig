@@ -83,9 +83,20 @@ pub fn RpcClientType(
 
         const MethodHashMap = std.StringHashMap(Method);
 
-        pub const TransType: type = switch (client_tag) {
-            .named_pipe, .stdio => std.fs.File,
-            .socket => std.net.Stream,
+        pub const TransType: type =
+            switch (builtin.target.os.tag) {
+            .linux => switch (client_tag) {
+                .stdio => std.fs.File,
+                .socket => std.net.Stream,
+            },
+            .windows => switch (client_tag) {
+                .named_pipe, .stdio => std.fs.File,
+                .socket => std.net.Stream,
+            },
+            else => @compileError(std.fmt.comptimePrint(
+                "not support current os {s}",
+                .{@tagName(builtin.target.os.tag)},
+            )),
         };
 
         const BufferedWriter = std.io.BufferedWriter(
@@ -291,7 +302,7 @@ pub fn RpcClientType(
         }
 
         // free the ResultType which is allocated by the self.allocator
-        pub fn freeResultType(self: *Self, result: ResultType) void {
+        pub fn freeResultType(self: Self, result: ResultType) void {
             switch (result) {
                 inline else => |val| self.freePayload(val),
             }
@@ -330,14 +341,12 @@ pub fn RpcClientType(
                                 continue;
                             } else if (res < 0) {
                                 @panic("wsapoll error!");
-                            } else {
-                                if (sockfds[0].revents &
-                                    (tools.POLLwin.POLLERR |
-                                    tools.POLLwin.POLLHUP |
-                                    tools.POLLwin.POLLNVAL) != 0)
-                                {
-                                    @panic("socket errors");
-                                }
+                            } else if (sockfds[0].revents &
+                                (tools.POLLwin.POLLERR |
+                                tools.POLLwin.POLLHUP |
+                                tools.POLLwin.POLLNVAL) != 0)
+                            {
+                                @panic("socket errors");
                             }
                         }
                     },
@@ -349,13 +358,15 @@ pub fn RpcClientType(
                         pollfd[0].fd = self.trans_reader.handle;
                         pollfd[0].events = posix.POLL.IN;
                         const res = std.posix.poll(
-                            pollfd,
+                            &pollfd,
                             0,
                         ) catch
                             unreachable;
                         if (res == 0) {
                             std.time.sleep(delay_time);
                             continue;
+                        } else if (pollfd[0].revents & (posix.POLL.ERR | posix.POLL.HUP | posix.POLL.NVAL) != 0) {
+                            @panic("socket errors");
                         }
                     },
                     else => @compileError(std.fmt.comptimePrint(
@@ -379,6 +390,7 @@ pub fn RpcClientType(
 
                 // get the message type
                 const t: MessageType = @enumFromInt(arr[0].uint);
+
                 // when message is response
                 switch (t) {
                     .Response => {
@@ -398,7 +410,7 @@ pub fn RpcClientType(
                     },
                     .Request => {
                         // get method name
-                        const method_name = arr[1].str.value();
+                        const method_name = arr[2].str.value();
                         // try get the method_hash_map
                         const method_hash_map = self.method_hash_map.acquire();
                         // we need to release hash map
@@ -456,6 +468,31 @@ pub fn RpcClientType(
                     self.flush() catch unreachable;
                 }
             }
+            // Send all unsent responses
+            {
+                const to_server_queue = self.to_server_queue.acquire();
+                defer self.to_server_queue.release();
+
+                for (0..to_server_queue.len) |_| {
+                    if (to_server_queue.pop()) |node| {
+                        const message_type: MessageType = @enumFromInt(node.data.arr[0].uint);
+                        // only send response message
+                        if (message_type != .Response) {
+                            to_server_queue.prepend(node);
+                            continue;
+                        }
+
+                        // free the payload node
+                        defer self.allocator.destroy(node);
+                        // collect the payload content
+                        defer self.freePayload(node.data);
+                        self.pack.write(node.data) catch unreachable;
+                        // flush the writer buffer
+                        self.flush() catch unreachable;
+                    }
+                }
+            }
+
             self.wait_group.finish();
         }
 

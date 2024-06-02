@@ -20,9 +20,6 @@ const ErrorSet = error{
 
 const infoApiName = "nvim_get_api_info";
 
-pub const ReqMethodType = rpc.ReqMethodType;
-pub const NotifyMethodType = rpc.NotifyMethodType;
-
 pub const connectNamedPipe = named_pipe.connectNamedPipe;
 
 // current build mode
@@ -37,6 +34,8 @@ pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType, comp
 
     return struct {
         const Self = @This();
+        pub const ReqMethodType = RpcClientType.ReqMethodType;
+        pub const NotifyMethodType = RpcClientType.NotifyMethodType;
         pub const TransType = RpcClientType.TransType;
 
         rpc_client: RpcClientType,
@@ -61,6 +60,10 @@ pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType, comp
                 self.rpc_client.freePayload(info);
             }
             self.rpc_client.deinit();
+        }
+
+        pub fn exit(self: *Self) void {
+            self.rpc_client.exit();
         }
 
         pub fn loop(self: *Self) !void {
