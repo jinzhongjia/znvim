@@ -3,12 +3,15 @@ const builtin = @import("builtin");
 const Thread = std.Thread;
 
 pub const POLLwin = struct {
-    pub const POLLPRI = 0x0400;
-    pub const POLLRDBAND = 0x0200;
     pub const POLLRDNORM = 0x0100;
-    pub const POLLWRNORM = 0x0010;
+    pub const POLLRDBAND = 0x0200;
     pub const POLLIN = POLLRDNORM | POLLRDBAND;
+    pub const POLLPRI = 0x0400;
+
+    pub const POLLWRNORM = 0x0010;
     pub const POLLOUT = POLLWRNORM;
+    pub const POLLWRBAND = 0x0020;
+
     pub const POLLERR = 0x0001;
     pub const POLLHUP = 0x0002;
     pub const POLLNVAL = 0x0004;

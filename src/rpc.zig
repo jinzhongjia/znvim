@@ -300,16 +300,25 @@ pub fn RpcClientType(
         fn readFromServer(self: *Self) void {
             while (self.is_alive.load(.monotonic)) {
                 switch (comptime builtin.target.os.tag) {
+                    // TODO: error handle
+                    // for windows
                     .windows => {
                         if (client_tag == .named_pipe) {
-                            const data_available = named_pipe
+                            const check_result = named_pipe
                                 .checkNamePipeData(self.trans_reader);
-                            if (!data_available) {
-                                std.time.sleep(delay_time);
-                                continue;
+                            switch (check_result) {
+                                .result => |data_available| {
+                                    if (!data_available) {
+                                        std.time.sleep(delay_time);
+                                        continue;
+                                    }
+                                },
+                                .win_error => |err| {
+                                    _ = err;
+                                    @panic("windows named pipe has error!");
+                                },
                             }
                         } else if (client_tag == .socket) {
-                            // TODO: this needs test
                             var sockfds: [1]windows.ws2_32.pollfd = undefined;
 
                             sockfds[0].fd = self.trans_reader.handle;
@@ -321,10 +330,19 @@ pub fn RpcClientType(
                                 continue;
                             } else if (res < 0) {
                                 @panic("wsapoll error!");
+                            } else {
+                                if (sockfds[0].revents &
+                                    (tools.POLLwin.POLLERR |
+                                    tools.POLLwin.POLLHUP |
+                                    tools.POLLwin.POLLNVAL) != 0)
+                                {
+                                    @panic("socket errors");
+                                }
                             }
                         }
                     },
 
+                    // for linux
                     .linux => {
                         // TODO: this need test
                         var pollfd: [1]posix.pollfd = undefined;

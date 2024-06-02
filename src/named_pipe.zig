@@ -28,7 +28,12 @@ extern "kernel32" fn PeekNamedPipe(
     lpBytesLeftThisMessage: ?LPDWORD,
 ) callconv(WINAPI) BOOL;
 
-pub fn checkNamePipeData(pipe: std.fs.File) bool {
+const CheckNamePipeResult = union(enum) {
+    win_error: windows.Win32Error,
+    result: bool,
+};
+
+pub fn checkNamePipeData(pipe: std.fs.File) CheckNamePipeResult {
     var bytesAvailable: DWORD = undefined;
     const result = PeekNamedPipe(
         pipe.handle,
@@ -38,7 +43,14 @@ pub fn checkNamePipeData(pipe: std.fs.File) bool {
         &bytesAvailable,
         null,
     );
-    return result == windows.TRUE and bytesAvailable > 0;
+    if (result == windows.TRUE) {
+        return CheckNamePipeResult{
+            .result = bytesAvailable > 0,
+        };
+    }
+    return CheckNamePipeResult{
+        .win_error = windows.kernel32.GetLastError(),
+    };
 }
 
 /// this function will try to connect named pipe on windows
