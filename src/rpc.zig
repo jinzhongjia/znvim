@@ -48,8 +48,7 @@ pub const ClientType = switch (builtin.target.os.tag) {
         socket,
     },
     .windows => enum {
-        stdio,
-        named_pipe,
+        pipe,
         socket,
     },
     else => @compileError(std.fmt.comptimePrint(
@@ -90,7 +89,7 @@ pub fn RpcClientType(
                 .socket => std.net.Stream,
             },
             .windows => switch (client_tag) {
-                .named_pipe, .stdio => std.fs.File,
+                .pipe => std.fs.File,
                 .socket => std.net.Stream,
             },
             else => @compileError(std.fmt.comptimePrint(
@@ -314,7 +313,7 @@ pub fn RpcClientType(
                     // TODO: error handle
                     // for windows
                     .windows => {
-                        if (client_tag == .named_pipe) {
+                        if (client_tag == .pipe) {
                             const check_result = named_pipe
                                 .checkNamePipeData(self.trans_reader);
                             switch (check_result) {
@@ -375,9 +374,11 @@ pub fn RpcClientType(
                     )),
                 }
 
+                log.info("wait message to read", .{});
                 // message from server
                 const payload = self.pack.read(self.allocator) catch unreachable;
                 errdefer self.freePayload(payload);
+                log.info("read get message!", .{});
 
                 if (payload != .arr) {
                     continue;
@@ -390,6 +391,8 @@ pub fn RpcClientType(
 
                 // get the message type
                 const t: MessageType = @enumFromInt(arr[0].uint);
+
+                log.info("message type is {s}", .{@tagName(t)});
 
                 // when message is response
                 switch (t) {
@@ -448,7 +451,9 @@ pub fn RpcClientType(
                     },
                 }
             }
+            log.info("try to finish read from server", .{});
             self.wait_group.finish();
+            log.info("succeed to finish read from server", .{});
         }
 
         fn sendToServer(self: *Self) void {
@@ -465,7 +470,9 @@ pub fn RpcClientType(
                     defer self.freePayload(node.data);
                     self.pack.write(node.data) catch unreachable;
                     // flush the writer buffer
+                    log.info("try to flush buffer", .{});
                     self.flush() catch unreachable;
+                    log.info("flush buffer successfully", .{});
                 }
             }
             // Send all unsent responses
@@ -493,7 +500,9 @@ pub fn RpcClientType(
                 }
             }
 
+            log.info("try to finish send to server", .{});
             self.wait_group.finish();
+            log.info("succeed to finish send to server", .{});
         }
 
         // event loop
@@ -609,7 +618,9 @@ pub fn RpcClientType(
 
             self.to_server_queue_s.post();
 
+            log.info("wait to wake call", .{});
             event.wait();
+            log.info("wake call successfully", .{});
 
             {
                 const subscribe_map = self.subscribe_map.acquire();
