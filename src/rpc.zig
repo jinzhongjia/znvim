@@ -6,8 +6,6 @@ const named_pipe = @import("named_pipe.zig");
 
 const log = std.log.scoped(.znvim);
 
-const delay_time = 3_0_000_000;
-
 const Thread = std.Thread;
 
 const TailQueue = std.TailQueue;
@@ -48,6 +46,7 @@ pub fn RpcClientType(
     comptime buffer_size: usize,
     comptime client_tag: ClientType,
     comptime user_data: type,
+    comptime delay_time: u64,
 ) type {
     return struct {
         const Self = @This();

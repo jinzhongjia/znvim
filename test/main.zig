@@ -20,7 +20,7 @@ pub fn main() !void {
     // try unix_socket(allocator);
 }
 
-const ClientType = znvim.Client(20480, .socket, *u32);
+const ClientType = znvim.defaultClient(.socket, *u32);
 
 var client: ClientType = undefined;
 fn socket(allocator: std.mem.Allocator) !void {

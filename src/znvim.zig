@@ -25,11 +25,23 @@ pub const connectNamedPipe = named_pipe.connectNamedPipe;
 // current build mode
 const build_mode = builtin.mode;
 
-pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType, comptime user_data: type) type {
+const default_delay_time = 3_0_000_000;
+
+pub fn defaultClient(comptime client_tag: ClientType, comptime user_data: type) type {
+    return Client(
+        20480,
+        client_tag,
+        user_data,
+        default_delay_time,
+    );
+}
+
+pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType, comptime user_data: type, comptime delay_time: u64) type {
     const RpcClientType = rpc.RpcClientType(
         buffer_size,
         client_tag,
         user_data,
+        delay_time,
     );
 
     return struct {
