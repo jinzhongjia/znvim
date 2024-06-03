@@ -42,19 +42,9 @@ pub const ResultType = union(enum) {
     result: Payload,
 };
 
-pub const ClientType = switch (builtin.target.os.tag) {
-    .linux => enum {
-        stdio,
-        socket,
-    },
-    .windows => enum {
-        pipe,
-        socket,
-    },
-    else => @compileError(std.fmt.comptimePrint(
-        "not support current os {s}",
-        .{@tagName(builtin.target.os.tag)},
-    )),
+pub const ClientType = enum {
+    pipe,
+    socket,
 };
 
 pub fn RpcClientType(
@@ -82,20 +72,9 @@ pub fn RpcClientType(
 
         const MethodHashMap = std.StringHashMap(Method);
 
-        pub const TransType: type =
-            switch (builtin.target.os.tag) {
-            .linux => switch (client_tag) {
-                .stdio => std.fs.File,
-                .socket => std.net.Stream,
-            },
-            .windows => switch (client_tag) {
-                .pipe => std.fs.File,
-                .socket => std.net.Stream,
-            },
-            else => @compileError(std.fmt.comptimePrint(
-                "not support current os {s}",
-                .{@tagName(builtin.target.os.tag)},
-            )),
+        pub const TransType: type = switch (client_tag) {
+            .pipe => std.fs.File,
+            .socket => std.net.Stream,
         };
 
         const BufferedWriter = std.io.BufferedWriter(
