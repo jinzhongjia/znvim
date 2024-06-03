@@ -2,6 +2,10 @@ const std = @import("std");
 const builtin = @import("builtin");
 const Thread = std.Thread;
 
+const windows = std.os.windows;
+const posix = std.posix;
+const named_pipe = @import("named_pipe.zig");
+
 pub const POLLwin = struct {
     pub const POLLRDNORM = 0x0100;
     pub const POLLRDBAND = 0x0200;
@@ -46,12 +50,75 @@ pub fn ThreadSafe(context: type) type {
     };
 }
 
+const listenErrors = error{
+    win32,
+    waspoll,
+    winsocket,
+    socket,
+};
+
 // listenPipe for windows
-pub fn listenFiles(file_0: std.fs.File, file_1: std.fs.File) !u32 {
-    if (builtin.os.tag == .windows) {
-        var pipes: [2]std.os.windows.HANDLE = .{ file_0.handle, file_1.handle };
-        return try std.os.windows.WaitForMultipleObjectsEx(&pipes, false, 0, false);
-    } else {
-        @compileError("not support !");
+pub fn listen(trans: union(enum) {
+    pipe: std.fs.File,
+    socket: std.net.Stream,
+}) !bool {
+    switch (comptime builtin.target.os.tag) {
+        .windows => {
+            if (trans == .pipe) {
+                const check_result = named_pipe
+                    .checkNamePipeData(trans.pipe);
+                switch (check_result) {
+                    .result => |data_available| {
+                        if (!data_available) {
+                            return false;
+                        }
+                    },
+                    .win_error => |err| {
+                        _ = err;
+                        return listenErrors.win32;
+                    },
+                }
+            } else if (trans == .socket) {
+                var sockfds: [1]windows.ws2_32.pollfd = undefined;
+
+                sockfds[0].fd = trans.socket.handle;
+                sockfds[0].events = POLLwin.POLLIN;
+
+                const res = windows.poll(&sockfds, 1, 0);
+                if (res == 0) {
+                    return false;
+                } else if (res < 0) {
+                    return listenErrors.waspoll;
+                } else if (sockfds[0].revents &
+                    (POLLwin.POLLERR |
+                    POLLwin.POLLHUP |
+                    POLLwin.POLLNVAL) != 0)
+                {
+                    return listenErrors.winsocket;
+                }
+            }
+        },
+
+        .linux => {
+            var pollfd: [1]posix.pollfd = undefined;
+            pollfd[0].fd = switch (trans) {
+                inline else => |val| val.handle,
+            };
+            pollfd[0].events = posix.POLL.IN;
+            const res = try std.posix.poll(
+                &pollfd,
+                0,
+            );
+            if (res == 0) {
+                return false;
+            } else if (pollfd[0].revents & (posix.POLL.ERR | posix.POLL.HUP | posix.POLL.NVAL) != 0) {
+                return listenErrors.socket;
+            }
+        },
+        else => @compileError(std.fmt.comptimePrint(
+            "not support current os {s}",
+            .{@tagName(builtin.target.os.tag)},
+        )),
     }
+    return true;
 }
