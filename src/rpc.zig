@@ -247,22 +247,38 @@ pub fn RpcClientType(
             allocator.destroy(self.reader_ptr);
         }
 
-        /// register request method
-        pub fn registerRequestMethod(self: *Self, method_name: []const u8, func: ReqMethodType) !void {
+        /// register method
+        fn registerMethod(
+            self: *Self,
+            comptime is_notify: bool,
+            method_name: []const u8,
+            func: if (is_notify) NotifyMethodType else ReqMethodType,
+        ) !void {
             const method_hash_map = self.method_hash_map.acquire();
             defer self.method_hash_map.release();
-            try method_hash_map.put(method_name, Method{
+            try method_hash_map.put(method_name, if (is_notify) Method{
+                .notify = func,
+            } else Method{
                 .req = func,
             });
         }
 
-        /// register notify method
-        pub fn registerNotifyMethod(self: *Self, method_name: []const u8, func: NotifyMethodType) !void {
+        /// unregister method
+        pub fn unregisterMethod(self: *Self, method_name: []const u8) void {
             const method_hash_map = self.method_hash_map.acquire();
             defer self.method_hash_map.release();
-            try method_hash_map.put(method_name, Method{
-                .notify = func,
-            });
+
+            method_hash_map.remove(method_name);
+        }
+
+        /// register request method
+        pub fn registerRequestMethod(self: *Self, method_name: []const u8, func: ReqMethodType) !void {
+            try self.registerMethod(false, method_name, func);
+        }
+
+        /// register notify method
+        pub fn registerNotifyMethod(self: *Self, method_name: []const u8, func: NotifyMethodType) !void {
+            try self.registerMethod(true, method_name, func);
         }
 
         /// flush the buffer

@@ -101,6 +101,10 @@ pub fn Client(comptime buffer_size: usize, comptime client_tag: ClientType, comp
             return self.rpc_client.registerNotifyMethod(method_name, func);
         }
 
+        pub fn unregisterMehod(self: *Self, method_name: []const u8) void {
+            self.rpc_client.unregisterMethod(method_name);
+        }
+
         pub fn call(self: *Self, method_name: []const u8, params: Payload) !ResultType {
             return self.rpc_client.call(method_name, params);
         }
