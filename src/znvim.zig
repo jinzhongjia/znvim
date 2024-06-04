@@ -9,7 +9,7 @@ pub const ClientType = rpc.ClientType;
 pub const Payload = rpc.Payload;
 pub const ResultType = rpc.ResultType;
 
-const ErrorSet = error{
+pub const ErrorSet = error{
     ApiNotFound,
     ApiDeprecated,
     NotGetVersion,
@@ -25,7 +25,7 @@ pub const connectNamedPipe = named_pipe.connectNamedPipe;
 // current build mode
 const build_mode = builtin.mode;
 
-const default_delay_time = 3_0_000_000;
+pub const default_delay_time = 3_0_000_000;
 
 pub fn defaultClient(comptime client_tag: ClientType, comptime user_data: type) type {
     return Client(

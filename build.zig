@@ -10,7 +10,7 @@ pub fn build(b: *std.Build) !void {
     );
 
     const znvim = b.addModule("znvim", .{
-        .root_source_file = b.path("src/znvim.zig"),
+        .root_source_file = b.path(b.pathJoin(&.{ "src", "znvim.zig" })),
         .imports = &.{.{
             .name = "msgpack",
             .module = msgpack.module("msgpack"),
@@ -18,7 +18,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     const unit_tests = b.addTest(.{
-        .root_source_file = b.path("test/test.zig"),
+        .root_source_file = b.path(b.pathJoin(&.{ "test", "test.zig" })),
         .target = target,
         .optimize = optimize,
     });
@@ -31,9 +31,28 @@ pub fn build(b: *std.Build) !void {
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_unit_tests.step);
 
+    const znvim_obj = b.addObject(.{
+        .name = "znvim",
+        .root_source_file = b.path(b.pathJoin(&.{ "src", "znvim.zig" })),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const docs_step = b.step("docs", "Generate docs");
+
+    const docs_install = b.addInstallDirectory(.{
+        .source_dir = znvim_obj.getEmittedDocs(),
+        .install_dir = .prefix,
+        .install_subdir = "docs",
+    });
+
+    docs_step.dependOn(&docs_install.step);
+
+    // build main
+
     const exe = b.addExecutable(.{
         .name = "zig",
-        .root_source_file = b.path("test/main.zig"),
+        .root_source_file = b.path(b.pathJoin(&.{ "test", "main.zig" })),
         .target = target,
         .optimize = optimize,
     });
