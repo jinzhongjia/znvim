@@ -110,6 +110,9 @@ pub fn RpcClientType(
 
         thread_pool_ptr: *Thread.Pool,
 
+        read_thread: Thread = undefined,
+        send_thread: Thread = undefined,
+
         trans_writer: TransType,
         trans_reader: TransType,
 
@@ -412,9 +415,9 @@ pub fn RpcClientType(
         // event loop
         pub fn loop(self: *Self) !void {
             self.wait_group.start();
-            try self.thread_pool_ptr.spawn(readFromServer, .{self});
+            self.read_thread = try std.Thread.spawn(.{}, readFromServer, .{self});
             self.wait_group.start();
-            try self.thread_pool_ptr.spawn(sendToServer, .{self});
+            self.send_thread = try std.Thread.spawn(.{}, sendToServer, .{self});
         }
 
         /// handle the request from server
