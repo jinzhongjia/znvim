@@ -37,10 +37,7 @@ pub const ResultType = union(enum) {
     result: Payload,
 };
 
-pub const ClientType = enum {
-    pipe,
-    socket,
-};
+pub const ClientType = tools.ClientType;
 
 pub fn RpcClientType(
     comptime buffer_size: usize,
@@ -69,7 +66,7 @@ pub fn RpcClientType(
         const MethodHashMap = std.StringHashMap(Method);
 
         pub const TransType: type = switch (client_tag) {
-            .pipe => std.fs.File,
+            .pipe, .stdio => std.fs.File,
             .socket => std.net.Stream,
         };
 
@@ -284,10 +281,7 @@ pub fn RpcClientType(
 
         fn readFromServer(self: *Self) void {
             while (self.is_alive.load(.monotonic)) {
-                const res = tools.listen(if (client_tag == .pipe)
-                    .{ .pipe = self.trans_reader }
-                else
-                    .{ .socket = self.trans_reader }) catch unreachable;
+                const res = tools.listen(client_tag, self.trans_reader) catch unreachable;
 
                 if (!res) {
                     std.time.sleep(delay_time);

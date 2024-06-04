@@ -6,6 +6,12 @@ const windows = std.os.windows;
 const posix = std.posix;
 const named_pipe = @import("named_pipe.zig");
 
+pub const ClientType = enum {
+    stdio,
+    pipe,
+    socket,
+};
+
 pub const POLLwin = struct {
     pub const POLLRDNORM = 0x0100;
     pub const POLLRDBAND = 0x0200;
@@ -58,15 +64,16 @@ const listenErrors = error{
 };
 
 // listenPipe for windows
-pub fn listen(trans: union(enum) {
-    pipe: std.fs.File,
-    socket: std.net.Stream,
-}) !bool {
+pub fn listen(comptime client_tag: ClientType, pl: anytype) !bool {
+    const trans = switch (client_tag) {
+        .pipe, .stdio => @as(std.fs.File, pl),
+        .socket => @as(std.net.Stream, pl),
+    };
     switch (comptime builtin.target.os.tag) {
         .windows => {
-            if (trans == .pipe) {
+            if (client_tag == .pipe) {
                 const check_result = named_pipe
-                    .checkNamePipeData(trans.pipe);
+                    .checkNamePipeData(trans);
                 switch (check_result) {
                     .result => |data_available| {
                         if (!data_available) {
@@ -78,10 +85,10 @@ pub fn listen(trans: union(enum) {
                         return listenErrors.win32;
                     },
                 }
-            } else if (trans == .socket) {
+            } else if (client_tag == .socket) {
                 var sockfds: [1]windows.ws2_32.pollfd = undefined;
 
-                sockfds[0].fd = trans.socket.handle;
+                sockfds[0].fd = trans.handle;
                 sockfds[0].events = POLLwin.POLLIN;
 
                 const res = windows.poll(&sockfds, 1, 0);
@@ -101,9 +108,7 @@ pub fn listen(trans: union(enum) {
 
         .linux => {
             var pollfd: [1]posix.pollfd = undefined;
-            pollfd[0].fd = switch (trans) {
-                inline else => |val| val.handle,
-            };
+            pollfd[0].fd = trans.handle;
             pollfd[0].events = posix.POLL.IN;
             const res = try std.posix.poll(
                 &pollfd,
