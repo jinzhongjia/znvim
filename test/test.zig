@@ -7,7 +7,7 @@ const expect = std.testing.expect;
 
 const args = [_][]const u8{ "nvim", "--embed" };
 
-const ClientType = znvim.defaultClient( .pipe, u32);
+const ClientType = znvim.defaultClient(.pipe, u32);
 
 test "basic embed connect" {
     var nvim = try create_nvim_process();

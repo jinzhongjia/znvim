@@ -4,7 +4,9 @@ const File = std.fs.File;
 const ChildProcess = std.ChildProcess;
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+const ClientType = znvim.defaultClient(.pipe, *u32);
 
+var client: ClientType = undefined;
 var user_data: u32 = 1;
 
 pub fn main() !void {
@@ -15,14 +17,36 @@ pub fn main() !void {
         if (deinit_status == .leak) @panic("TEST FAIL");
     }
 
+    io(allocator) catch |err| {
+        std.log.err("err is {any}", .{err});
+    };
+
     // try pipee(allocator);
-    try socket(allocator);
+    // try socket(allocator);
     // try unix_socket(allocator);
 }
+fn io(allocator: std.mem.Allocator) !void {
+    client = try ClientType.init(std.io.getStdOut(), std.io.getStdIn(), allocator);
 
-const ClientType = znvim.defaultClient(.socket, *u32);
+    defer client.deinit();
+    try client.loop();
 
-var client: ClientType = undefined;
+    try client.getApiInfo();
+
+    const reqFuncType = ClientType.ReqMethodType;
+    const notifyFuncType = ClientType.NotifyMethodType;
+
+    try client.registerRequestMethod("add", reqFuncType{
+        .func = add,
+        .userdata = &user_data,
+    });
+
+    try client.registerNotifyMethod("exit", notifyFuncType{
+        .func = exit,
+        .userdata = &user_data,
+    });
+}
+
 fn socket(allocator: std.mem.Allocator) !void {
     const address = "127.0.0.1";
     const port = 9090;
@@ -83,7 +107,6 @@ fn add(_: znvim.Payload, allocator: std.mem.Allocator, userdata: *u32) znvim.Res
 }
 
 fn exit(_: znvim.Payload, _: std.mem.Allocator, _: *u32) void {
-    std.log.info("exit", .{});
     client.exit();
 }
 
@@ -125,7 +148,7 @@ fn unix_socket(allocator: std.mem.Allocator) !void {
 }
 
 fn pipee(allocator: std.mem.Allocator) !void {
-    const pipe_path = "\\\\.\\pipe\\nvim.2324.0";
+    const pipe_path = "\\\\.\\pipe\\nvim.23808.0";
 
     const pipe = try znvim.connectNamedPipe(
         pipe_path,
