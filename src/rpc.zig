@@ -288,74 +288,11 @@ pub fn RpcClientType(
                     .{ .pipe = self.trans_reader }
                 else
                     .{ .socket = self.trans_reader }) catch unreachable;
+
                 if (!res) {
                     std.time.sleep(delay_time);
                     continue;
                 }
-                // switch (comptime builtin.target.os.tag) {
-                //     // TODO: error handle
-                //     // for windows
-                //     .windows => {
-                //         if (client_tag == .pipe) {
-                //             const check_result = named_pipe
-                //                 .checkNamePipeData(self.trans_reader);
-                //             switch (check_result) {
-                //                 .result => |data_available| {
-                //                     if (!data_available) {
-                //                         std.time.sleep(delay_time);
-                //                         continue;
-                //                     }
-                //                 },
-                //                 .win_error => |err| {
-                //                     _ = err;
-                //                     @panic("windows named pipe has error!");
-                //                 },
-                //             }
-                //         } else if (client_tag == .socket) {
-                //             var sockfds: [1]windows.ws2_32.pollfd = undefined;
-                //
-                //             sockfds[0].fd = self.trans_reader.handle;
-                //             sockfds[0].events = tools.POLLwin.POLLIN;
-                //
-                //             const res = windows.poll(&sockfds, 1, 0);
-                //             if (res == 0) {
-                //                 std.time.sleep(delay_time);
-                //                 continue;
-                //             } else if (res < 0) {
-                //                 @panic("wsapoll error!");
-                //             } else if (sockfds[0].revents &
-                //                 (tools.POLLwin.POLLERR |
-                //                 tools.POLLwin.POLLHUP |
-                //                 tools.POLLwin.POLLNVAL) != 0)
-                //             {
-                //                 @panic("socket errors");
-                //             }
-                //         }
-                //     },
-                //
-                //     // for linux
-                //     .linux => {
-                //         // TODO: this need test
-                //         var pollfd: [1]posix.pollfd = undefined;
-                //         pollfd[0].fd = self.trans_reader.handle;
-                //         pollfd[0].events = posix.POLL.IN;
-                //         const res = std.posix.poll(
-                //             &pollfd,
-                //             0,
-                //         ) catch
-                //             unreachable;
-                //         if (res == 0) {
-                //             std.time.sleep(delay_time);
-                //             continue;
-                //         } else if (pollfd[0].revents & (posix.POLL.ERR | posix.POLL.HUP | posix.POLL.NVAL) != 0) {
-                //             @panic("socket errors");
-                //         }
-                //     },
-                //     else => @compileError(std.fmt.comptimePrint(
-                //         "not support current os {s}",
-                //         .{@tagName(builtin.target.os.tag)},
-                //     )),
-                // }
 
                 // message from server
                 const payload = self.pack.read(self.allocator) catch unreachable;
