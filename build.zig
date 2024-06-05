@@ -47,20 +47,4 @@ pub fn build(b: *std.Build) !void {
     });
 
     docs_step.dependOn(&docs_install.step);
-
-    // build main
-
-    const exe = b.addExecutable(.{
-        .name = "zig",
-        .root_source_file = b.path(b.pathJoin(&.{ "test", "main.zig" })),
-        .target = target,
-        .optimize = optimize,
-    });
-    exe.root_module.addImport("znvim", znvim);
-    b.installArtifact(exe);
-
-    const run_cmd = b.addRunArtifact(exe);
-    run_cmd.step.dependOn(b.getInstallStep());
-    const run_step = b.step("run", "Run the app");
-    run_step.dependOn(&run_cmd.step);
 }
