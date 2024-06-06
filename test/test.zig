@@ -1,48 +1,87 @@
 const std = @import("std");
 const znvim = @import("znvim");
-const File = std.fs.File;
-const ChildProcess = std.ChildProcess;
-const allocator = std.testing.allocator;
-const expect = std.testing.expect;
-
-const args = [_][]const u8{ "nvim", "--embed", "-u", "NONE" };
-
-const ClientType = znvim.defaultClient(.pipe, u32);
 
 test "basic embed connect" {
-    var nvim = try create_nvim_process();
+    const ClientType = znvim.defaultClient(.pipe, u32);
+
+    const args = [_][]const u8{ "nvim", "--embed", "-u", "NONE" };
+
+    var nvim = try create_nvim_process(std.testing.allocator, &args, true);
+    defer _ = nvim.kill() catch unreachable;
 
     var client = try ClientType.init(
         nvim.stdin.?,
         nvim.stdout.?,
-        allocator,
+        std.testing.allocator,
     );
 
-    defer _ = nvim.kill() catch unreachable;
     defer client.deinit();
 
     try client.loop();
 
-    const params = try znvim.Payload.arrPayload(0, allocator);
-    defer params.free(allocator);
+    const params = try znvim.Payload.arrPayload(0, std.testing.allocator);
+    defer params.free(std.testing.allocator);
 
     const res = try client.rpc_client.call("nvim_get_current_buf", params);
     defer client.rpc_client.freeResultType(res);
 
-    try expect(res.result.ext.data[0] == 1);
+    try std.testing.expect(res.result.ext.data[0] == 1);
 
     client.exit();
 }
 
-fn create_nvim_process() !ChildProcess {
-    var nvim = ChildProcess.init(&args, allocator);
+test "socket connect test" {
+    const address = "127.0.0.1";
+    const port = 9090;
+
+    const str = try std.fmt.allocPrint(std.testing.allocator, "{s}:{d}", .{ address, port });
+    defer std.testing.allocator.free(str);
+
+    const ClientType = znvim.defaultClient(.socket, u32);
+
+    const args = [_][]const u8{ "nvim", "--listen", str, "-u", "NONE" };
+
+    var nvim = try create_nvim_process(std.testing.allocator, &args, false);
+    defer _ = nvim.kill() catch unreachable;
+
+    const stream: std.net.Stream = while (true) {
+        const res = std.net.tcpConnectToHost(std.testing.allocator, address, port) catch {
+            continue;
+        };
+        break res;
+    };
+    defer stream.close();
+
+    var client = try ClientType.init(
+        stream,
+        stream,
+        std.testing.allocator,
+    );
+
+    defer client.deinit();
+
+    try client.loop();
+
+    const params = try znvim.Payload.arrPayload(0, std.testing.allocator);
+    defer params.free(std.testing.allocator);
+
+    const res = try client.rpc_client.call("nvim_get_current_buf", params);
+    defer client.rpc_client.freeResultType(res);
+
+    try std.testing.expect(res.result.ext.data[0] == 1);
+
+    client.exit();
+}
+
+fn create_nvim_process(allocator: std.mem.Allocator, args: []const []const u8, is_pipe: bool) !std.ChildProcess {
+    var nvim = std.ChildProcess.init(args, allocator);
 
     // set to use pipe
-    nvim.stdin_behavior = .Pipe;
+    nvim.stdin_behavior = if (is_pipe) .Pipe else .Ignore;
     // set to use pipe
-    nvim.stdout_behavior = .Pipe;
+    nvim.stdout_behavior = if (is_pipe) .Pipe else .Ignore;
     // set ignore
-    nvim.stderr_behavior = .Ignore;
+    nvim.stderr_behavior = if (is_pipe) .Pipe else .Ignore;
 
     // try spwan
     try nvim.spawn();
