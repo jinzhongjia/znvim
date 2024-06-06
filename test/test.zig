@@ -5,7 +5,7 @@ const ChildProcess = std.ChildProcess;
 const allocator = std.testing.allocator;
 const expect = std.testing.expect;
 
-const args = [_][]const u8{ "nvim", "--embed" };
+const args = [_][]const u8{ "nvim", "--embed", "-u", "NONE" };
 
 const ClientType = znvim.defaultClient(.pipe, u32);
 
