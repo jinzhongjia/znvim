@@ -73,8 +73,8 @@ test "socket connect test" {
     client.exit();
 }
 
-fn create_nvim_process(allocator: std.mem.Allocator, args: []const []const u8, is_pipe: bool) !std.ChildProcess {
-    var nvim = std.ChildProcess.init(args, allocator);
+fn create_nvim_process(allocator: std.mem.Allocator, args: []const []const u8, is_pipe: bool) !std.process.Child {
+    var nvim = std.process.Child.init(args, allocator);
 
     // set to use pipe
     nvim.stdin_behavior = if (is_pipe) .Pipe else .Ignore;
