@@ -19,6 +19,9 @@ extern "kernel32" fn WaitNamedPipeW(
     nTimeOut: DWORD,
 ) callconv(WINAPI) BOOL;
 
+/// Copies data from a named or anonymous pipe into a buffer
+/// without removing it from the pipe.
+/// It also returns information about data in the pipe.
 extern "kernel32" fn PeekNamedPipe(
     hNamedPipe: HANDLE,
     lpBuffer: ?LPVOID,
@@ -33,6 +36,7 @@ const CheckNamePipeResult = union(enum) {
     result: bool,
 };
 
+/// check named pipe is available
 pub fn checkNamePipeData(pipe: std.fs.File) CheckNamePipeResult {
     var bytesAvailable: DWORD = undefined;
     const result = PeekNamedPipe(
@@ -56,11 +60,18 @@ pub fn checkNamePipeData(pipe: std.fs.File) CheckNamePipeResult {
 /// this function will try to connect named pipe on windows
 /// no need to free the mem
 pub fn connectNamedPipe(path: []const u8, allocator: std.mem.Allocator) !std.fs.File {
-    var arena = std.heap.ArenaAllocator.init(allocator);
+    // use 256 * 2 bytes
+    var stack_alloc = std.heap.stackFallback(256 * @sizeOf(u16), allocator);
+    const stack_allocator = stack_alloc.get();
+
+    var arena = std.heap.ArenaAllocator.init(stack_allocator);
     defer arena.deinit();
+
     const arena_allocator = arena.allocator();
 
+    // convert utf8 to utf16
     const utf16_path = try std.unicode.utf8ToUtf16LeWithNull(arena_allocator, path);
+    // try to connect named pipe
     const handle = windows.kernel32.CreateFileW(
         utf16_path,
         windows.GENERIC_READ | windows.GENERIC_WRITE,

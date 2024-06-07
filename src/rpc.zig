@@ -11,6 +11,8 @@ const Thread = std.Thread;
 const TailQueue = std.TailQueue;
 
 const Allocator = std.mem.Allocator;
+
+pub const connectNamedPipe = named_pipe.connectNamedPipe;
 pub const Payload = msgpack.Payload;
 
 const MessageType = enum(u2) {
@@ -19,6 +21,7 @@ const MessageType = enum(u2) {
     Notification = 2,
 };
 
+/// error set for rpc
 pub const ErrorSet = error{
     PayloadTypeError,
     PayloadLengthError,

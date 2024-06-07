@@ -4,7 +4,7 @@ const znvim = @import("znvim");
 test "basic embed connect" {
     const ClientType = znvim.defaultClient(.pipe, u32);
 
-    const args = [_][]const u8{ "nvim", "--embed", "-u", "NONE" };
+    const args = [_][]const u8{ "nvim", "--embed", "--headless", "-u", "NONE" };
 
     var nvim = try create_nvim_process(std.testing.allocator, &args, true);
     defer _ = nvim.kill() catch unreachable;
@@ -39,7 +39,7 @@ test "socket connect test" {
 
     const ClientType = znvim.defaultClient(.socket, u32);
 
-    const args = [_][]const u8{ "nvim", "--listen", str, "-u", "NONE" };
+    const args = [_][]const u8{ "nvim", "--headless", "--listen", str, "-u", "NONE" };
 
     var nvim = try create_nvim_process(std.testing.allocator, &args, false);
     defer _ = nvim.kill() catch unreachable;
