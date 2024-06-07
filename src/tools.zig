@@ -6,9 +6,13 @@ const windows = std.os.windows;
 const posix = std.posix;
 const named_pipe = @import("named_pipe.zig");
 
+/// client type
 pub const ClientType = enum {
+    /// for stdio on unix-*
     stdio,
+    // for windows
     pipe,
+    /// for all playform
     socket,
 };
 

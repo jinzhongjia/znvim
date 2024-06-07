@@ -13,6 +13,7 @@ const TailQueue = std.TailQueue;
 const Allocator = std.mem.Allocator;
 
 pub const connectNamedPipe = named_pipe.connectNamedPipe;
+/// payload for msgpack rpc protocol
 pub const Payload = msgpack.Payload;
 
 const MessageType = enum(u2) {
@@ -35,6 +36,7 @@ const SubscribeMap = std.AutoHashMap(u32, *Thread.ResetEvent);
 
 const IsAlive = std.atomic.Value(bool);
 
+// the result type, this will be used by `call`
 pub const ResultType = union(enum) {
     err: Payload,
     result: Payload,

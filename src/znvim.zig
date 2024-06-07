@@ -4,14 +4,11 @@ const rpc = @import("rpc.zig");
 
 const Allocator = std.mem.Allocator;
 
-/// client type
 pub const ClientType = rpc.ClientType;
-/// payload for msgpack rpc protocol
 pub const Payload = rpc.Payload;
-// the result type, this will be used by `call`
 pub const ResultType = rpc.ResultType;
 
-// error sets
+/// error sets
 pub const ErrorSet = error{
     ApiNotFound,
     ApiDeprecated,
@@ -31,6 +28,7 @@ const build_mode = builtin.mode;
 
 /// default delay time, nanosecond
 pub const default_delay_time = 3_0_000_000;
+/// default buffer size
 pub const default_buffer_size = 20 * 1024;
 
 /// default Client type
