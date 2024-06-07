@@ -190,5 +190,13 @@ pub fn Client(
             }
             return ErrorSet.NotGetApiInfo;
         }
+
+        /// get api infos
+        fn apiInfos(self: Self) !Payload {
+            if (self.nvim_info) |info| {
+                return info.arr[1];
+            }
+            return ErrorSet.NotGetApiInfo;
+        }
     };
 }
