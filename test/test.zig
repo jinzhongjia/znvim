@@ -22,10 +22,11 @@ test "basic embed connect" {
     const params = try znvim.Payload.arrPayload(0, std.testing.allocator);
     defer params.free(std.testing.allocator);
 
-    const res = try client.rpc_client.call("nvim_get_current_buf", params);
-    defer client.rpc_client.freeResultType(res);
+    const res = try client.call("nvim_get_current_buf", params);
+    defer client.freeResultType(res);
 
     try std.testing.expect(res.result.ext.data[0] == 1);
+    // _ = try client.call("nvim_get_urrent_buf", params);
 
     client.exit();
 }
@@ -65,8 +66,8 @@ test "socket connect test" {
     const params = try znvim.Payload.arrPayload(0, std.testing.allocator);
     defer params.free(std.testing.allocator);
 
-    const res = try client.rpc_client.call("nvim_get_current_buf", params);
-    defer client.rpc_client.freeResultType(res);
+    const res = try client.call("nvim_get_current_buf", params);
+    defer client.freeResultType(res);
 
     try std.testing.expect(res.result.ext.data[0] == 1);
 
