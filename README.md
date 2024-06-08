@@ -17,7 +17,7 @@ _znvim_ is a [neovim remote rpc](https://neovim.io/doc/user/api.html#rpc-connect
 
 ## Getting Started
 
-### `0.13.0`
+### `0.12.0` / `0.13.0`
 
 1. Add to `build.zig.zon`
 
@@ -37,3 +37,8 @@ const znvim = b.dependency("znvim", .{
 exe.root_module.addImport("znvim", znvim.module("znvim"));
 ```
 
+## To use this lib
+
+You can find example on `test` fold!
+
+Recommend to learn about what [msgpack](https://github.com/msgpack/msgpack/blob/master/spec.md) is (this lib uses [zig-msgpack](https://github.com/zigcc/zig-msgpack)) and read neovim's API [documentation](https://neovim.io/doc/user/api.html).
