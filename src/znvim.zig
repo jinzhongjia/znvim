@@ -128,12 +128,11 @@ pub fn Client(
         /// for freeing payload
         /// note: this only can free the payload
         /// which used allocator from same znvim instance
-        pub fn freePayload(self: Self, payload: Payload) void {
+        fn freePayload(self: Self, payload: Payload) void {
             self.rpc_client.freePayload(payload);
         }
 
         /// for freeing result type
-        /// this is just a wrapping for freePayload
         pub fn freeResultType(self: Self, result_type: ResultType) void {
             self.rpc_client.freeResultType(result_type);
         }
@@ -182,7 +181,6 @@ pub fn Client(
                 return;
             }
             const params = try Payload.arrPayload(0, self.getAllocator());
-            defer self.freePayload(params);
             const result = try self.call(infoApiName, params);
             if (result == .err) {
                 return ErrorSet.GetApiInfoFailed;

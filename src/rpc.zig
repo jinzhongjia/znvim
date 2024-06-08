@@ -400,6 +400,7 @@ pub fn RpcClientType(
                     defer self.allocator.destroy(node);
                     // collect the payload content
                     defer self.freePayload(node.data);
+                    // write to the buffer
                     self.pack.write(node.data) catch unreachable;
                     // flush the writer buffer
                     self.flush() catch unreachable;

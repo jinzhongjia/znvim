@@ -1,9 +1,28 @@
 const std = @import("std");
 const znvim = @import("znvim");
 
-test "test get function" {}
-
 test "basic embed connect" {
+    const ClientType = znvim.defaultClient(.pipe, u32);
+
+    const args = [_][]const u8{ "nvim", "--embed", "--headless", "-u", "NONE" };
+
+    var nvim = try create_nvim_process(std.testing.allocator, &args, true);
+    defer _ = nvim.kill() catch unreachable;
+
+    var client = try ClientType.init(
+        nvim.stdin.?,
+        nvim.stdout.?,
+        std.testing.allocator,
+    );
+
+    defer client.deinit();
+    defer client.exit();
+
+    try client.loop();
+    try client.getApiInfo();
+}
+
+test "call function" {
     const ClientType = znvim.defaultClient(.pipe, u32);
 
     const args = [_][]const u8{ "nvim", "--embed", "--headless", "-u", "NONE" };
@@ -24,12 +43,47 @@ test "basic embed connect" {
     try client.getApiInfo();
 
     const params = try znvim.Payload.arrPayload(0, std.testing.allocator);
-    defer params.free(std.testing.allocator);
 
     const res = try client.call("nvim_get_current_buf", params);
     defer client.freeResultType(res);
 
     try std.testing.expect(res.result.ext.data[0] == 1);
+}
+
+test "notify function" {
+    const ClientType = znvim.defaultClient(.pipe, u32);
+
+    const args = [_][]const u8{ "nvim", "--embed", "--headless", "-u", "NONE" };
+
+    var nvim = try create_nvim_process(std.testing.allocator, &args, true);
+    defer _ = nvim.kill() catch unreachable;
+
+    var client = try ClientType.init(
+        nvim.stdin.?,
+        nvim.stdout.?,
+        std.testing.allocator,
+    );
+
+    defer client.deinit();
+    defer client.exit();
+
+    try client.loop();
+    try client.getApiInfo();
+
+    var params = try znvim.Payload.arrPayload(3, std.testing.allocator);
+
+    const param_0 = try znvim.Payload.strToPayload("hello, world!", std.testing.allocator);
+
+    const param_1 = znvim.Payload.uintToPayload(1);
+
+    const param_2 = try znvim.Payload.arrPayload(0, std.testing.allocator);
+
+    try params.setArrElement(0, param_0);
+    try params.setArrElement(1, param_1);
+    try params.setArrElement(2, param_2);
+
+    // try params
+    _ = try client.notify("nvim_notify", params);
 }
 
 test "socket connect test" {
@@ -67,7 +121,6 @@ test "socket connect test" {
     try client.getApiInfo();
 
     const params = try znvim.Payload.arrPayload(0, std.testing.allocator);
-    defer params.free(std.testing.allocator);
 
     const res = try client.call("nvim_get_current_buf", params);
     defer client.freeResultType(res);
