@@ -125,13 +125,6 @@ pub fn Client(
             try self.rpc_client.loop();
         }
 
-        /// for freeing payload
-        /// note: this only can free the payload
-        /// which used allocator from same znvim instance
-        fn freePayload(self: Self, payload: Payload) void {
-            self.rpc_client.freePayload(payload);
-        }
-
         /// for freeing result type
         pub fn freeResultType(self: Self, result_type: ResultType) void {
             self.rpc_client.freeResultType(result_type);
@@ -180,7 +173,7 @@ pub fn Client(
             if (self.nvim_info != null) {
                 return;
             }
-            const params = try Payload.arrPayload(0, self.getAllocator());
+            const params = try self.paramArr(0);
             const result = try self.call(infoApiName, params);
             if (result == .err) {
                 return ErrorSet.GetApiInfoFailed;
@@ -235,6 +228,46 @@ pub fn Client(
             } else {
                 return ErrorSet.ApiNotFound;
             }
+        }
+
+        pub fn paramNil(_: Self) Payload {
+            return Payload.nilToPayload();
+        }
+
+        pub fn paramBool(_: Self, val: bool) Payload {
+            return Payload.boolToPayload(val);
+        }
+
+        pub fn paramInt(_: Self, val: i64) Payload {
+            return Payload.intToPayload(val);
+        }
+
+        pub fn paramUint(_: Self, val: u64) Payload {
+            return Payload.uintToPayload(val);
+        }
+
+        pub fn paramFloat(_: Self, val: f64) Payload {
+            return Payload.floatToPayload(val);
+        }
+
+        pub fn paramStr(self: Self, str: []const u8) !Payload {
+            return Payload.strToPayload(str, self.getAllocator());
+        }
+
+        pub fn paramBin(self: Self, bin: []const u8) !Payload {
+            return Payload.binToPayload(bin, self.getAllocator());
+        }
+
+        pub fn paramArr(self: Self, len: usize) !Payload {
+            return Payload.arrPayload(len, self.getAllocator());
+        }
+
+        pub fn paramMap(self: Self) !Payload {
+            return Payload.mapPayload(self.getAllocator());
+        }
+
+        pub fn paramExt(self: Self, t: i8, data: []const u8) !Payload {
+            return Payload.extToPayload(t, data, self.getAllocator());
         }
     };
 }

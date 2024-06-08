@@ -42,7 +42,7 @@ test "call function" {
     try client.loop();
     try client.getApiInfo();
 
-    const params = try znvim.Payload.arrPayload(0, std.testing.allocator);
+    const params = try client.paramArr(0);
 
     const res = try client.call("nvim_get_current_buf", params);
     defer client.freeResultType(res);
@@ -70,13 +70,13 @@ test "notify function" {
     try client.loop();
     try client.getApiInfo();
 
-    var params = try znvim.Payload.arrPayload(3, std.testing.allocator);
+    var params = try client.paramArr(3);
 
-    const param_0 = try znvim.Payload.strToPayload("hello, world!", std.testing.allocator);
+    const param_0 = try client.paramStr("hello, world!");
 
-    const param_1 = znvim.Payload.uintToPayload(1);
+    const param_1 = client.paramUint(1);
 
-    const param_2 = try znvim.Payload.arrPayload(0, std.testing.allocator);
+    const param_2 = try client.paramArr(0);
 
     try params.setArrElement(0, param_0);
     try params.setArrElement(1, param_1);
@@ -120,7 +120,7 @@ test "socket connect test" {
     try client.loop();
     try client.getApiInfo();
 
-    const params = try znvim.Payload.arrPayload(0, std.testing.allocator);
+    const params = try client.paramArr(0);
 
     const res = try client.call("nvim_get_current_buf", params);
     defer client.freeResultType(res);
