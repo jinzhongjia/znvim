@@ -15,6 +15,8 @@ pub const ErrorSet = error{
     NotGetVersion,
     NotGetApiLevel,
     NotGetApiInfo,
+    NotGetFunctions,
+    NotGetFuncName,
     GetApiInfoFailed,
 };
 
@@ -154,6 +156,11 @@ pub fn Client(
         /// call server api
         /// this will be blocked until znvim instance receive corresponding response from server
         pub fn call(self: *Self, method_name: []const u8, params: Payload) !ResultType {
+            // only check on debug mode
+            if (build_mode == .Debug and self.nvim_info != null) {
+                try self.checkApiAvailable(method_name);
+            }
+
             return self.rpc_client.call(method_name, params);
         }
 
@@ -198,5 +205,45 @@ pub fn Client(
             }
             return ErrorSet.NotGetApiInfo;
         }
+
+        /// get api level
+        fn getApiLevel(self: Self) !u32 {
+            const api_infos: Payload = try self.apiInfos();
+            const version = try api_infos.mapGet("version") orelse return ErrorSet.NotGetVersion;
+            const api_level = try version.mapGet("api_level") orelse return ErrorSet.NotGetApiLevel;
+            return @intCast(api_level.uint);
+        }
+
+        fn getFunc(self: Self, api_name: []const u8) !?Payload {
+            const api_infos = try self.apiInfos();
+            const funcs = try api_infos.mapGet("functions") orelse return ErrorSet.NotGetFunctions;
+            for (funcs.arr) |func| {
+                const func_name = try func.mapGet("name") orelse return ErrorSet.NotGetFuncName;
+                if (u8Eql(func_name.str.value(), api_name)) {
+                    return func;
+                }
+            }
+            return null;
+        }
+
+        /// check api whether available
+        fn checkApiAvailable(self: Self, api_name: []const u8) !void {
+            const func = try self.getFunc(api_name);
+            if (func) |val| {
+                if (try val.mapGet("deprecated_since")) |deprecated_since| {
+                    if (deprecated_since.uint <= try self.getApiLevel())
+                        return ErrorSet.ApiDeprecated;
+                }
+            } else {
+                return ErrorSet.ApiNotFound;
+            }
+        }
     };
+}
+
+fn u8Eql(a: []const u8, b: []const u8) bool {
+    if (a.len != b.len) {
+        return false;
+    }
+    return std.mem.eql(u8, a, b);
 }

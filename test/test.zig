@@ -1,6 +1,8 @@
 const std = @import("std");
 const znvim = @import("znvim");
 
+test "test get function" {}
+
 test "basic embed connect" {
     const ClientType = znvim.defaultClient(.pipe, u32);
 
@@ -16,8 +18,10 @@ test "basic embed connect" {
     );
 
     defer client.deinit();
+    defer client.exit();
 
     try client.loop();
+    try client.getApiInfo();
 
     const params = try znvim.Payload.arrPayload(0, std.testing.allocator);
     defer params.free(std.testing.allocator);
@@ -26,9 +30,6 @@ test "basic embed connect" {
     defer client.freeResultType(res);
 
     try std.testing.expect(res.result.ext.data[0] == 1);
-    // _ = try client.call("nvim_get_urrent_buf", params);
-
-    client.exit();
 }
 
 test "socket connect test" {
@@ -60,8 +61,10 @@ test "socket connect test" {
     );
 
     defer client.deinit();
+    defer client.exit();
 
     try client.loop();
+    try client.getApiInfo();
 
     const params = try znvim.Payload.arrPayload(0, std.testing.allocator);
     defer params.free(std.testing.allocator);
@@ -70,8 +73,6 @@ test "socket connect test" {
     defer client.freeResultType(res);
 
     try std.testing.expect(res.result.ext.data[0] == 1);
-
-    client.exit();
 }
 
 fn create_nvim_process(allocator: std.mem.Allocator, args: []const []const u8, is_pipe: bool) !std.process.Child {
