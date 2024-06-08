@@ -509,17 +509,24 @@ pub fn RpcClientType(
             const node = try self.allocator.create(ResToClientQueue.Node);
             errdefer self.allocator.destroy(node);
 
-            var req = try Payload.arrPayload(4, self.allocator);
+            const id = id_blk: {
+                const id_ptr = self.id.acquire();
+                defer self.id.release();
+                const tmp_id = id_ptr.*;
+                break :id_blk tmp_id;
+            };
+
+            const req = blk: {
+                var tmp_req = try Payload.arrPayload(4, self.allocator);
+
+                try tmp_req.setArrElement(0, Payload.uintToPayload(@intFromEnum(MessageType.Request)));
+                try tmp_req.setArrElement(0, Payload.uintToPayload(@intFromEnum(MessageType.Request)));
+                try tmp_req.setArrElement(1, Payload.uintToPayload(id));
+                try tmp_req.setArrElement(2, try Payload.strToPayload(method_name, self.allocator));
+                try tmp_req.setArrElement(3, params);
+                break :blk tmp_req;
+            };
             errdefer self.freePayload(req);
-
-            try req.setArrElement(0, Payload.uintToPayload(@intFromEnum(MessageType.Request)));
-
-            const id = self.id.acquire().*;
-            self.id.release();
-
-            try req.setArrElement(1, Payload.uintToPayload(id));
-            try req.setArrElement(2, try Payload.strToPayload(method_name, self.allocator));
-            try req.setArrElement(3, params);
 
             const event = try self.allocator.create(Thread.ResetEvent);
             defer self.allocator.destroy(event);
@@ -588,10 +595,13 @@ pub fn RpcClientType(
             const node = try self.allocator.create(ResToClientQueue.Node);
             errdefer self.allocator.destroy(node);
 
-            var note = try Payload.arrPayload(3, self.allocator);
-            try note.setArrElement(0, Payload.uintToPayload(@intFromEnum(MessageType.Notification)));
-            try note.setArrElement(1, try Payload.strToPayload(method_name, self.allocator));
-            try note.setArrElement(2, params);
+            const note = blk: {
+                var res = try Payload.arrPayload(3, self.allocator);
+                try res.setArrElement(0, Payload.uintToPayload(@intFromEnum(MessageType.Notification)));
+                try res.setArrElement(1, try Payload.strToPayload(method_name, self.allocator));
+                try res.setArrElement(2, params);
+                break :blk res;
+            };
 
             const to_server_queue = self.to_server_queue.acquire();
             {
