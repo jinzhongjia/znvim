@@ -56,10 +56,6 @@ pub fn Client(
     comptime user_data: type,
     comptime delay_time: u64,
 ) type {
-    if (builtin.os.tag == .windows and client_tag == .stdio) {
-        @compileError("for windows, we only can use .pipe or .socket!");
-    }
-
     return struct {
         /// znvim type self
         const Self = @This();

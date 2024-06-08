@@ -71,7 +71,7 @@ pub fn RpcClientType(
         const MethodHashMap = std.StringHashMap(Method);
 
         pub const TransType: type = switch (client_tag) {
-            .pipe, .stdio => std.fs.File,
+            .pipe => std.fs.File,
             .socket => std.net.Stream,
         };
 

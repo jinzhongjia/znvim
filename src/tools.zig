@@ -8,8 +8,6 @@ const named_pipe = @import("named_pipe.zig");
 
 /// client type
 pub const ClientType = enum {
-    /// for stdio on unix-*
-    stdio,
     // for windows
     pipe,
     /// for all playform
@@ -70,7 +68,7 @@ const listenErrors = error{
 // listenPipe for windows
 pub fn listen(comptime client_tag: ClientType, pl: anytype) !bool {
     const trans = switch (client_tag) {
-        .pipe, .stdio => @as(std.fs.File, pl),
+        .pipe => @as(std.fs.File, pl),
         .socket => @as(std.net.Stream, pl),
     };
     switch (comptime builtin.target.os.tag) {
