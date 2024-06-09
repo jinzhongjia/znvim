@@ -363,6 +363,12 @@ pub fn RpcClientType(
                                 }) catch unreachable;
                             }
                         }
+
+                        // when method not exist
+                        self.thread_pool_ptr.spawn(handleNotFoundMethod, .{
+                            self,
+                            payload,
+                        }) catch unreachable;
                     },
                     .Notification => {
                         // get method name
@@ -386,6 +392,70 @@ pub fn RpcClientType(
                 }
             }
             self.wait_group.finish();
+        }
+
+        // handle request method not exist
+        fn handleNotFoundMethod(self: *Self, payload: Payload) void {
+            defer self.freePayload(payload);
+            // get the array
+            const arr = payload.arr;
+            // get the msgpack id
+            const msg_id = arr[1].uint;
+            // get the method name
+            const name = arr[2].str;
+
+            // create a res node
+            const node = self.allocator.create(ToServerQueue.Node) catch {
+                return;
+            };
+            errdefer self.allocator.destroy(node);
+
+            const res = blk: {
+                // allocator the res memory, if allocator failed, just return, and keep silent
+                var tmp = Payload.arrPayload(4, self.allocator) catch {
+                    return;
+                };
+                errdefer self.freePayload(tmp);
+
+                // setting the category code
+                tmp.setArrElement(
+                    0,
+                    Payload.uintToPayload(@intFromEnum(MessageType.Response)),
+                ) catch unreachable;
+
+                // setting the id
+                tmp.setArrElement(1, Payload.uintToPayload(msg_id)) catch unreachable;
+
+                const error_msg = std.fmt.allocPrint(
+                    self.allocator,
+                    "error: not found api {s}, msgpack id is {}",
+                    .{ name.value(), msg_id },
+                ) catch unreachable;
+
+                // setting the error
+                // for this, if we use strToPayload,
+                // this will result in additional memory allocation and copy overhead
+                tmp.setArrElement(
+                    2,
+                    Payload{ .str = .{ .str = error_msg } },
+                ) catch unreachable;
+
+                // setting the result
+                tmp.setArrElement(3, Payload.nilToPayload()) catch unreachable;
+
+                break :blk tmp;
+            };
+
+            // get the right to handle to_server_queue
+            const to_server_queue = self.to_server_queue.acquire();
+            {
+                defer self.to_server_queue.release();
+                node.data = res;
+                // append the res node to queue
+                to_server_queue.append(node);
+            }
+
+            self.to_server_queue_s.post();
         }
 
         fn sendToServer(self: *Self) void {
