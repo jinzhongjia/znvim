@@ -8,7 +8,7 @@ const log = std.log.scoped(.znvim);
 
 const Thread = std.Thread;
 
-const TailQueue = std.TailQueue;
+const TailQueue = if (builtin.zig_version.minor == 13) std.TailQueue else std.DoublyLinkedList;
 
 const Allocator = std.mem.Allocator;
 

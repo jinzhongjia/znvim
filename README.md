@@ -17,7 +17,7 @@ _znvim_ is a [neovim remote rpc](https://neovim.io/doc/user/api.html#rpc-connect
 
 ## Getting Started
 
-### `0.12.0` / `0.13.0`
+### `0.12.0` / `0.13.0` / `master`
 
 1. Add to `build.zig.zon`
 
