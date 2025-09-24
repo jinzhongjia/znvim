@@ -41,12 +41,29 @@ pub const Stdio = struct {
 
     fn read(tr: *Transport, buffer: []u8) Transport.ReadError!usize {
         const self = tr.downcast(Stdio);
-        return self.stdin_file.read(buffer) catch Transport.ReadError.UnexpectedError;
+        return self.stdin_file.read(buffer) catch |err| switch (err) {
+            error.WouldBlock, error.ConnectionTimedOut => Transport.ReadError.Timeout,
+            error.BrokenPipe,
+            error.ConnectionResetByPeer,
+            error.SocketNotConnected,
+            error.NotOpenForReading,
+            error.OperationAborted,
+            error.Canceled,
+            error.ProcessNotFound => Transport.ReadError.ConnectionClosed,
+            else => Transport.ReadError.UnexpectedError,
+        };
     }
 
     fn write(tr: *Transport, data: []const u8) Transport.WriteError!void {
         const self = tr.downcast(Stdio);
-        self.stdout_file.writeAll(data) catch return Transport.WriteError.UnexpectedError;
+        self.stdout_file.writeAll(data) catch |err| switch (err) {
+            error.BrokenPipe => return Transport.WriteError.BrokenPipe,
+            error.ConnectionResetByPeer,
+            error.NotOpenForWriting,
+            error.OperationAborted,
+            error.ProcessNotFound => return Transport.WriteError.ConnectionClosed,
+            else => return Transport.WriteError.UnexpectedError,
+        };
     }
 
     fn isConnected(tr: *Transport) bool {
