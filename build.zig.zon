@@ -1,14 +1,20 @@
 .{
-    .name = "znvim",
-    .version = "0.0.1",
-    .minimum_zig_version = "0.12.0",
+    .name = .znvim,
+    .version = "1.0.0",
+    .fingerprint = 0x79f956aa821de333, // Changing this has security and trust implications.
+    .minimum_zig_version = "0.15.1",
     .dependencies = .{
-        .@"zig-msgpack" = .{
-            .url = "https://github.com/zigcc/zig-msgpack/archive/refs/tags/0.0.5.tar.gz",
-            .hash = "12207ec1296852c17c0424b5e650003bd9a3c4f35e9d0ab586d39ea0ab812c2d9f2c",
+        .zig_msgpack = .{
+            .url = "https://github.com/zigcc/zig-msgpack/archive/refs/tags/0.0.12.tar.gz",
+            .hash = "zig_msgpack-0.0.8-evvueCICAgDcE1f5qgHVUFujzu4-QvXms9kKYc9xMYm1",
         },
     },
     .paths = .{
-        "",
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        // For example...
+        //"LICENSE",
+        //"README.md",
     },
 }
