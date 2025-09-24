@@ -277,7 +277,7 @@ pub const Client = struct {
         var params_payload = try msgpack.Payload.arrPayload(params.len, self.allocator);
         defer params_payload.free(self.allocator);
         for (params, 0..) |param, index| {
-            params_payload.arr[index] = param;
+            params_payload.arr[index] = try payload_utils.clonePayload(self.allocator, param);
         }
 
         const request_msg = protocol.message.Request{
@@ -300,7 +300,7 @@ pub const Client = struct {
         var params_payload = try msgpack.Payload.arrPayload(params.len, self.allocator);
         defer params_payload.free(self.allocator);
         for (params, 0..) |param, index| {
-            params_payload.arr[index] = param;
+            params_payload.arr[index] = try payload_utils.clonePayload(self.allocator, param);
         }
 
         const notification = protocol.message.Notification{

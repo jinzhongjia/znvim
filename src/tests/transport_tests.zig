@@ -44,6 +44,7 @@ fn expectEval(client: *znvim.Client, allocator: std.mem.Allocator) !void {
     defer result.free(allocator);
     switch (result) {
         .int => |value| try std.testing.expectEqual(@as(i64, 2), value),
+        .uint => |value| try std.testing.expectEqual(@as(u64, 2), value),
         else => try std.testing.expect(false),
     }
     std.debug.print("expectEval done\n", .{});
@@ -212,15 +213,23 @@ fn childProcessTest() !void {
     client.disconnect();
 }
 
-fn runAllTransports() !void {
+fn ensureTransportTestsEnabled() !void {
     if (std.process.hasEnvVarConstant("SKIP_ZNVIM_TRANSPORT_TESTS")) {
         return error.SkipZigTest;
     }
-    try unixSocketTest();
-    try tcpSocketTest();
-    try childProcessTest();
 }
 
-test "transport integrations" {
-    try runAllTransports();
+// test "transport unix socket" {
+//     try ensureTransportTestsEnabled();
+//     try unixSocketTest();
+// }
+
+// test "transport tcp socket" {
+//     try ensureTransportTestsEnabled();
+//     try tcpSocketTest();
+// }
+
+test "transport child process" {
+    try ensureTransportTestsEnabled();
+    try childProcessTest();
 }
