@@ -1,6 +1,7 @@
 const std = @import("std");
 const Transport = @import("transport.zig").Transport;
 
+/// Transport backed by a blocking Unix domain socket stream.
 pub const UnixSocket = struct {
     allocator: std.mem.Allocator,
     stream: ?std.net.Stream = null,
@@ -36,6 +37,7 @@ pub const UnixSocket = struct {
         self.stream = null;
     }
 
+    /// Maps system-level read failures to the higher-level transport error set.
     fn read(tr: *Transport, buffer: []u8) Transport.ReadError!usize {
         const self = tr.downcast(UnixSocket);
         const stream = self.stream orelse return Transport.ReadError.ConnectionClosed;
@@ -47,6 +49,7 @@ pub const UnixSocket = struct {
         };
     }
 
+    /// Writes a full message, normalizing OS errors to the transport error set.
     fn write(tr: *Transport, data: []const u8) Transport.WriteError!void {
         const self = tr.downcast(UnixSocket);
         const stream = self.stream orelse return Transport.WriteError.ConnectionClosed;

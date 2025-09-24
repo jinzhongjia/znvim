@@ -3,6 +3,7 @@ const windows = std.os.windows;
 const unicode = std.unicode;
 const Transport = @import("transport.zig").Transport;
 
+/// Transport that connects to a Windows named pipe created by Neovim.
 pub const WindowsPipe = struct {
     allocator: std.mem.Allocator,
     handle: ?windows.HANDLE = null,
@@ -65,6 +66,7 @@ pub const WindowsPipe = struct {
         }
     }
 
+    /// Wraps `ReadFile`, mapping Windows error codes to the cross-platform transport errors.
     fn read(tr: *Transport, buffer: []u8) Transport.ReadError!usize {
         const self = tr.downcast(WindowsPipe);
         const handle = self.handle orelse return Transport.ReadError.ConnectionClosed;
@@ -76,6 +78,7 @@ pub const WindowsPipe = struct {
         };
     }
 
+    /// Wraps `WriteFile`, reporting broken pipes as connection closures.
     fn write(tr: *Transport, data: []const u8) Transport.WriteError!void {
         const self = tr.downcast(WindowsPipe);
         const handle = self.handle orelse return Transport.WriteError.ConnectionClosed;

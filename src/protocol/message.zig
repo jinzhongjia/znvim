@@ -1,12 +1,14 @@
 const std = @import("std");
 const msgpack = @import("msgpack");
 
+/// Enumerates the three message kinds defined by the MessagePack-RPC protocol.
 pub const MessageType = enum(u8) {
     Request = 0,
     Response = 1,
     Notification = 2,
 };
 
+/// MessagePack-RPC request envelope with method name and parameters.
 pub const Request = struct {
     type: MessageType = .Request,
     msgid: u32,
@@ -22,6 +24,7 @@ pub const Request = struct {
     }
 };
 
+/// MessagePack-RPC response envelope with optional error or result payload.
 pub const Response = struct {
     type: MessageType = .Response,
     msgid: u32,
@@ -40,6 +43,7 @@ pub const Response = struct {
     }
 };
 
+/// MessagePack-RPC notification carrying a method and payload without expecting a reply.
 pub const Notification = struct {
     type: MessageType = .Notification,
     method: []const u8,
@@ -54,12 +58,14 @@ pub const Notification = struct {
     }
 };
 
+/// Tagged union that stores any of the supported message envelopes.
 pub const AnyMessage = union(MessageType) {
     Request: Request,
     Response: Response,
     Notification: Notification,
 };
 
+/// Disposes whatever payload is currently stored in a message union.
 pub fn deinitMessage(message: *AnyMessage, allocator: std.mem.Allocator) void {
     switch (message.*) {
         .Request => |*req| req.deinit(allocator),

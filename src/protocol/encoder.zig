@@ -3,6 +3,7 @@ const msgpack = @import("msgpack");
 const message = @import("message.zig");
 const payload_utils = @import("payload_utils.zig");
 
+/// Collects encoded bytes in-memory while the msgpack packer writes into it.
 const WriterContext = struct {
     buffer: *std.ArrayListUnmanaged(u8),
     allocator: std.mem.Allocator,
@@ -24,6 +25,7 @@ const ReaderContext = struct {
     }
 };
 
+/// Msgpack packer configured with our writer/reader shims.
 const Packer = msgpack.Pack(
     *WriterContext,
     *ReaderContext,
@@ -35,6 +37,7 @@ const Packer = msgpack.Pack(
 
 pub const EncodeError = WriterContext.Error || msgpack.MsGPackError;
 
+/// Serializes a MessagePack-RPC request into a heap-owned byte slice.
 pub fn encodeRequest(allocator: std.mem.Allocator, req: message.Request) EncodeError![]u8 {
     var buffer = std.ArrayListUnmanaged(u8){};
     errdefer buffer.deinit(allocator);
@@ -56,6 +59,7 @@ pub fn encodeRequest(allocator: std.mem.Allocator, req: message.Request) EncodeE
     return try buffer.toOwnedSlice(allocator);
 }
 
+/// Serializes a MessagePack-RPC notification into a heap-owned byte slice.
 pub fn encodeNotification(allocator: std.mem.Allocator, notif: message.Notification) EncodeError![]u8 {
     var buffer = std.ArrayListUnmanaged(u8){};
     errdefer buffer.deinit(allocator);
@@ -76,6 +80,7 @@ pub fn encodeNotification(allocator: std.mem.Allocator, notif: message.Notificat
     return try buffer.toOwnedSlice(allocator);
 }
 
+/// Serializes a MessagePack-RPC response, cloning optional error/result payloads as needed.
 pub fn encodeResponse(allocator: std.mem.Allocator, resp: message.Response) EncodeError![]u8 {
     var buffer = std.ArrayListUnmanaged(u8){};
     errdefer buffer.deinit(allocator);

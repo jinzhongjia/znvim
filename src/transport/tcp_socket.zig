@@ -1,6 +1,7 @@
 const std = @import("std");
 const Transport = @import("transport.zig").Transport;
 
+/// Transport backed by a TCP socket connected to a remote Neovim instance.
 pub const TcpSocket = struct {
     allocator: std.mem.Allocator,
     host: []const u8,
@@ -43,6 +44,7 @@ pub const TcpSocket = struct {
         self.stream = null;
     }
 
+    /// Normalizes socket read errors into the shared transport error contract.
     fn read(tr: *Transport, buffer: []u8) Transport.ReadError!usize {
         const self = tr.downcast(TcpSocket);
         const stream = self.stream orelse return Transport.ReadError.ConnectionClosed;
@@ -53,6 +55,7 @@ pub const TcpSocket = struct {
         };
     }
 
+    /// Writes the entire buffer and maps OS errors to transport error codes.
     fn write(tr: *Transport, data: []const u8) Transport.WriteError!void {
         const self = tr.downcast(TcpSocket);
         const stream = self.stream orelse return Transport.WriteError.ConnectionClosed;

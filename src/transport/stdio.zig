@@ -1,6 +1,7 @@
 const std = @import("std");
 const Transport = @import("transport.zig").Transport;
 
+/// Transport that uses the current process stdin/stdout handles for communication.
 pub const Stdio = struct {
     stdin_file: std.fs.File,
     stdout_file: std.fs.File,
@@ -14,6 +15,7 @@ pub const Stdio = struct {
         };
     }
 
+    /// Allows tests to inject alternative file handles and control ownership.
     pub fn initWithFiles(reader: std.fs.File, writer: std.fs.File, owns: bool) Stdio {
         return .{ .stdin_file = reader, .stdout_file = writer, .owns_handles = owns };
     }
