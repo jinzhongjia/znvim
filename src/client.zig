@@ -209,7 +209,10 @@ pub const Client = struct {
         switch (self.transport_kind) {
             .unix_socket => {
                 const path = self.options.socket_path orelse return error.TransportNotInitialized;
-                (&self.transport).connect(path) catch return error.TransportNotInitialized;
+                (&self.transport).connect(path) catch |err| switch (err) {
+                    error.Timeout => return error.Timeout,
+                    else => return error.TransportNotInitialized,
+                };
             },
             .named_pipe => {
                 const path = self.options.socket_path orelse return error.TransportNotInitialized;
