@@ -1,5 +1,6 @@
 const std = @import("std");
 
+/// Thin virtual dispatch wrapper used by the client to talk to any transport implementation.
 pub const Transport = struct {
     pub const ReadError = error{
         ConnectionClosed,
@@ -13,6 +14,7 @@ pub const Transport = struct {
         UnexpectedError,
     };
 
+    /// Function table each concrete transport must implement.
     pub const VTable = struct {
         connect: *const fn (*Transport, address: []const u8) anyerror!void,
         disconnect: *const fn (*Transport) void,
@@ -24,6 +26,7 @@ pub const Transport = struct {
     vtable: *const VTable,
     impl: *anyopaque,
 
+    /// Initializes the wrapper with a pointer to the concrete instance and its vtable.
     pub fn init(impl: *anyopaque, vtable: *const VTable) Transport {
         return .{ .vtable = vtable, .impl = impl };
     }
@@ -48,10 +51,12 @@ pub const Transport = struct {
         return self.vtable.is_connected(self);
     }
 
+    /// Casts the opaque pointer back to its original transport type.
     pub fn downcast(self: *Transport, comptime T: type) *T {
         return @as(*T, @ptrCast(@alignCast(self.impl)));
     }
 
+    /// Const variant of `downcast`.
     pub fn downcastConst(self: *const Transport, comptime T: type) *const T {
         return @as(*const T, @ptrCast(@alignCast(self.impl)));
     }

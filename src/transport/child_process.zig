@@ -4,6 +4,7 @@ const AtomicBool = std.atomic.Value(bool);
 const Transport = @import("transport.zig").Transport;
 const connection = @import("../connection.zig");
 
+/// Transport that launches an embedded Neovim instance and communicates over pipes.
 pub const ChildProcess = struct {
     allocator: std.mem.Allocator,
     nvim_path: []const u8,
@@ -43,6 +44,7 @@ pub const ChildProcess = struct {
         try self.reconnect();
     }
 
+    /// Tears down any existing process and respawns a fresh embedded Neovim.
     fn reconnect(self: *ChildProcess) !void {
         self.disconnectInternal();
 
@@ -78,6 +80,7 @@ pub const ChildProcess = struct {
         self.disconnectInternal();
     }
 
+    /// Shared cleanup that ensures pipes and child process handles are released.
     fn disconnectInternal(self: *ChildProcess) void {
         if (self.child) |child_ptr| {
             if (self.stdin_file) |file| file.close();
@@ -117,6 +120,7 @@ pub const ChildProcess = struct {
     };
 };
 
+/// Waits for the child to exit, killing it if the provided timeout elapses.
 fn waitForChildExit(child: *process.Child, timeout_ns: u64) bool {
     const Waiter = struct {
         fn run(proc_child: *process.Child, term_ptr: *?process.Child.Term, done: *AtomicBool) void {

@@ -1,6 +1,7 @@
 const std = @import("std");
 const msgpack = @import("msgpack");
 
+/// Deeply duplicates a msgpack payload so the caller receives its own owned copy.
 pub fn clonePayload(allocator: std.mem.Allocator, value: msgpack.Payload) !msgpack.Payload {
     return switch (value) {
         .nil => msgpack.Payload.nilToPayload(),
@@ -45,6 +46,7 @@ pub fn clonePayload(allocator: std.mem.Allocator, value: msgpack.Payload) !msgpa
     };
 }
 
+/// Allocates and copies a string slice so it can outlive the original buffer.
 pub fn copyString(allocator: std.mem.Allocator, source: []const u8) ![]const u8 {
     const copy = try allocator.alloc(u8, source.len);
     @memcpy(copy, source);

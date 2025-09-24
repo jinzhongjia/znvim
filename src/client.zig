@@ -6,14 +6,17 @@ const protocol = @import("protocol/msgpack_rpc.zig");
 const payload_utils = @import("protocol/payload_utils.zig");
 const builtin = @import("builtin");
 
+/// Keeps track of which concrete transport is currently backing the client.
 const TransportKind = enum { none, unix_socket, named_pipe, tcp_socket, stdio, child_process };
 const ApiParseError = error{ InvalidFormat, MissingField, OutOfMemory };
 
+/// Represents a single parameter entry exposed by the Neovim API.
 pub const ApiParameter = struct {
     type_name: []const u8,
     name: []const u8,
 };
 
+/// Metadata describing a callable function exposed by Neovim.
 pub const ApiFunction = struct {
     name: []const u8,
     since: u32,
@@ -22,6 +25,7 @@ pub const ApiFunction = struct {
     parameters: []const ApiParameter,
 };
 
+/// Captures the semantic version information returned by Neovim.
 pub const ApiVersion = struct {
     major: i64,
     minor: i64,
@@ -33,6 +37,7 @@ pub const ApiVersion = struct {
     build: ?[]const u8,
 };
 
+/// Aggregated API metadata fetched from Neovim at startup.
 pub const ApiInfo = struct {
     channel_id: i64,
     version: ApiVersion,
@@ -66,6 +71,7 @@ const WindowsState = if (builtin.os.tag == .windows)
 else
     struct {};
 
+/// High-level Neovim RPC client that wraps transports, requests, and API metadata.
 pub const Client = struct {
     allocator: std.mem.Allocator,
     options: connection.ConnectionOptions,
@@ -82,6 +88,7 @@ pub const Client = struct {
     api_info: ?ApiInfo = null,
     windows: WindowsState = .{},
 
+    /// Prepares a client with the requested connection options but does not open the transport yet.
     pub fn init(allocator: std.mem.Allocator, options: connection.ConnectionOptions) ClientInitError!Client {
         var client = Client{
             .allocator = allocator,
@@ -93,6 +100,7 @@ pub const Client = struct {
         return client;
     }
 
+    /// Lazily instantiates the transport implementation that matches the supplied options.
     fn setupTransport(self: *Client) ClientInitError!void {
         if (self.transport_kind != .none) {
             return;
@@ -194,6 +202,7 @@ pub const Client = struct {
         self.transport_kind = .none;
     }
 
+    /// Connects the prepared transport and eagerly fetches API metadata unless disabled.
     pub fn connect(self: *Client) ClientError!void {
         if (self.connected) return error.AlreadyConnected;
         switch (self.transport_kind) {
@@ -274,6 +283,7 @@ pub const Client = struct {
 
         const msgid = self.nextMessageId();
 
+        // Clone the payloads so the caller keeps ownership of its arguments.
         var params_payload = try msgpack.Payload.arrPayload(params.len, self.allocator);
         defer params_payload.free(self.allocator);
         for (params, 0..) |param, index| {
@@ -297,6 +307,7 @@ pub const Client = struct {
     pub fn notify(self: *Client, method: []const u8, params: []const msgpack.Payload) ClientError!void {
         if (!self.connected) return error.NotConnected;
 
+        // Notifications also duplicate params for the same ownership reason as requests.
         var params_payload = try msgpack.Payload.arrPayload(params.len, self.allocator);
         defer params_payload.free(self.allocator);
         for (params, 0..) |param, index| {
@@ -318,6 +329,7 @@ pub const Client = struct {
         return self.next_msgid.fetchAdd(1, .monotonic);
     }
 
+    /// Reads from the transport until the matching response arrives or the connection closes.
     fn awaitResponse(self: *Client, msgid: u32) ClientError!msgpack.Payload {
         while (true) {
             if (try self.processIncomingMessages(msgid)) |result| {
@@ -342,6 +354,7 @@ pub const Client = struct {
         }
     }
 
+    /// Decodes buffered messages and returns a response when it matches the awaited id.
     fn processIncomingMessages(self: *Client, expected_msgid: u32) ClientError!?msgpack.Payload {
         while (true) {
             const decoded_opt = try self.tryDecodeMessage();
@@ -377,6 +390,7 @@ pub const Client = struct {
         }
     }
 
+    /// Attempts to parse a message from the accumulated read buffer, leaving partial data intact.
     fn tryDecodeMessage(self: *Client) ClientError!?protocol.decoder.DecodeResult {
         if (self.read_buffer.items.len == 0) return null;
 
@@ -389,6 +403,7 @@ pub const Client = struct {
         return decode_res;
     }
 
+    /// Rebuilds the cached API metadata from the payload returned by `nvim_get_api_info`.
     fn loadApiInfo(self: *Client, payload: msgpack.Payload) ApiParseError!void {
         _ = self.api_arena.reset(.free_all);
         const arena = self.api_arena.allocator();
@@ -465,6 +480,7 @@ fn mapGetRequired(map: msgpack.Payload, key: []const u8) ApiParseError!msgpack.P
     return maybe orelse ApiParseError.MissingField;
 }
 
+/// Extracts the version block from the API metadata map, copying owned strings into the arena.
 fn parseVersion(arena: std.mem.Allocator, payload: msgpack.Payload) ApiParseError!ApiVersion {
     const version_map = switch (payload) {
         .map => payload,
@@ -504,6 +520,7 @@ fn parseVersion(arena: std.mem.Allocator, payload: msgpack.Payload) ApiParseErro
     };
 }
 
+/// Parses and arena-allocates the array of API function descriptors.
 fn parseFunctions(arena: std.mem.Allocator, payload: msgpack.Payload) ApiParseError![]const ApiFunction {
     const fn_arr = switch (payload) {
         .arr => payload.arr,

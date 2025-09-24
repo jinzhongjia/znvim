@@ -1,3 +1,4 @@
+/// Public entry points for working with MessagePack-RPC encoding/decoding.
 pub const message = @import("message.zig");
 pub const encoder = @import("encoder.zig");
 pub const decoder = @import("decoder.zig");

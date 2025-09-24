@@ -4,6 +4,7 @@ const message = @import("message.zig");
 const payload_utils = @import("payload_utils.zig");
 const encoder = @import("encoder.zig");
 
+/// Minimal writer used to satisfy the msgpack reader/writer interface.
 const DummyWriterContext = struct {
     pub const Error = error{};
 
@@ -12,6 +13,7 @@ const DummyWriterContext = struct {
     }
 };
 
+/// Stateful reader that lets msgpack consume from the provided byte slice.
 const ReaderContext = struct {
     data: []const u8,
     position: usize = 0,
@@ -50,6 +52,7 @@ pub const DecodeResult = struct {
     bytes_read: usize,
 };
 
+/// Parses a MessagePack-RPC frame from the given bytes and reports how many were consumed.
 pub fn decode(allocator: std.mem.Allocator, bytes: []const u8) DecodeError!DecodeResult {
     var writer_ctx = DummyWriterContext{};
     var reader_ctx = ReaderContext{ .data = bytes };
@@ -79,6 +82,7 @@ pub fn decode(allocator: std.mem.Allocator, bytes: []const u8) DecodeError!Decod
     };
 }
 
+/// Builds a request object from the message array, copying owned data.
 fn decodeRequest(allocator: std.mem.Allocator, root: []msgpack.Payload) DecodeError!message.Request {
     if (root.len < 4) return error.InvalidMessageFormat;
 
@@ -95,6 +99,7 @@ fn decodeRequest(allocator: std.mem.Allocator, root: []msgpack.Payload) DecodeEr
     };
 }
 
+/// Builds a response object, cloning optional error/result payloads when present.
 fn decodeResponse(allocator: std.mem.Allocator, root: []msgpack.Payload) DecodeError!message.Response {
     if (root.len < 4) return error.InvalidMessageFormat;
 
@@ -117,6 +122,7 @@ fn decodeResponse(allocator: std.mem.Allocator, root: []msgpack.Payload) DecodeE
     };
 }
 
+/// Builds a notification object from the message array, copying owned data.
 fn decodeNotification(allocator: std.mem.Allocator, root: []msgpack.Payload) DecodeError!message.Notification {
     if (root.len < 3) return error.InvalidMessageFormat;
 
@@ -146,6 +152,7 @@ fn payloadToU32(value: msgpack.Payload) DecodeError!u32 {
     }
 }
 
+/// Converts the first tuple element into a strongly-typed message kind.
 fn extractMessageType(value: msgpack.Payload) DecodeError!message.MessageType {
     const number: u8 = switch (value) {
         .uint => |u| std.math.cast(u8, u) orelse return error.InvalidMessageType,

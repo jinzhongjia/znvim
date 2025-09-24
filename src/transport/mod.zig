@@ -1,5 +1,6 @@
 const builtin = @import("builtin");
 
+/// Re-exports all transport implementations for convenient importing.
 pub const Transport = @import("transport.zig").Transport;
 pub const UnixSocket = @import("unix_socket.zig").UnixSocket;
 pub const TcpSocket = @import("tcp_socket.zig").TcpSocket;
