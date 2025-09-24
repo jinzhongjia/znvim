@@ -1,235 +1,291 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const znvim = @import("../root.zig");
-const transport = @import("../transport/mod.zig");
-const protocol = @import("../protocol/msgpack_rpc.zig");
 const msgpack = @import("msgpack");
-const AtomicBool = std.atomic.Value(bool);
 const posix = std.posix;
 const windows = std.os.windows;
 
-const TestError = error{Timeout};
+// 编译时选项控制是否输出调试信息
+const debug_output = false;
 
-fn waitForUnixSocket(path: []const u8) !void {
-    const max_attempts: usize = 200;
-    var attempt: usize = 0;
-    while (attempt < max_attempts) : (attempt += 1) {
-        if (std.fs.cwd().access(path, .{})) {
-            return;
-        } else |_| {}
-        std.Thread.sleep(10 * std.time.ns_per_ms);
+/// 测试上下文，管理测试所需的资源
+const TestContext = struct {
+    allocator: std.mem.Allocator,
+    client: ?*znvim.Client = null,
+    nvim_process: ?std.process.Child = null,
+
+    const Self = @This();
+
+    /// 初始化测试上下文
+    fn init(allocator: std.mem.Allocator) Self {
+        return .{
+            .allocator = allocator,
+        };
     }
-    return TestError.Timeout;
-}
 
-fn waitForTcp(host: []const u8, port: u16, allocator: std.mem.Allocator) !void {
-    const max_attempts: usize = 200;
-    var attempt: usize = 0;
-    while (attempt < max_attempts) : (attempt += 1) {
-        if (std.net.tcpConnectToHost(allocator, host, port)) |stream| {
-            stream.close();
-            return;
-        } else |_| {}
-        std.Thread.sleep(10 * std.time.ns_per_ms);
-    }
-    return TestError.Timeout;
-}
-
-fn expectEval(client: *znvim.Client, allocator: std.mem.Allocator) !void {
-    std.debug.print("expectEval start\n", .{});
-    var expr = try msgpack.Payload.strToPayload("1+1", allocator);
-    defer expr.free(allocator);
-    const params = [_]msgpack.Payload{expr};
-    var result = try client.request("vim_eval", &params);
-    defer result.free(allocator);
-    switch (result) {
-        .int => |value| try std.testing.expectEqual(@as(i64, 2), value),
-        .uint => |value| try std.testing.expectEqual(@as(u64, 2), value),
-        else => try std.testing.expect(false),
-    }
-    std.debug.print("expectEval done\n", .{});
-}
-
-fn sendQuit(client: *znvim.Client, allocator: std.mem.Allocator) !void {
-    std.debug.print("sendQuit start\n", .{});
-    var cmd = try msgpack.Payload.strToPayload("qa!", allocator);
-    defer cmd.free(allocator);
-    const params = [_]msgpack.Payload{cmd};
-    try client.notify("nvim_command", &params);
-    std.debug.print("sendQuit notified\n", .{});
-}
-
-fn spawnNvimListen(allocator: std.mem.Allocator, address: []const u8) !std.process.Child {
-    var child = std.process.Child.init(&.{ "nvim", "--headless", "--clean", "--listen", address }, allocator);
-    child.stdin_behavior = .Ignore;
-    child.stdout_behavior = .Ignore;
-    child.stderr_behavior = .Inherit;
-    child.spawn() catch |err| switch (err) {
-        error.FileNotFound => return error.SkipZigTest,
-        else => return err,
-    };
-    return child;
-}
-
-fn spawnNvimEmbed(allocator: std.mem.Allocator) !std.process.Child {
-    var child = std.process.Child.init(&.{ "nvim", "--headless", "--clean", "--embed" }, allocator);
-    child.stdin_behavior = .Ignore;
-    child.stdout_behavior = .Ignore;
-    child.stderr_behavior = .Inherit;
-    child.spawn() catch |err| switch (err) {
-        error.FileNotFound => return error.SkipZigTest,
-        else => return err,
-    };
-    return child;
-}
-
-fn waitForExit(child: *std.process.Child, timeout_ns: u64) bool {
-    const Waiter = struct {
-        fn run(proc_child: *std.process.Child, term_ptr: *?std.process.Child.Term, done: *AtomicBool) void {
-            term_ptr.* = proc_child.wait() catch null;
-            done.store(true, .seq_cst);
+    /// 清理资源
+    fn deinit(self: *Self) void {
+        if (self.client) |client| {
+            client.disconnect();
+            client.deinit();
         }
+        if (self.nvim_process) |*child| {
+            NvimProcess.terminate(child);
+        }
+    }
+
+    /// 执行简单的求值测试
+    fn testEval(self: *Self) !void {
+        if (debug_output) std.debug.print("Testing eval...\n", .{});
+
+        const client = self.client orelse return error.NoClient;
+        var expr = try msgpack.Payload.strToPayload("1+1", self.allocator);
+        defer expr.free(self.allocator);
+
+        const params = [_]msgpack.Payload{expr};
+        var result = try client.request("vim_eval", &params);
+        defer result.free(self.allocator);
+
+        switch (result) {
+            .int => |value| try std.testing.expectEqual(@as(i64, 2), value),
+            .uint => |value| try std.testing.expectEqual(@as(u64, 2), value),
+            else => return error.UnexpectedResultType,
+        }
+    }
+
+    /// 发送退出命令
+    fn sendQuitCommand(self: *Self) !void {
+        if (debug_output) std.debug.print("Sending quit command...\n", .{});
+
+        const client = self.client orelse return error.NoClient;
+        var cmd = try msgpack.Payload.strToPayload("qa!", self.allocator);
+        defer cmd.free(self.allocator);
+
+        const params = [_]msgpack.Payload{cmd};
+        try client.notify("nvim_command", &params);
+    }
+};
+
+/// Nvim 进程管理
+const NvimProcess = struct {
+    const SpawnError = error{
+        NvimNotFound,
+        SpawnFailed,
     };
 
-    var done = AtomicBool.init(false);
-    var term: ?std.process.Child.Term = null;
-    const thread = std.Thread.spawn(.{}, Waiter.run, .{ child, &term, &done }) catch {
-        _ = child.wait() catch {};
-        return true;
-    };
+    /// 启动监听模式的 Nvim 进程
+    fn spawnListen(allocator: std.mem.Allocator, address: []const u8) !std.process.Child {
+        var child = std.process.Child.init(&.{ "nvim", "--headless", "--clean", "--listen", address }, allocator);
+        child.stdin_behavior = .Ignore;
+        child.stdout_behavior = .Ignore;
+        child.stderr_behavior = .Inherit;
 
-    var timer = std.time.Timer.start() catch unreachable;
-    var timed_out = false;
-    while (!done.load(.seq_cst)) {
-        if (timer.read() >= timeout_ns) {
-            timed_out = true;
-            if (!done.load(.seq_cst)) {
-                if (builtin.os.tag == .windows) {
-                    _ = windows.TerminateProcess(child.id, 1) catch {};
-                } else {
-                    _ = posix.kill(child.id, posix.SIG.TERM) catch {};
-                }
+        child.spawn() catch |err| switch (err) {
+            error.FileNotFound => return error.SkipZigTest,
+            else => return err,
+        };
+
+        return child;
+    }
+
+    /// 终止 Nvim 进程
+    fn terminate(child: *std.process.Child) void {
+        _ = waitForExit(child, 10 * std.time.ns_per_s);
+    }
+
+    /// 等待进程退出（带超时）
+    fn waitForExit(child: *std.process.Child, timeout_ns: u64) bool {
+        const AtomicBool = std.atomic.Value(bool);
+
+        const Waiter = struct {
+            fn run(proc: *std.process.Child, term: *?std.process.Child.Term, done: *AtomicBool) void {
+                term.* = proc.wait() catch null;
+                done.store(true, .seq_cst);
             }
-            break;
+        };
+
+        var done = AtomicBool.init(false);
+        var term: ?std.process.Child.Term = null;
+
+        const thread = std.Thread.spawn(.{}, Waiter.run, .{ child, &term, &done }) catch {
+            _ = child.wait() catch {};
+            return true;
+        };
+
+        var timer = std.time.Timer.start() catch unreachable;
+        var timed_out = false;
+
+        while (!done.load(.seq_cst)) {
+            if (timer.read() >= timeout_ns) {
+                timed_out = true;
+                if (!done.load(.seq_cst)) {
+                    if (builtin.os.tag == .windows) {
+                        _ = windows.TerminateProcess(child.id, 1) catch {};
+                    } else {
+                        _ = posix.kill(child.id, posix.SIG.TERM) catch {};
+                    }
+                }
+                break;
+            }
+            std.Thread.sleep(10 * std.time.ns_per_ms);
         }
-        std.Thread.sleep(10 * std.time.ns_per_ms);
+
+        thread.join();
+
+        if (term == null) {
+            _ = child.wait() catch {};
+        }
+
+        return !timed_out;
+    }
+};
+
+/// 连接等待器
+const ConnectionWaiter = struct {
+    const max_attempts: usize = 200;
+    const retry_delay_ms: u64 = 10;
+
+    /// 等待 Unix 套接字可用
+    fn waitForUnixSocket(path: []const u8) !void {
+        var attempt: usize = 0;
+        while (attempt < max_attempts) : (attempt += 1) {
+            if (std.fs.cwd().access(path, .{})) {
+                return;
+            } else |_| {}
+            std.Thread.sleep(retry_delay_ms * std.time.ns_per_ms);
+        }
+        return error.Timeout;
     }
 
-    thread.join();
-
-    if (term == null) {
-        _ = child.wait() catch {};
+    /// 等待 TCP 端口可用
+    fn waitForTcp(host: []const u8, port: u16, allocator: std.mem.Allocator) !void {
+        var attempt: usize = 0;
+        while (attempt < max_attempts) : (attempt += 1) {
+            if (std.net.tcpConnectToHost(allocator, host, port)) |stream| {
+                stream.close();
+                return;
+            } else |_| {}
+            std.Thread.sleep(retry_delay_ms * std.time.ns_per_ms);
+        }
+        return error.Timeout;
     }
+};
 
-    return !timed_out;
-}
+/// Unix 套接字传输测试
+const UnixSocketTransport = struct {
+    fn runTest() !void {
+        if (builtin.os.tag == .windows) return error.SkipZigTest;
 
-fn cleanupChild(child: *std.process.Child) void {
-    _ = waitForExit(child, 10 * std.time.ns_per_s);
-}
+        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+        defer _ = gpa.deinit();
+        const allocator = gpa.allocator();
 
-fn unixSocketTest() !void {
-    std.debug.print("unixSocketTest begin\n", .{});
-    if (builtin.os.tag == .windows) return error.SkipZigTest;
+        var ctx = TestContext.init(allocator);
+        defer ctx.deinit();
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+        // 生成唯一的套接字路径
+        const socket_path = try std.fmt.allocPrint(allocator, "/tmp/znvim-test-{d}.sock", .{std.time.timestamp()});
+        defer allocator.free(socket_path);
 
-    const socket_path = try std.fmt.allocPrint(allocator, "/tmp/znvim-test-{d}.sock", .{std.time.timestamp()});
-    defer allocator.free(socket_path);
+        // 启动 Nvim 进程
+        ctx.nvim_process = try NvimProcess.spawnListen(allocator, socket_path);
 
-    var child = try spawnNvimListen(allocator, socket_path);
-    var child_cleaned = false;
-    defer if (!child_cleaned) cleanupChild(&child);
+        // 等待套接字就绪
+        ConnectionWaiter.waitForUnixSocket(socket_path) catch |err| switch (err) {
+            error.Timeout => return error.SkipZigTest,
+            else => return err,
+        };
 
-    waitForUnixSocket(socket_path) catch |err| switch (err) {
-        TestError.Timeout => return error.SkipZigTest,
-        else => return err,
-    };
+        // 创建并连接客户端
+        var client = try znvim.Client.init(allocator, .{
+            .socket_path = socket_path,
+            .skip_api_info = true,
+        });
+        ctx.client = &client;
 
-    var client = try znvim.Client.init(allocator, .{ .socket_path = socket_path, .skip_api_info = true });
-    defer client.deinit();
-    std.debug.print("unix connect\n", .{});
-    try client.connect();
-    std.debug.print("unix connected\n", .{});
+        try client.connect();
 
-    try expectEval(&client, allocator);
-    try sendQuit(&client, allocator);
-    client.disconnect();
-
-    child_cleaned = waitForExit(&child, 10 * std.time.ns_per_s);
-    if (!child_cleaned) return error.SkipZigTest;
-}
-
-fn tcpSocketTest() !void {
-    const host = "127.0.0.1";
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-
-    const random_offset = std.crypto.random.int(u16) % 1000;
-    const port: u16 = 22000 + random_offset;
-
-    const address_buf = try std.fmt.allocPrint(allocator, "{s}:{d}", .{ host, port });
-    defer allocator.free(address_buf);
-
-    var child = try spawnNvimListen(allocator, address_buf);
-    var child_cleaned = false;
-    defer if (!child_cleaned) cleanupChild(&child);
-
-    waitForTcp(host, port, allocator) catch |err| switch (err) {
-        TestError.Timeout => return error.SkipZigTest,
-        else => return err,
-    };
-
-    var client = try znvim.Client.init(allocator, .{ .tcp_address = host, .tcp_port = port, .skip_api_info = true });
-    defer client.deinit();
-    std.debug.print("tcp connect\n", .{});
-    try client.connect();
-    std.debug.print("tcp connected\n", .{});
-
-    try expectEval(&client, allocator);
-    try sendQuit(&client, allocator);
-    client.disconnect();
-
-    child_cleaned = waitForExit(&child, 10 * std.time.ns_per_s);
-    if (!child_cleaned) return error.SkipZigTest;
-}
-
-fn childProcessTest() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-
-    var client = try znvim.Client.init(allocator, .{ .spawn_process = true, .skip_api_info = true });
-    defer client.deinit();
-    std.debug.print("child connect\n", .{});
-    try client.connect();
-    std.debug.print("child connected\n", .{});
-
-    try expectEval(&client, allocator);
-    try sendQuit(&client, allocator);
-    client.disconnect();
-}
-
-fn ensureTransportTestsEnabled() !void {
-    if (std.process.hasEnvVarConstant("SKIP_ZNVIM_TRANSPORT_TESTS")) {
-        return error.SkipZigTest;
+        // 执行测试
+        try ctx.testEval();
+        try ctx.sendQuitCommand();
     }
+};
+
+/// TCP 套接字传输测试
+const TcpSocketTransport = struct {
+    fn runTest() !void {
+        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+        defer _ = gpa.deinit();
+        const allocator = gpa.allocator();
+
+        var ctx = TestContext.init(allocator);
+        defer ctx.deinit();
+
+        // 生成随机端口
+        const host = "127.0.0.1";
+        const port: u16 = 22000 + (std.crypto.random.int(u16) % 1000);
+
+        const address_buf = try std.fmt.allocPrint(allocator, "{s}:{d}", .{ host, port });
+        defer allocator.free(address_buf);
+
+        // 启动 Nvim 进程
+        ctx.nvim_process = try NvimProcess.spawnListen(allocator, address_buf);
+
+        // 等待 TCP 端口就绪
+        ConnectionWaiter.waitForTcp(host, port, allocator) catch |err| switch (err) {
+            error.Timeout => return error.SkipZigTest,
+            else => return err,
+        };
+
+        // 创建并连接客户端
+        var client = try znvim.Client.init(allocator, .{
+            .tcp_address = host,
+            .tcp_port = port,
+            .skip_api_info = true,
+        });
+        ctx.client = &client;
+
+        try client.connect();
+
+        // 执行测试
+        try ctx.testEval();
+        try ctx.sendQuitCommand();
+    }
+};
+
+/// 子进程传输测试
+const ChildProcessTransport = struct {
+    fn runTest() !void {
+        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+        defer _ = gpa.deinit();
+        const allocator = gpa.allocator();
+
+        var ctx = TestContext.init(allocator);
+        defer ctx.deinit();
+
+        // 创建并连接客户端（自动生成子进程）
+        var client = try znvim.Client.init(allocator, .{
+            .spawn_process = true,
+            .skip_api_info = true,
+        });
+        ctx.client = &client;
+
+        try client.connect();
+
+        // 执行测试
+        try ctx.testEval();
+        try ctx.sendQuitCommand();
+    }
+};
+
+test "Unix socket transport" {
+    try UnixSocketTransport.runTest();
 }
 
-// test "transport unix socket" {
-//     try ensureTransportTestsEnabled();
-//     try unixSocketTest();
-// }
+test "TCP socket transport" {
+    try TcpSocketTransport.runTest();
+}
 
-// test "transport tcp socket" {
-//     try ensureTransportTestsEnabled();
-//     try tcpSocketTest();
-// }
-
-test "transport child process" {
-    try ensureTransportTestsEnabled();
-    try childProcessTest();
+test "Child process transport" {
+    try ChildProcessTransport.runTest();
 }
