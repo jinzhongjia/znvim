@@ -64,6 +64,7 @@ pub const ClientError = ClientInitError || transport.Transport.ReadError || tran
     UnexpectedMessage,
     NvimError,
     OutOfMemory,
+    Timeout,
 };
 
 const WindowsState = if (builtin.os.tag == .windows)
@@ -142,7 +143,7 @@ pub const Client = struct {
                 const pipe_ptr = try self.allocator.create(transport.WindowsPipe);
                 errdefer self.allocator.destroy(pipe_ptr);
 
-                pipe_ptr.* = transport.WindowsPipe.init(self.allocator);
+                pipe_ptr.* = transport.WindowsPipe.init(self.allocator, self.options.timeout_ms);
                 self.transport = transport.Transport.init(pipe_ptr, &transport.WindowsPipe.vtable);
                 self.transport_kind = .named_pipe;
                 self.windows.pipe = pipe_ptr;

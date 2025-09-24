@@ -12,6 +12,7 @@ pub const ChildProcess = struct {
     child: ?*process.Child = null,
     stdin_file: ?std.fs.File = null,
     stdout_file: ?std.fs.File = null,
+    shutdown_timeout_ns: u64,
 
     pub fn init(allocator: std.mem.Allocator, options: connection.ConnectionOptions) !ChildProcess {
         const path_copy = try allocator.dupe(u8, options.nvim_path);
@@ -19,6 +20,10 @@ pub const ChildProcess = struct {
         argv[0] = path_copy;
         argv[1] = "--headless";
         argv[2] = "--embed";
+        const timeout_ns = if (options.timeout_ms == 0)
+            0
+        else
+            @as(u64, options.timeout_ms) * std.time.ns_per_ms;
         return .{
             .allocator = allocator,
             .nvim_path = path_copy,
@@ -26,6 +31,7 @@ pub const ChildProcess = struct {
             .child = null,
             .stdin_file = null,
             .stdout_file = null,
+            .shutdown_timeout_ns = timeout_ns,
         };
     }
 
@@ -88,7 +94,8 @@ pub const ChildProcess = struct {
             self.stdin_file = null;
             self.stdout_file = null;
 
-            _ = waitForChildExit(child_ptr, 5 * std.time.ns_per_s);
+            const timeout_ns = self.shutdown_timeout_ns;
+            _ = waitForChildExit(child_ptr, timeout_ns);
             self.allocator.destroy(child_ptr);
             self.child = null;
         }
@@ -97,13 +104,30 @@ pub const ChildProcess = struct {
     fn read(tr: *Transport, buffer: []u8) Transport.ReadError!usize {
         const self = tr.downcast(ChildProcess);
         const file = self.stdout_file orelse return Transport.ReadError.ConnectionClosed;
-        return file.read(buffer) catch Transport.ReadError.UnexpectedError;
+        return file.read(buffer) catch |err| switch (err) {
+            error.WouldBlock, error.ConnectionTimedOut => Transport.ReadError.Timeout,
+            error.BrokenPipe,
+            error.ConnectionResetByPeer,
+            error.SocketNotConnected,
+            error.NotOpenForReading,
+            error.OperationAborted,
+            error.Canceled,
+            error.ProcessNotFound => Transport.ReadError.ConnectionClosed,
+            else => Transport.ReadError.UnexpectedError,
+        };
     }
 
     fn write(tr: *Transport, data: []const u8) Transport.WriteError!void {
         const self = tr.downcast(ChildProcess);
         const file = self.stdin_file orelse return Transport.WriteError.ConnectionClosed;
-        file.writeAll(data) catch return Transport.WriteError.UnexpectedError;
+        file.writeAll(data) catch |err| switch (err) {
+            error.BrokenPipe => return Transport.WriteError.BrokenPipe,
+            error.ConnectionResetByPeer,
+            error.NotOpenForWriting,
+            error.OperationAborted,
+            error.ProcessNotFound => return Transport.WriteError.ConnectionClosed,
+            else => return Transport.WriteError.UnexpectedError,
+        };
     }
 
     fn isConnected(tr: *Transport) bool {
@@ -137,9 +161,10 @@ fn waitForChildExit(child: *process.Child, timeout_ns: u64) bool {
     };
 
     var timer = std.time.Timer.start() catch unreachable;
+    const enforce_timeout = timeout_ns != 0;
     var timed_out = false;
     while (!done.load(.seq_cst)) {
-        if (timer.read() >= timeout_ns) {
+        if (enforce_timeout and timer.read() >= timeout_ns) {
             timed_out = true;
             if (!done.load(.seq_cst)) {
                 _ = child.kill() catch {};
