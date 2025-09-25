@@ -47,3 +47,15 @@ test "transport module tests" {
 test "msgpack module tests" {
     _ = @import("tests/msgpack_tests.zig");
 }
+
+test "transport unit tests" {
+    _ = @import("tests/transport_unit_tests.zig");
+}
+
+test "connection module tests" {
+    _ = @import("tests/connection_tests.zig");
+}
+
+test "protocol unit tests" {
+    _ = @import("tests/protocol_unit_tests.zig");
+}
