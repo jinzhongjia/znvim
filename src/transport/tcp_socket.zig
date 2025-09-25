@@ -55,6 +55,29 @@ pub const TcpSocket = struct {
     fn read(tr: *Transport, buffer: []u8) Transport.ReadError!usize {
         const self = tr.downcast(TcpSocket);
         const stream = self.stream orelse return Transport.ReadError.ConnectionClosed;
+
+        if (builtin.os.tag == .windows) {
+            const sock = stream.handle;
+            const result = ws2.recv(sock, buffer.ptr, @intCast(buffer.len), 0);
+            if (result == ws2.SOCKET_ERROR) {
+                const werr = ws2.WSAGetLastError();
+                return switch (werr) {
+                    .WSAEWOULDBLOCK => Transport.ReadError.Timeout,
+                    .WSAECONNRESET,
+                    .WSAECONNABORTED,
+                    .WSAENOTCONN,
+                    .WSAESHUTDOWN,
+                    .WSAETIMEDOUT,
+                    .WSAENETRESET,
+                    .WSAEDISCON,
+                    => Transport.ReadError.ConnectionClosed,
+                    else => Transport.ReadError.UnexpectedError,
+                };
+            }
+            if (result == 0) return Transport.ReadError.ConnectionClosed;
+            return @intCast(result);
+        }
+
         return stream.read(buffer) catch |err| switch (err) {
             error.WouldBlock => Transport.ReadError.Timeout,
             error.ConnectionResetByPeer,
@@ -68,6 +91,36 @@ pub const TcpSocket = struct {
     fn write(tr: *Transport, data: []const u8) Transport.WriteError!void {
         const self = tr.downcast(TcpSocket);
         const stream = self.stream orelse return Transport.WriteError.ConnectionClosed;
+
+        if (builtin.os.tag == .windows) {
+            const sock = stream.handle;
+            var offset: usize = 0;
+            while (offset < data.len) {
+                const remaining = data.len - offset;
+                const sent = ws2.send(sock, data.ptr + offset, @intCast(remaining), 0);
+                if (sent == ws2.SOCKET_ERROR) {
+                    const werr = ws2.WSAGetLastError();
+                    return switch (werr) {
+                        .WSAEWOULDBLOCK => Transport.WriteError.UnexpectedError,
+                        .WSAECONNRESET,
+                        .WSAECONNABORTED,
+                        .WSAENOTCONN,
+                        .WSAESHUTDOWN,
+                        .WSAETIMEDOUT,
+                        .WSAENETRESET,
+                        .WSAEDISCON,
+                        => Transport.WriteError.ConnectionClosed,
+                        else => Transport.WriteError.UnexpectedError,
+                    };
+                }
+                if (sent == 0) {
+                    return Transport.WriteError.ConnectionClosed;
+                }
+                offset += @intCast(sent);
+            }
+            return;
+        }
+
         stream.writeAll(data) catch |err| switch (err) {
             error.BrokenPipe => return Transport.WriteError.BrokenPipe,
             error.ConnectionResetByPeer,
