@@ -17,6 +17,37 @@ pub fn build(b: *std.Build) void {
     });
     mod.addImport("msgpack", msgpack_module);
 
+    const example_sources = [_]struct {
+        name: []const u8,
+        path: []const u8,
+    }{
+        .{ .name = "api_lookup", .path = "examples/api_lookup.zig" },
+        .{ .name = "buffer_lines", .path = "examples/buffer_lines.zig" },
+        .{ .name = "eval_expression", .path = "examples/eval_expression.zig" },
+        .{ .name = "print_api", .path = "examples/print_api.zig" },
+        .{ .name = "run_command", .path = "examples/run_command.zig" },
+    };
+
+    const examples_step = b.step("examples", "Build examples");
+
+    inline for (example_sources) |example| {
+        const exe_module = b.createModule(.{
+            .root_source_file = b.path(example.path),
+            .target = target,
+            .optimize = optimize,
+        });
+        exe_module.addImport("znvim", mod);
+        exe_module.addImport("msgpack", msgpack_module);
+
+        const exe = b.addExecutable(.{
+            .name = example.name,
+            .root_module = exe_module,
+        });
+
+        const install = b.addInstallArtifact(exe, .{});
+        examples_step.dependOn(&install.step);
+    }
+
     const mod_tests = b.addTest(.{
         .root_module = mod,
     });

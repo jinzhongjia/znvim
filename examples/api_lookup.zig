@@ -1,5 +1,5 @@
 const std = @import("std");
-const znvim = @import("../src/root.zig");
+const znvim = @import("znvim");
 
 // Simple error set that captures the three failure modes of this example:
 // missing command-line argument, missing environment variable, or the API
@@ -23,10 +23,14 @@ pub fn main() !void {
         return ExampleError.MissingArgument;
     };
 
-    const address = std.os.getenv("NVIM_LISTEN_ADDRESS") orelse {
-        std.debug.print("Set NVIM_LISTEN_ADDRESS before running this example.\n", .{});
-        return ExampleError.MissingAddress;
+    const address = std.process.getEnvVarOwned(allocator, "NVIM_LISTEN_ADDRESS") catch |err| switch (err) {
+        error.EnvironmentVariableNotFound => {
+            std.debug.print("Set NVIM_LISTEN_ADDRESS before running this example.\n", .{});
+            return ExampleError.MissingAddress;
+        },
+        else => return err,
     };
+    defer allocator.free(address);
 
     var client = try znvim.Client.init(allocator, .{ .socket_path = address });
     defer client.deinit();

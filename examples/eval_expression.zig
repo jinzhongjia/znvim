@@ -1,5 +1,5 @@
 const std = @import("std");
-const znvim = @import("../src/root.zig");
+const znvim = @import("znvim");
 const msgpack = @import("msgpack");
 
 const ExampleError = error{MissingAddress};
@@ -12,10 +12,14 @@ pub fn main() !void {
     };
     const allocator = gpa.allocator();
 
-    const address = std.os.getenv("NVIM_LISTEN_ADDRESS") orelse {
-        std.debug.print("Set NVIM_LISTEN_ADDRESS before running this example.\n", .{});
-        return ExampleError.MissingAddress;
+    const address = std.process.getEnvVarOwned(allocator, "NVIM_LISTEN_ADDRESS") catch |err| switch (err) {
+        error.EnvironmentVariableNotFound => {
+            std.debug.print("Set NVIM_LISTEN_ADDRESS before running this example.\n", .{});
+            return ExampleError.MissingAddress;
+        },
+        else => return err,
     };
+    defer allocator.free(address);
 
     // The client performs runtime API discovery during connect, so the
     // resulting `request` call can rely on the negotiated interface.
