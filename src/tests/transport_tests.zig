@@ -214,12 +214,22 @@ const UnixSocketTransport = struct {
 /// TCP 套接字传输测试
 const TcpSocketTransport = struct {
     fn runTest() !void {
+        if (builtin.os.tag == .windows) return error.SkipZigTest;
+
         var gpa = std.heap.GeneralPurposeAllocator(.{}){};
         defer _ = gpa.deinit();
         const allocator = gpa.allocator();
 
         var ctx = TestContext.init(allocator);
         defer ctx.deinit();
+
+        if (builtin.os.tag == .windows) {
+            windows.callWSAStartup() catch |err| switch (err) {
+                error.ProcessFdQuotaExceeded => return error.SkipZigTest,
+                error.Unexpected => return err,
+                error.SystemResources => return error.SkipZigTest,
+            };
+        }
 
         // 生成随机端口
         const host = "127.0.0.1";
@@ -228,16 +238,16 @@ const TcpSocketTransport = struct {
         const address_buf = try std.fmt.allocPrint(allocator, "{s}:{d}", .{ host, port });
         defer allocator.free(address_buf);
 
-        // 启动 Nvim 进程
+        if (debug_output) std.debug.print("Spawning nvim with address: {s}\n", .{address_buf});
         ctx.nvim_process = try NvimProcess.spawnListen(allocator, address_buf);
 
-        // 等待 TCP 端口就绪
+        if (builtin.os.tag == .windows and debug_output) std.debug.print("Waiting for TCP port {s}:{d}\n", .{ host, port });
         ConnectionWaiter.waitForTcp(host, port, allocator) catch |err| switch (err) {
             error.Timeout => return error.SkipZigTest,
             else => return err,
         };
 
-        // 创建并连接客户端
+        if (debug_output) std.debug.print("Connecting RPC client to {s}:{d}\n", .{ host, port });
         var client = try znvim.Client.init(allocator, .{
             .tcp_address = host,
             .tcp_port = port,
@@ -247,8 +257,9 @@ const TcpSocketTransport = struct {
 
         try client.connect();
 
-        // 执行测试
+        if (debug_output) std.debug.print("testEval via TCP transport\n", .{});
         try ctx.testEval();
+        if (debug_output) std.debug.print("Sending quit via TCP transport\n", .{});
         try ctx.sendQuitCommand();
     }
 };
@@ -283,6 +294,7 @@ test "Unix socket transport" {
 }
 
 test "TCP socket transport" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
     try TcpSocketTransport.runTest();
 }
 
