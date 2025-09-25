@@ -37,7 +37,6 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         });
         exe_module.addImport("znvim", mod);
-        exe_module.addImport("msgpack", msgpack_module);
 
         const exe = b.addExecutable(.{
             .name = example.name,

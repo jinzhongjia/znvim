@@ -1,26 +1,31 @@
 # znvim
 
-A lightweight Neovim RPC client written in Zig. znvim connects to a running Neovim instance, negotiates its API surface at runtime via `nvim_get_api_info`, and exposes a thin MessagePack-RPC interface for synchronous requests and notifications.
+A lightweight Neovim RPC client for Zig that discovers the runtime API via `nvim_get_api_info`, manages transports, and ships a high-level MessagePack helper so application code never needs to touch the raw `zig-msgpack` API.
 
-> **Status:** experimental / work-in-progress. Only Unix socket transports are implemented today.
+> **Status:** experimental. Core transports (Unix socket, Windows named pipe, TCP, stdio, embedded child process) are present but the library surface may change while stabilising the msgpack façade.
 
-## Features
+## Highlights
 
-- Runtime API discovery driven by `nvim_get_api_info`, exposed through typed `ApiInfo` / `ApiFunction` metadata.
-- Multiple transport backends: Unix sockets (macOS/Linux), Windows named pipes, TCP sockets, stdio pipes, and auto-spawned `nvim --embed` child processes.
-- Synchronous `Client.request` / `Client.notify` helpers over MessagePack-RPC.
-- Built on top of [`zig-msgpack`](https://github.com/zigcc/zig-msgpack) for encoding/decoding MessagePack payloads.
-- Simple allocator-aware design; callers control lifetimes of all payload allocations.
+- **Runtime API discovery** – obtain structured metadata (`ApiInfo`, `ApiFunction`, `ApiParameter`) describing exactly what the connected Neovim instance exposes.
+- **Multiple transports** – talk to Neovim over Unix sockets, TCP, stdio pipes, named pipes on Windows, or auto-spawned `nvim --embed` processes.
+- **Allocator-friendly client** – the caller keeps ownership of allocations and can decide how long payloads live.
+- **MessagePack façade** – `znvim.msgpack` wraps `zig-msgpack` with ergonomic constructors (`msgpack.array`, `msgpack.object`, `msgpack.encode`, …) plus type-safe readers (`msgpack.expectString`, `msgpack.asArray`, …).
+- **Examples ready to build** – `zig build examples` produces runnable binaries that demonstrate common workflows.
+
+## Requirements
+
+- Zig 0.15.x
+- A running Neovim instance compiled with `--embed` support (standard builds already have it)
 
 ## Installation
 
-The package targets Zig `0.15.x`.
+Add the package to your project using `zig fetch`:
 
 ```sh
 zig fetch --save https://github.com/jinzhongjia/znvim/archive/main.tar.gz
 ```
 
-Then wire the dependency in your `build.zig`:
+Wire the module in `build.zig`:
 
 ```zig
 const znvim_dep = b.dependency("znvim", .{
@@ -29,7 +34,6 @@ const znvim_dep = b.dependency("znvim", .{
 });
 const znvim = znvim_dep.module("znvim");
 
-// Usage example
 exe.root_module.addImport("znvim", znvim);
 ```
 
@@ -38,56 +42,94 @@ exe.root_module.addImport("znvim", znvim);
 ```zig
 const std = @import("std");
 const znvim = @import("znvim");
+const msgpack = znvim.msgpack;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
+    defer switch (gpa.deinit()) {
+        .ok => {},
+        .leak => std.debug.print("warning: leaked allocations\n", .{}),
+    };
     const allocator = gpa.allocator();
 
-    const address = std.os.getenv("NVIM_LISTEN_ADDRESS") orelse
+    const address = std.process.getEnvVarOwned(allocator, "NVIM_LISTEN_ADDRESS") catch {
+        std.debug.print("Set NVIM_LISTEN_ADDRESS to your Neovim socket before running.\n", .{});
         return error.MissingAddress;
+    };
+    defer allocator.free(address);
 
     var client = try znvim.Client.init(allocator, .{ .socket_path = address });
     defer client.deinit();
     try client.connect();
 
-    const info = client.getApiInfo() orelse return error.ApiInfoUnavailable;
-    std.debug.print("Neovim API {d}.{d}.{d} exposes {d} functions\n",
-        .{ info.version.major, info.version.minor, info.version.patch, info.functions.len });
+    // Ask Neovim to evaluate a small expression.
+    const expr = try msgpack.string(allocator, "join(['zig', 'nvim'], '-')");
+    defer msgpack.free(expr, allocator);
+
+    const params = [_]msgpack.Value{expr};
+    const response = try client.request("vim_eval", &params);
+    defer msgpack.free(response, allocator);
+
+    if (msgpack.asString(response)) |result| {
+        std.debug.print("Neovim answered: {s}\n", .{result});
+    }
 }
 ```
 
-To connect from a shell, start Neovim in headless mode and point `NVIM_LISTEN_ADDRESS` at the socket:
+Launch Neovim and point `NVIM_LISTEN_ADDRESS` at the exposed socket:
 
 ```sh
 nvim --headless --listen /tmp/nvim.sock &
 export NVIM_LISTEN_ADDRESS=/tmp/nvim.sock
-zig build-exe examples/print_api.zig
-./print_api
+zig build examples
+./zig-out/bin/print_api
 ```
 
 ## Examples
 
-The `examples/` directory contains self-contained programs that demonstrate common interactions:
+| Example | Description |
+| --- | --- |
+| `print_api.zig` | Connects and prints the first few discovered API functions. |
+| `run_command.zig` | Issues an `nvim_command` notification that writes to `:messages`. |
+| `eval_expression.zig` | Evaluates a Vimscript expression and inspects the returned payload. |
+| `buffer_lines.zig` | Reads the current buffer, replaces its content, then verifies the change. |
+| `api_lookup.zig` | Looks up metadata for a single API function by name. |
 
-- `examples/print_api.zig` – connect and print the discovered API metadata (first 10 functions).
-- `examples/run_command.zig` – send an `nvim_command` notification.
-- `examples/eval_expression.zig` – evaluate a Vimscript expression and inspect the returned payload.
-- `examples/buffer_lines.zig` – fetch the current buffer, overwrite its contents, and read lines back.
-- `examples/api_lookup.zig` – query runtime metadata for a specific API function (pass the name as argv).
+Build all examples in one go with `zig build examples`; binaries are placed under `zig-out/bin/`.
 
-Each example imports `../src/root.zig` directly to work inside this repository. When you depend on znvim from another project, replace that import with `@import("znvim")` and build via your own `build.zig`.
+## MessagePack helper overview
 
-## Development & Testing
+The `znvim.msgpack` namespace aims to be the only interface most users need:
 
-Run the full test suite (including the new parser and API refresh tests) with:
+```zig
+const payload = try msgpack.object(allocator, .{
+    .name = "my-command",
+    .enabled = true,
+    .retries = 3,
+});
+
+defer msgpack.free(payload, allocator);
+
+const arr = try msgpack.array(allocator, &.{ payload });
+const parsed = msgpack.expectArray(arr) catch return error.NotArray;
+```
+
+Use `msgpack.encode(allocator, value)` for generic encoding of common Zig types, and the `expect*` / `as*` helpers when decoding responses.
+
+## Development
+
+Run tests:
 
 ```sh
 zig build test
 ```
 
-The tests leverage a fake transport and synthetic `nvim_get_api_info` responses to exercise the runtime parser without requiring a live Neovim instance.
+To work on the documentation, keep the English `README.md` and the Chinese translation `README.zh.md` in sync.
 
 ## License
 
 MIT
+
+---
+
+- [中文文档](README.zh.md)

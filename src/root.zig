@@ -20,6 +20,7 @@ pub const ConnectionOptions = connection_mod.ConnectionOptions;
 
 pub const transport = transport_mod;
 pub const protocol = protocol_mod;
+pub const msgpack = @import("msgpack.zig");
 
 pub const Request = protocol_mod.message.Request;
 pub const Response = protocol_mod.message.Response;

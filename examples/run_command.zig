@@ -1,6 +1,6 @@
 const std = @import("std");
 const znvim = @import("znvim");
-const msgpack = @import("msgpack");
+const msgpack = znvim.msgpack;
 
 // The only thing that can realistically go wrong here is forgetting to point
 // `NVIM_LISTEN_ADDRESS` at a running Neovim instance.
@@ -31,10 +31,10 @@ pub fn main() !void {
 
     // Notifications do not expect a response, so we can skip the more expensive
     // `request` path. We still need to encode the payload with msgpack though.
-    var command_payload = try msgpack.Payload.strToPayload("echom 'Hello from Zig'", allocator);
-    defer command_payload.free(allocator);
+    const command_payload = try msgpack.string(allocator, "echom 'Hello from Zig'");
+    defer msgpack.free(command_payload, allocator);
 
-    const params = [_]msgpack.Payload{command_payload};
+    const params = [_]msgpack.Value{command_payload};
     try client.notify("nvim_command", &params);
 
     std.debug.print("Sent command to Neovim. Check :messages inside the instance.\n", .{});
