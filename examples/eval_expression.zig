@@ -1,6 +1,6 @@
 const std = @import("std");
 const znvim = @import("znvim");
-const msgpack = @import("msgpack");
+const msgpack = znvim.msgpack;
 
 const ExampleError = error{MissingAddress};
 
@@ -29,12 +29,12 @@ pub fn main() !void {
 
     // Build the MsgPack parameter list the same way Neovim expects when
     // calling `nvim_eval`. Here we ask Neovim to join two strings with a dash.
-    var expr_payload = try msgpack.Payload.strToPayload("join(['zig', 'nvim'], '-')", allocator);
-    defer expr_payload.free(allocator);
+    const expr_payload = try msgpack.string(allocator, "join(['zig', 'nvim'], '-')");
+    defer msgpack.free(expr_payload, allocator);
 
-    const params = [_]msgpack.Payload{expr_payload};
-    var result = try client.request("vim_eval", &params);
-    defer result.free(allocator);
+    const params = [_]msgpack.Value{expr_payload};
+    const result = try client.request("vim_eval", &params);
+    defer msgpack.free(result, allocator);
 
     // The result type depends on the evaluated expression. Demonstrate a few
     // common conversions and print the raw MsgPack payload otherwise.
