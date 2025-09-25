@@ -1,5 +1,5 @@
 const std = @import("std");
-const znvim = @import("../src/root.zig");
+const znvim = @import("znvim");
 
 // Define a light-weight error set that expresses everything that can go wrong
 // in this example. Returning explicit errors keeps the control flow readable.
@@ -16,10 +16,14 @@ pub fn main() !void {
     // Ask the user for the Neovim socket location. Any transport supported by
     // Neovim (Unix socket, TCP, etc.) works – as long as the address is stored
     // in the `NVIM_LISTEN_ADDRESS` environment variable.
-    const address = std.os.getenv("NVIM_LISTEN_ADDRESS") orelse {
-        std.debug.print("Set NVIM_LISTEN_ADDRESS before running this example.\n", .{});
-        return ExampleError.MissingAddress;
+    const address = std.process.getEnvVarOwned(allocator, "NVIM_LISTEN_ADDRESS") catch |err| switch (err) {
+        error.EnvironmentVariableNotFound => {
+            std.debug.print("Set NVIM_LISTEN_ADDRESS before running this example.\n", .{});
+            return ExampleError.MissingAddress;
+        },
+        else => return err,
     };
+    defer allocator.free(address);
 
     // Initialising the client only records options. `connect` performs the
     // actual socket dial and queries the Neovim API metadata automatically.

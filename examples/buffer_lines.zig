@@ -1,5 +1,5 @@
 const std = @import("std");
-const znvim = @import("../src/root.zig");
+const znvim = @import("znvim");
 const msgpack = @import("msgpack");
 
 const ExampleError = error{ MissingAddress, UnexpectedPayload };
@@ -35,10 +35,14 @@ pub fn main() !void {
     };
     const allocator = gpa.allocator();
 
-    const address = std.os.getenv("NVIM_LISTEN_ADDRESS") orelse {
-        std.debug.print("Set NVIM_LISTEN_ADDRESS before running this example.\n", .{});
-        return ExampleError.MissingAddress;
+    const address = std.process.getEnvVarOwned(allocator, "NVIM_LISTEN_ADDRESS") catch |err| switch (err) {
+        error.EnvironmentVariableNotFound => {
+            std.debug.print("Set NVIM_LISTEN_ADDRESS before running this example.\n", .{});
+            return ExampleError.MissingAddress;
+        },
+        else => return err,
     };
+    defer allocator.free(address);
 
     var client = try znvim.Client.init(allocator, .{ .socket_path = address });
     defer client.deinit();
@@ -61,7 +65,8 @@ pub fn main() !void {
         msgpack.Payload.boolToPayload(false),
         replacement_lines,
     };
-    try client.request("nvim_buf_set_lines", &set_params);
+    var set_result = try client.request("nvim_buf_set_lines", &set_params);
+    defer set_result.free(allocator);
 
     // Read the lines back to confirm the change.
     const get_params = [_]msgpack.Payload{
