@@ -290,7 +290,10 @@ fn encodeStructValue(
     inline for (info.fields) |field| {
         const field_value = @field(value, field.name);
         const encoded = try encodeInternal(allocator, field_value);
-        try map.mapPut(field.name, encoded);
+        map.mapPut(field.name, encoded) catch |err| switch (err) {
+            error.NotMap, error.NotArr => unreachable,
+            error.OutOfMemory => return error.OutOfMemory,
+        };
     }
 
     return map;
