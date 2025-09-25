@@ -4,6 +4,66 @@ const unicode = std.unicode;
 const Transport = @import("transport.zig").Transport;
 
 const ns_per_ms = std.time.ns_per_ms;
+const nmpwait_wait_forever: windows.DWORD = std.math.maxInt(windows.DWORD);
+
+extern "kernel32" fn CreateFileW(
+    lpFileName: windows.LPCWSTR,
+    dwDesiredAccess: windows.DWORD,
+    dwShareMode: windows.DWORD,
+    lpSecurityAttributes: ?*windows.SECURITY_ATTRIBUTES,
+    dwCreationDisposition: windows.DWORD,
+    dwFlagsAndAttributes: windows.DWORD,
+    hTemplateFile: ?windows.HANDLE,
+) callconv(.winapi) windows.HANDLE;
+
+extern "kernel32" fn WaitNamedPipeW(
+    lpNamedPipeName: windows.LPCWSTR,
+    nTimeOut: windows.DWORD,
+) callconv(.winapi) windows.BOOL;
+
+const CreatePipeHandleError = error{
+    FileNotFound,
+    PipeBusy,
+    AccessDenied,
+    Unexpected,
+};
+
+fn openPipeHandle(
+    path: [*:0]const u16,
+    desired_access: windows.DWORD,
+    share_mode: windows.DWORD,
+    creation: windows.DWORD,
+    flags: windows.DWORD,
+) CreatePipeHandleError!windows.HANDLE {
+    const handle = CreateFileW(path, desired_access, share_mode, null, creation, flags, null);
+    if (handle == windows.INVALID_HANDLE_VALUE) {
+        const err = windows.GetLastError();
+        return switch (err) {
+            .FILE_NOT_FOUND => error.FileNotFound,
+            .PIPE_BUSY => error.PipeBusy,
+            .ACCESS_DENIED => error.AccessDenied,
+            else => error.Unexpected,
+        };
+    }
+    return handle;
+}
+
+const WaitNamedPipeError = error{
+    FileNotFound,
+    WaitTimeout,
+    Unexpected,
+};
+
+fn waitForNamedPipe(path: [*:0]const u16, timeout_ms: windows.DWORD) WaitNamedPipeError!void {
+    if (WaitNamedPipeW(path, timeout_ms) != 0) return;
+
+    const err = windows.GetLastError();
+    return switch (err) {
+        .FILE_NOT_FOUND => error.FileNotFound,
+        .WAIT_TIMEOUT => error.WaitTimeout,
+        else => error.Unexpected,
+    };
+}
 
 /// Transport that connects to a Windows named pipe created by Neovim.
 pub const WindowsPipe = struct {
@@ -49,18 +109,16 @@ pub const WindowsPipe = struct {
                 if (timer.read() >= deadline_ns) return error.Timeout;
             }
 
-            const handle = windows.CreateFileW(
+            const handle = openPipeHandle(
                 wide.ptr,
                 windows.GENERIC_READ | windows.GENERIC_WRITE,
                 0,
-                null,
                 windows.OPEN_EXISTING,
                 windows.FILE_ATTRIBUTE_NORMAL,
-                null,
             ) catch |err| switch (err) {
                 error.PipeBusy, error.FileNotFound => {
                     if (infinite_wait) {
-                        _ = windows.WaitNamedPipeW(wide.ptr, windows.NMPWAIT_WAIT_FOREVER) catch |wait_err| switch (wait_err) {
+                        waitForNamedPipe(wide.ptr, nmpwait_wait_forever) catch |wait_err| switch (wait_err) {
                             error.FileNotFound => continue,
                             else => return wait_err,
                         };
@@ -74,7 +132,7 @@ pub const WindowsPipe = struct {
                     const remaining_ms_rounded = (remaining_ns + ns_per_ms - 1) / ns_per_ms;
                     const wait_ms_u64 = std.math.clamp(remaining_ms_rounded, 1, @as(u64, std.math.maxInt(u32)));
                     const wait_arg: windows.DWORD = @intCast(wait_ms_u64);
-                    _ = windows.WaitNamedPipeW(wide.ptr, wait_arg) catch |wait_err| switch (wait_err) {
+                    waitForNamedPipe(wide.ptr, wait_arg) catch |wait_err| switch (wait_err) {
                         error.FileNotFound => continue,
                         error.WaitTimeout => return error.Timeout,
                         else => return wait_err,
@@ -103,8 +161,7 @@ pub const WindowsPipe = struct {
         const handle = self.handle orelse return Transport.ReadError.ConnectionClosed;
 
         return windows.ReadFile(handle, buffer, null) catch |err| switch (err) {
-            error.BrokenPipe => Transport.ReadError.ConnectionClosed,
-            error.HandleEOF => Transport.ReadError.ConnectionClosed,
+            error.BrokenPipe, error.ConnectionResetByPeer => Transport.ReadError.ConnectionClosed,
             else => Transport.ReadError.UnexpectedError,
         };
     }
@@ -116,7 +173,7 @@ pub const WindowsPipe = struct {
 
         _ = windows.WriteFile(handle, data, null) catch |err| switch (err) {
             error.BrokenPipe => return Transport.WriteError.BrokenPipe,
-            error.HandleEOF => return Transport.WriteError.ConnectionClosed,
+            error.ConnectionResetByPeer => return Transport.WriteError.ConnectionClosed,
             else => return Transport.WriteError.UnexpectedError,
         };
     }

@@ -1,5 +1,11 @@
 const std = @import("std");
+const builtin = @import("builtin");
+const windows = std.os.windows;
+const ws2 = windows.ws2_32;
 const Transport = @import("transport.zig").Transport;
+
+var winsock_ready = std.atomic.Value(bool).init(false);
+var winsock_mutex = std.Thread.Mutex{};
 
 /// Transport backed by a TCP socket connected to a remote Neovim instance.
 pub const TcpSocket = struct {
@@ -35,6 +41,7 @@ pub const TcpSocket = struct {
             s.close();
             self.stream = null;
         }
+        try ensureWinsock();
         self.stream = try std.net.tcpConnectToHost(self.allocator, self.host, self.port);
     }
 
@@ -50,7 +57,9 @@ pub const TcpSocket = struct {
         const stream = self.stream orelse return Transport.ReadError.ConnectionClosed;
         return stream.read(buffer) catch |err| switch (err) {
             error.WouldBlock => Transport.ReadError.Timeout,
-            error.ConnectionResetByPeer, error.SocketNotConnected => Transport.ReadError.ConnectionClosed,
+            error.ConnectionResetByPeer,
+            error.SocketNotConnected,
+            => Transport.ReadError.ConnectionClosed,
             else => Transport.ReadError.UnexpectedError,
         };
     }
@@ -61,7 +70,9 @@ pub const TcpSocket = struct {
         const stream = self.stream orelse return Transport.WriteError.ConnectionClosed;
         stream.writeAll(data) catch |err| switch (err) {
             error.BrokenPipe => return Transport.WriteError.BrokenPipe,
-            error.ConnectionResetByPeer, error.SocketNotConnected => return Transport.WriteError.ConnectionClosed,
+            error.ConnectionResetByPeer,
+            error.SocketNotConnected,
+            => return Transport.WriteError.ConnectionClosed,
             else => return Transport.WriteError.UnexpectedError,
         };
     }
@@ -69,6 +80,26 @@ pub const TcpSocket = struct {
     fn isConnected(tr: *Transport) bool {
         const self = tr.downcastConst(TcpSocket);
         return self.stream != null;
+    }
+
+    fn ensureWinsock() !void {
+        if (builtin.os.tag != .windows)
+            return;
+
+        if (winsock_ready.load(.acquire))
+            return;
+
+        winsock_mutex.lock();
+        defer winsock_mutex.unlock();
+
+        if (!winsock_ready.load(.monotonic)) {
+            windows.callWSAStartup() catch |err| switch (err) {
+                error.ProcessFdQuotaExceeded => return error.SystemResources,
+                error.Unexpected => return error.Unexpected,
+                error.SystemResources => return error.SystemResources,
+            };
+            winsock_ready.store(true, .release);
+        }
     }
 
     pub const vtable = Transport.VTable{
