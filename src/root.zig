@@ -43,3 +43,7 @@ test "client module tests" {
 test "transport module tests" {
     _ = @import("tests/transport_tests.zig");
 }
+
+test "msgpack module tests" {
+    _ = @import("tests/msgpack_tests.zig");
+}
