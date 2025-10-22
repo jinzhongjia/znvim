@@ -41,7 +41,7 @@ const Packer = msgpack.Pack(
     ReaderContext.read,
 );
 
-pub const DecodeError = msgpack.MsGPackError || std.mem.Allocator.Error || error{
+pub const DecodeError = msgpack.MsgPackError || std.mem.Allocator.Error || error{
     InvalidMessageFormat,
     InvalidMessageType,
     InvalidFieldType,

@@ -399,7 +399,7 @@ pub const Client = struct {
         if (self.read_buffer.items.len == 0) return null;
 
         const decode_res = protocol.decode(self.allocator, self.read_buffer.items) catch |err| switch (err) {
-            msgpack.MsGPackError.LENGTH_READING => return null,
+            msgpack.MsgPackError.LengthReading => return null,
             else => return err,
         };
 
