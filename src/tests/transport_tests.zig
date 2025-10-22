@@ -214,8 +214,6 @@ const UnixSocketTransport = struct {
 /// TCP 套接字传输测试
 const TcpSocketTransport = struct {
     fn runTest() !void {
-        if (builtin.os.tag == .windows) return error.SkipZigTest;
-
         var gpa = std.heap.GeneralPurposeAllocator(.{}){};
         defer _ = gpa.deinit();
         const allocator = gpa.allocator();
@@ -223,6 +221,7 @@ const TcpSocketTransport = struct {
         var ctx = TestContext.init(allocator);
         defer ctx.deinit();
 
+        // Windows 需要初始化 Winsock
         if (builtin.os.tag == .windows) {
             windows.callWSAStartup() catch |err| switch (err) {
                 error.ProcessFdQuotaExceeded => return error.SkipZigTest,
@@ -294,7 +293,6 @@ test "Unix socket transport" {
 }
 
 test "TCP socket transport" {
-    if (builtin.os.tag == .windows) return error.SkipZigTest;
     try TcpSocketTransport.runTest();
 }
 
