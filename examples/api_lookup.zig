@@ -1,9 +1,6 @@
 const std = @import("std");
 const znvim = @import("znvim");
 
-// Simple error set that captures the three failure modes of this example:
-// missing command-line argument, missing environment variable, or the API
-// function not existing on the connected Neovim instance.
 const ExampleError = error{ MissingAddress, MissingArgument, FunctionNotFound };
 
 pub fn main() !void {
@@ -17,15 +14,20 @@ pub fn main() !void {
     var args = try std.process.argsWithAllocator(allocator);
     defer args.deinit();
 
-    _ = args.next(); // executable name
+    _ = args.next(); // Skip executable name
     const target_name = args.next() orelse {
-        std.debug.print("Usage: api_lookup.zig <function-name>\n", .{});
+        std.debug.print("Usage: api_lookup <function-name>\n\n", .{});
+        std.debug.print("Examples:\n", .{});
+        std.debug.print("  api_lookup nvim_buf_set_lines\n", .{});
+        std.debug.print("  api_lookup nvim_get_current_buf\n", .{});
+        std.debug.print("  api_lookup nvim_eval\n", .{});
         return ExampleError.MissingArgument;
     };
 
     const address = std.process.getEnvVarOwned(allocator, "NVIM_LISTEN_ADDRESS") catch |err| switch (err) {
         error.EnvironmentVariableNotFound => {
             std.debug.print("Set NVIM_LISTEN_ADDRESS before running this example.\n", .{});
+            std.debug.print("Example: export NVIM_LISTEN_ADDRESS=/tmp/nvim.sock\n", .{});
             return ExampleError.MissingAddress;
         },
         else => return err,
@@ -38,21 +40,28 @@ pub fn main() !void {
 
     const info = client.getApiInfo() orelse return error.FunctionNotFound;
     const fn_info = info.findFunction(target_name) orelse {
-        std.debug.print("Function '{s}' not found in Neovim API (total {d}).\n", .{ target_name, info.functions.len });
+        std.debug.print("Function '{s}' not found in Neovim API.\n", .{target_name});
+        std.debug.print("Total available functions: {d}\n\n", .{info.functions.len});
+        std.debug.print("Tip: Run 'print_api' to see all available functions.\n", .{});
         return ExampleError.FunctionNotFound;
     };
 
-    std.debug.print("Function {s}\n", .{fn_info.name});
-    std.debug.print("  since: {d}\n", .{fn_info.since});
-    std.debug.print("  return: {s}\n", .{fn_info.return_type});
-    std.debug.print("  method: {}\n", .{fn_info.method});
+    // Print detailed function information
+    std.debug.print("╭─ Function: {s}\n", .{fn_info.name});
+    std.debug.print("│\n", .{});
+    std.debug.print("│  API Level: {d}\n", .{fn_info.since});
+    std.debug.print("│  Method: {}\n", .{fn_info.method});
+    std.debug.print("│  Return Type: {s}\n", .{fn_info.return_type});
+    std.debug.print("│\n", .{});
 
     if (fn_info.parameters.len == 0) {
-        std.debug.print("  parameters: (none)\n", .{});
+        std.debug.print("│  Parameters: (none)\n", .{});
     } else {
-        std.debug.print("  parameters:\n", .{});
-        for (fn_info.parameters) |param| {
-            std.debug.print("    - {s} {s}\n", .{ param.type_name, param.name });
+        std.debug.print("│  Parameters ({d}):\n", .{fn_info.parameters.len});
+        for (fn_info.parameters, 0..) |param, i| {
+            const prefix = if (i == fn_info.parameters.len - 1) "└─" else "├─";
+            std.debug.print("│    {s} {s}: {s}\n", .{ prefix, param.name, param.type_name });
         }
     }
+    std.debug.print("╰\n", .{});
 }

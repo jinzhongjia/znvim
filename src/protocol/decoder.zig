@@ -54,12 +54,18 @@ pub const DecodeResult = struct {
 
 /// Parses a MessagePack-RPC frame from the given bytes and reports how many were consumed.
 pub fn decode(allocator: std.mem.Allocator, bytes: []const u8) DecodeError!DecodeResult {
+    // Use an arena allocator for temporary decode data
+    // This works around msgpack library bugs with freeing nested map keys
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+    const temp_alloc = arena.allocator();
+
     var writer_ctx = DummyWriterContext{};
     var reader_ctx = ReaderContext{ .data = bytes };
     var packer = Packer.init(&writer_ctx, &reader_ctx);
 
-    var payload = try packer.read(allocator);
-    defer payload.free(allocator);
+    const payload = try packer.read(temp_alloc);
+    // No need to free payload - arena will clean up everything
 
     const root = switch (payload) {
         .arr => |arr| arr,
@@ -70,6 +76,7 @@ pub fn decode(allocator: std.mem.Allocator, bytes: []const u8) DecodeError!Decod
 
     const msg_type = try extractMessageType(root[0]);
 
+    // Clone to permanent allocator before arena is destroyed
     const result_message = switch (msg_type) {
         .Request => message.AnyMessage{ .Request = try decodeRequest(allocator, root) },
         .Response => message.AnyMessage{ .Response = try decodeResponse(allocator, root) },
