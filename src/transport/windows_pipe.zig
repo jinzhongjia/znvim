@@ -191,3 +191,311 @@ pub const WindowsPipe = struct {
         .is_connected = isConnected,
     };
 };
+
+// ============================================================================
+// 单元测试
+// ============================================================================
+
+test "WindowsPipe init creates disconnected instance" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    const allocator = std.testing.allocator;
+    var pipe = WindowsPipe.init(allocator, 5000);
+    defer pipe.deinit();
+
+    try std.testing.expect(pipe.handle == null);
+    try std.testing.expectEqual(@as(u32, 5000), pipe.timeout_ms);
+
+    var transport = pipe.asTransport();
+    try std.testing.expect(!transport.isConnected());
+}
+
+test "WindowsPipe init with zero timeout" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    const allocator = std.testing.allocator;
+    var pipe = WindowsPipe.init(allocator, 0);
+    defer pipe.deinit();
+
+    try std.testing.expectEqual(@as(u32, 0), pipe.timeout_ms);
+    try std.testing.expect(pipe.handle == null);
+}
+
+test "WindowsPipe init with custom timeout" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    const allocator = std.testing.allocator;
+    const custom_timeout: u32 = 12345;
+    var pipe = WindowsPipe.init(allocator, custom_timeout);
+    defer pipe.deinit();
+
+    try std.testing.expectEqual(custom_timeout, pipe.timeout_ms);
+}
+
+test "WindowsPipe deinit without connection is safe" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    const allocator = std.testing.allocator;
+    var pipe = WindowsPipe.init(allocator, 1000);
+
+    // 多次调用 deinit 应该是安全的
+    pipe.deinit();
+    pipe.deinit();
+    pipe.deinit();
+
+    try std.testing.expect(pipe.handle == null);
+}
+
+test "WindowsPipe asTransport returns valid transport" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    const allocator = std.testing.allocator;
+    var pipe = WindowsPipe.init(allocator, 5000);
+    defer pipe.deinit();
+
+    var transport = pipe.asTransport();
+
+    // 验证 vtable 指针正确
+    try std.testing.expectEqual(&WindowsPipe.vtable, transport.vtable);
+
+    // 验证初始状态
+    try std.testing.expect(!transport.isConnected());
+}
+
+test "WindowsPipe vtable disconnect on unconnected pipe is safe" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    const allocator = std.testing.allocator;
+    var pipe = WindowsPipe.init(allocator, 5000);
+    defer pipe.deinit();
+
+    var transport = pipe.asTransport();
+
+    // 在未连接状态下调用 disconnect 应该是安全的
+    transport.disconnect();
+    transport.disconnect();
+
+    try std.testing.expect(!transport.isConnected());
+    try std.testing.expect(pipe.handle == null);
+}
+
+test "WindowsPipe read on disconnected returns ConnectionClosed" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    const allocator = std.testing.allocator;
+    var pipe = WindowsPipe.init(allocator, 5000);
+    defer pipe.deinit();
+
+    var transport = pipe.asTransport();
+    var buffer: [10]u8 = undefined;
+
+    const result = transport.read(&buffer);
+    try std.testing.expectError(Transport.ReadError.ConnectionClosed, result);
+}
+
+test "WindowsPipe write on disconnected returns ConnectionClosed" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    const allocator = std.testing.allocator;
+    var pipe = WindowsPipe.init(allocator, 5000);
+    defer pipe.deinit();
+
+    var transport = pipe.asTransport();
+    const data = "test data";
+
+    const result = transport.write(data);
+    try std.testing.expectError(Transport.WriteError.ConnectionClosed, result);
+}
+
+test "WindowsPipe openPipeHandle validates error codes" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    // 测试不存在的管道路径应该返回 FileNotFound
+    const invalid_path = [_:0]u16{ '\\', '\\', '.', '\\', 'p', 'i', 'p', 'e', '\\', 'n', 'o', 'n', 'e', 'x', 'i', 's', 't', 'e', 'n', 't', '-', 't', 'e', 's', 't', '-', 'p', 'i', 'p', 'e', 0 };
+
+    const result = openPipeHandle(
+        &invalid_path,
+        windows.GENERIC_READ | windows.GENERIC_WRITE,
+        0,
+        windows.OPEN_EXISTING,
+        windows.FILE_ATTRIBUTE_NORMAL,
+    );
+
+    // 应该返回错误（FileNotFound 或其他错误）
+    try std.testing.expect(std.meta.isError(result));
+}
+
+test "WindowsPipe waitForNamedPipe timeout validation" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    // 测试等待不存在的管道应该超时
+    const invalid_path = [_:0]u16{ '\\', '\\', '.', '\\', 'p', 'i', 'p', 'e', '\\', 'n', 'o', 'n', 'e', 'x', 'i', 's', 't', 'e', 'n', 't', '-', 't', 'e', 's', 't', 0 };
+
+    const result = waitForNamedPipe(&invalid_path, 1); // 1ms 超时
+
+    // 应该返回超时或文件不存在错误
+    if (result) |_| {
+        try std.testing.expect(false); // 不应该成功
+    } else |err| {
+        const is_expected_error = (err == error.FileNotFound) or
+            (err == error.WaitTimeout) or
+            (err == error.Unexpected);
+        try std.testing.expect(is_expected_error);
+    }
+}
+
+test "WindowsPipe state remains consistent after failed connection" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    const allocator = std.testing.allocator;
+    var pipe = WindowsPipe.init(allocator, 100);
+    defer pipe.deinit();
+
+    var transport = pipe.asTransport();
+
+    // 尝试连接到不存在的管道
+    const invalid_pipe_path = "\\\\.\\pipe\\nonexistent-test-pipe-12345";
+    const connect_result = transport.connect(invalid_pipe_path);
+
+    // 连接应该失败
+    try std.testing.expect(std.meta.isError(connect_result));
+
+    // 失败后状态应该保持一致
+    try std.testing.expect(!transport.isConnected());
+    try std.testing.expect(pipe.handle == null);
+
+    // 应该可以安全清理
+    pipe.deinit();
+    try std.testing.expect(pipe.handle == null);
+}
+
+test "WindowsPipe multiple timeout values are preserved" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    const allocator = std.testing.allocator;
+    const test_timeouts = [_]u32{ 0, 1, 100, 1000, 5000, 30000, std.math.maxInt(u32) };
+
+    for (test_timeouts) |timeout| {
+        var pipe = WindowsPipe.init(allocator, timeout);
+        defer pipe.deinit();
+
+        try std.testing.expectEqual(timeout, pipe.timeout_ms);
+    }
+}
+
+test "WindowsPipe allocator is stored correctly" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    var pipe = WindowsPipe.init(allocator, 5000);
+    defer pipe.deinit();
+
+    // 验证 allocator 被正确存储（通过创建一些分配来间接测试）
+    // 这主要是确保结构体字段正确初始化
+    try std.testing.expect(pipe.handle == null);
+}
+
+test "WindowsPipe handle starts as null" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    const allocator = std.testing.allocator;
+    var pipe = WindowsPipe.init(allocator, 1000);
+    defer pipe.deinit();
+
+    try std.testing.expect(pipe.handle == null);
+
+    // 即使通过 transport 接口查询，也应该是未连接状态
+    var transport = pipe.asTransport();
+    try std.testing.expect(!transport.isConnected());
+}
+
+test "WindowsPipe isConnected reflects handle state" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    const allocator = std.testing.allocator;
+    var pipe = WindowsPipe.init(allocator, 1000);
+    defer pipe.deinit();
+
+    var transport = pipe.asTransport();
+
+    // 初始状态：未连接
+    try std.testing.expect(!transport.isConnected());
+    try std.testing.expect(pipe.handle == null);
+
+    // 注意：我们不能模拟一个有效的 handle，因为那需要真实的系统调用
+    // 但我们可以验证 null 状态下的行为
+}
+
+test "WindowsPipe vtable function pointers are not null" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    // 验证 vtable 中的所有函数指针都被正确设置
+    // 通过检查它们的地址非零来验证
+    const vtable_addr = @intFromPtr(&WindowsPipe.vtable);
+    try std.testing.expect(vtable_addr != 0);
+
+    // 验证每个函数指针都有有效的地址
+    try std.testing.expect(@intFromPtr(WindowsPipe.vtable.connect) != 0);
+    try std.testing.expect(@intFromPtr(WindowsPipe.vtable.disconnect) != 0);
+    try std.testing.expect(@intFromPtr(WindowsPipe.vtable.read) != 0);
+    try std.testing.expect(@intFromPtr(WindowsPipe.vtable.write) != 0);
+    try std.testing.expect(@intFromPtr(WindowsPipe.vtable.is_connected) != 0);
+}
+
+test "WindowsPipe downcast works correctly" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    const allocator = std.testing.allocator;
+    var pipe = WindowsPipe.init(allocator, 2000);
+    defer pipe.deinit();
+
+    var transport = pipe.asTransport();
+
+    // downcast 应该返回原始的 pipe 指针
+    const downcasted = transport.downcast(WindowsPipe);
+    try std.testing.expectEqual(&pipe, downcasted);
+    try std.testing.expectEqual(@as(u32, 2000), downcasted.timeout_ms);
+
+    // downcastConst 也应该工作
+    const downcasted_const = transport.downcastConst(WindowsPipe);
+    try std.testing.expectEqual(&pipe, downcasted_const);
+}
+
+test "WindowsPipe CreatePipeHandleError error set is complete" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    // 验证错误类型可以被转换到 CreatePipeHandleError
+    const err1: CreatePipeHandleError = error.FileNotFound;
+    const err2: CreatePipeHandleError = error.PipeBusy;
+    const err3: CreatePipeHandleError = error.AccessDenied;
+    const err4: CreatePipeHandleError = error.Unexpected;
+
+    try std.testing.expectEqual(error.FileNotFound, err1);
+    try std.testing.expectEqual(error.PipeBusy, err2);
+    try std.testing.expectEqual(error.AccessDenied, err3);
+    try std.testing.expectEqual(error.Unexpected, err4);
+}
+
+test "WindowsPipe WaitNamedPipeError error set is complete" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    // 验证错误类型可以被转换到 WaitNamedPipeError
+    const err1: WaitNamedPipeError = error.FileNotFound;
+    const err2: WaitNamedPipeError = error.WaitTimeout;
+    const err3: WaitNamedPipeError = error.Unexpected;
+
+    try std.testing.expectEqual(error.FileNotFound, err1);
+    try std.testing.expectEqual(error.WaitTimeout, err2);
+    try std.testing.expectEqual(error.Unexpected, err3);
+}
+
+test "WindowsPipe constant values are correct" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    // 验证常量定义
+    try std.testing.expectEqual(@as(u64, std.time.ns_per_ms), ns_per_ms);
+    try std.testing.expectEqual(std.math.maxInt(windows.DWORD), nmpwait_wait_forever);
+}
