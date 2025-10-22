@@ -59,3 +59,7 @@ test "connection module tests" {
 test "protocol unit tests" {
     _ = @import("tests/protocol_unit_tests.zig");
 }
+
+test "memory leak tests" {
+    _ = @import("tests/memory_leak_test.zig");
+}
