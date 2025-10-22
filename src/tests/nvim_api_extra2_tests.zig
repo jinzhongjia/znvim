@@ -103,7 +103,6 @@ test "nvim_list_uis returns attached UIs" {
     try std.testing.expect(uis.len >= 0);
 }
 
-
 // Test nvim_notify
 test "nvim_notify sends notification message" {
     const allocator = std.testing.allocator;
@@ -206,7 +205,8 @@ test "nvim_get_vvar gets vim variables" {
     defer msgpack.free(result, allocator);
 
     const progname = try msgpack.expectString(result);
-    try std.testing.expectEqualStrings("nvim", progname);
+    // On Windows it's "nvim.exe", on Unix it's "nvim"
+    try std.testing.expect(std.mem.startsWith(u8, progname, "nvim"));
 }
 
 // Test nvim_set_current_line updates line

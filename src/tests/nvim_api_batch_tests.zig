@@ -190,7 +190,15 @@ test "nvim_set_current_dir sets working directory" {
     var client = try createTestClient(allocator);
     defer client.deinit();
 
-    const dir = try msgpack.string(allocator, "/tmp");
+    // Use system temp directory for cross-platform compatibility
+    const builtin = @import("builtin");
+    const tmp_dir = std.process.getEnvVarOwned(allocator, "TMPDIR") catch
+        std.process.getEnvVarOwned(allocator, "TEMP") catch
+        std.process.getEnvVarOwned(allocator, "TMP") catch
+        try allocator.dupe(u8, if (builtin.target.os.tag == .windows) "C:\\Windows\\Temp" else "/tmp");
+    defer allocator.free(tmp_dir);
+
+    const dir = try msgpack.string(allocator, tmp_dir);
     defer msgpack.free(dir, allocator);
 
     const result = try client.request("nvim_set_current_dir", &.{dir});
@@ -299,7 +307,8 @@ test "nvim_get_vvar gets vim variable" {
     defer msgpack.free(result, allocator);
 
     const progname = try msgpack.expectString(result);
-    try std.testing.expectEqualStrings("nvim", progname);
+    // On Windows it's "nvim.exe", on Unix it's "nvim"
+    try std.testing.expect(std.mem.startsWith(u8, progname, "nvim"));
 }
 
 // Test nvim_get_option

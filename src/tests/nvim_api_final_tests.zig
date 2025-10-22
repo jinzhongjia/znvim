@@ -49,7 +49,6 @@ test "nvim_del_current_line deletes the current line" {
     defer msgpack.free(result, allocator);
 }
 
-
 // Test nvim_subscribe and nvim_unsubscribe
 test "nvim subscribe and unsubscribe to events" {
     const allocator = std.testing.allocator;
@@ -376,7 +375,6 @@ test "nvim_win_set_config updates floating window config" {
     defer msgpack.free(result, allocator);
 }
 
-
 // Test nvim_set_current_dir
 test "nvim_set_current_dir changes working directory" {
     const allocator = std.testing.allocator;
@@ -384,7 +382,15 @@ test "nvim_set_current_dir changes working directory" {
     var client = try createTestClient(allocator);
     defer client.deinit();
 
-    const dir = try msgpack.string(allocator, "/tmp");
+    // Use system temp directory for cross-platform compatibility
+    const builtin = @import("builtin");
+    const tmp_dir = std.process.getEnvVarOwned(allocator, "TMPDIR") catch
+        std.process.getEnvVarOwned(allocator, "TEMP") catch
+        std.process.getEnvVarOwned(allocator, "TMP") catch
+        try allocator.dupe(u8, if (builtin.target.os.tag == .windows) "C:\\Windows\\Temp" else "/tmp");
+    defer allocator.free(tmp_dir);
+
+    const dir = try msgpack.string(allocator, tmp_dir);
     defer msgpack.free(dir, allocator);
 
     const result = try client.request("nvim_set_current_dir", &.{dir});

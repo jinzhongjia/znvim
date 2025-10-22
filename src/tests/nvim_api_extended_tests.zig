@@ -127,7 +127,8 @@ test "nvim_get_vvar retrieves vim variables" {
     defer msgpack.free(result, allocator);
 
     const progname = try msgpack.expectString(result);
-    try std.testing.expectEqualStrings("nvim", progname);
+    // On Windows it's "nvim.exe", on Unix it's "nvim"
+    try std.testing.expect(std.mem.startsWith(u8, progname, "nvim"));
 }
 
 // Test nvim_feedkeys

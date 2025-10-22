@@ -293,13 +293,20 @@ test "nvim_set_current_dir changes working directory" {
     var client = try createTestClient(allocator);
     defer client.deinit();
 
-    const dir = try msgpack.string(allocator, "/tmp");
+    // Use system temp directory for cross-platform compatibility
+    const builtin = @import("builtin");
+    const tmp_dir = std.process.getEnvVarOwned(allocator, "TMPDIR") catch
+        std.process.getEnvVarOwned(allocator, "TEMP") catch
+        std.process.getEnvVarOwned(allocator, "TMP") catch
+        try allocator.dupe(u8, if (builtin.target.os.tag == .windows) "C:\\Windows\\Temp" else "/tmp");
+    defer allocator.free(tmp_dir);
+
+    const dir = try msgpack.string(allocator, tmp_dir);
     defer msgpack.free(dir, allocator);
 
     const result = try client.request("nvim_set_current_dir", &.{dir});
     defer msgpack.free(result, allocator);
 }
-
 
 // Test nvim_paste
 test "nvim_paste inserts text" {
@@ -437,7 +444,6 @@ test "nvim_get_all_options_info returns option metadata" {
     try std.testing.expect(result == .map);
     try std.testing.expect(result.map.count() > 0);
 }
-
 
 // Test nvim_win_set_buf
 test "nvim_win_set_buf switches window buffer" {
