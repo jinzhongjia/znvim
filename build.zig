@@ -21,6 +21,7 @@ pub fn build(b: *std.Build) void {
         name: []const u8,
         path: []const u8,
     }{
+        .{ .name = "simple_spawn", .path = "examples/simple_spawn.zig" },
         .{ .name = "api_lookup", .path = "examples/api_lookup.zig" },
         .{ .name = "buffer_lines", .path = "examples/buffer_lines.zig" },
         .{ .name = "eval_expression", .path = "examples/eval_expression.zig" },

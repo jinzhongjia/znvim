@@ -507,10 +507,9 @@ fn parseVersion(arena: std.mem.Allocator, payload: msgpack.Payload) ApiParseErro
     else
         false;
 
-    const build = if (try mapGetOptional(version_map, "build")) |value|
-        try payloadToString(arena, value)
-    else
-        null;
+    const build = if (try mapGetOptional(version_map, "build")) |value| blk: {
+        break :blk payloadToString(arena, value) catch null;
+    } else null;
 
     return ApiVersion{
         .major = major,
