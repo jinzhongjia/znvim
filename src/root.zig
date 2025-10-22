@@ -63,3 +63,75 @@ test "protocol unit tests" {
 test "memory leak tests" {
     _ = @import("tests/memory_leak_test.zig");
 }
+
+test "nvim api integration tests" {
+    _ = @import("tests/nvim_api_tests.zig");
+}
+
+test "nvim api extended tests" {
+    _ = @import("tests/nvim_api_extended_tests.zig");
+}
+
+test "nvim api extmark tests" {
+    _ = @import("tests/nvim_api_extmark_tests.zig");
+}
+
+test "nvim api keymap tests" {
+    _ = @import("tests/nvim_api_keymap_tests.zig");
+}
+
+test "nvim api more tests" {
+    _ = @import("tests/nvim_api_more_tests.zig");
+}
+
+test "nvim api additional tests" {
+    _ = @import("tests/nvim_api_additional_tests.zig");
+}
+
+test "nvim api final tests" {
+    _ = @import("tests/nvim_api_final_tests.zig");
+}
+
+test "nvim api extra1 tests" {
+    _ = @import("tests/nvim_api_extra1_tests.zig");
+}
+
+test "nvim api extra2 tests" {
+    _ = @import("tests/nvim_api_extra2_tests.zig");
+}
+
+test "nvim api extra3 tests" {
+    _ = @import("tests/nvim_api_extra3_tests.zig");
+}
+
+test "nvim api lsp tests" {
+    _ = @import("tests/nvim_api_lsp_tests.zig");
+}
+
+test "nvim api misc tests" {
+    _ = @import("tests/nvim_api_misc_tests.zig");
+}
+
+test "nvim api buffer tests" {
+    _ = @import("tests/nvim_api_buffer_tests.zig");
+}
+
+test "nvim api batch tests" {
+    _ = @import("tests/nvim_api_batch_tests.zig");
+}
+
+test "nvim api window tests" {
+    _ = @import("tests/nvim_api_window_tests.zig");
+}
+
+test "nvim api tabpage tests" {
+    _ = @import("tests/nvim_api_tabpage_tests.zig");
+}
+
+test "nvim api complete tests" {
+    _ = @import("tests/nvim_api_complete_tests.zig");
+}
+
+test "nvim api final push tests" {
+    _ = @import("tests/nvim_api_final_push_tests.zig");
+}
