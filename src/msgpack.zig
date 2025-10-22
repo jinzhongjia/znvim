@@ -291,8 +291,11 @@ fn encodeStructValue(
         const field_value = @field(value, field.name);
         const encoded = try encodeInternal(allocator, field_value);
         map.mapPut(field.name, encoded) catch |err| switch (err) {
-            error.NotMap, error.NotArr => unreachable,
-            error.OutOfMemory => return error.OutOfMemory,
+            error.NotMap, error.NotArray => unreachable,
+            error.OutOfMemory => {
+                encoded.free(allocator);
+                return error.OutOfMemory;
+            },
         };
     }
 

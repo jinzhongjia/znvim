@@ -35,7 +35,7 @@ const Packer = msgpack.Pack(
     ReaderContext.read,
 );
 
-pub const EncodeError = WriterContext.Error || msgpack.MsGPackError;
+pub const EncodeError = WriterContext.Error || msgpack.MsgPackError;
 
 /// Serializes a MessagePack-RPC request into a heap-owned byte slice.
 pub fn encodeRequest(allocator: std.mem.Allocator, req: message.Request) EncodeError![]u8 {
