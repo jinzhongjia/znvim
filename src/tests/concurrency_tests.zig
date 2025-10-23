@@ -418,7 +418,7 @@ test "atomic counter contention benchmark" {
     var threads = try allocator.alloc(std.Thread, thread_count);
     defer allocator.free(threads);
 
-    const start_time = std.time.nanoTimestamp();
+    // const start_time = std.time.nanoTimestamp();
 
     const ThreadContext = struct {
         client: *Client,
@@ -447,17 +447,17 @@ test "atomic counter contention benchmark" {
         thread.join();
     }
 
-    const end_time = std.time.nanoTimestamp();
-    const elapsed_ms = @divFloor(end_time - start_time, std.time.ns_per_ms);
+    // const end_time = std.time.nanoTimestamp();
+    // const elapsed_ms = @divFloor(end_time - start_time, std.time.ns_per_ms);
 
     const total_ops = thread_count * iterations;
-    const ops_per_ms = @divFloor(total_ops, @max(elapsed_ms, 1));
+    // const ops_per_ms = @divFloor(total_ops, @max(elapsed_ms, 1));
 
-    std.debug.print("\n[Concurrency Benchmark]\n", .{});
-    std.debug.print("  Threads: {}\n", .{thread_count});
-    std.debug.print("  Operations: {}\n", .{total_ops});
-    std.debug.print("  Time: {}ms\n", .{elapsed_ms});
-    std.debug.print("  Throughput: {} ops/ms\n", .{ops_per_ms});
+    // std.debug.print("\n[Concurrency Benchmark]\n", .{});
+    // std.debug.print("  Threads: {}\n", .{thread_count});
+    // std.debug.print("  Operations: {}\n", .{total_ops});
+    // std.debug.print("  Time: {}ms\n", .{elapsed_ms});
+    // std.debug.print("  Throughput: {} ops/ms\n", .{ops_per_ms});
 
     // Verify final count
     const final_id = client.next_msgid.load(.monotonic);
