@@ -143,3 +143,11 @@ test "windows pipe integration tests" {
 test "client windows tests" {
     _ = @import("tests/client_windows_tests.zig");
 }
+
+test "error recovery tests" {
+    _ = @import("tests/error_recovery_tests.zig");
+}
+
+test "boundary condition tests" {
+    _ = @import("tests/boundary_tests.zig");
+}
