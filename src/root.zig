@@ -135,3 +135,7 @@ test "nvim api complete tests" {
 test "nvim api final push tests" {
     _ = @import("tests/nvim_api_final_push_tests.zig");
 }
+
+test "windows pipe integration tests" {
+    _ = @import("tests/windows_pipe_integration_tests.zig");
+}

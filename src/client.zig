@@ -254,12 +254,17 @@ pub const Client = struct {
     }
 
     pub fn isConnected(self: *const Client) bool {
-        return self.connected and switch (self.transport_kind) {
-            .unix_socket => (&self.transport).isConnected(),
-            .named_pipe => (&self.transport).isConnected(),
-            .tcp_socket => (&self.transport).isConnected(),
-            .stdio => (&self.transport).isConnected(),
-            .child_process => (&self.transport).isConnected(),
+        if (!self.connected) return false;
+
+        // 需要临时转换为可变指针以调用 Transport.isConnected
+        // 这是安全的，因为 isConnected 实际上并不修改状态
+        var mutable_self = @constCast(self);
+        return switch (self.transport_kind) {
+            .unix_socket => (&mutable_self.transport).isConnected(),
+            .named_pipe => (&mutable_self.transport).isConnected(),
+            .tcp_socket => (&mutable_self.transport).isConnected(),
+            .stdio => (&mutable_self.transport).isConnected(),
+            .child_process => (&mutable_self.transport).isConnected(),
             .none => false,
         };
     }
