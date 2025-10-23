@@ -158,13 +158,21 @@ test "Client deinit cleans up transport resources" {
     });
 
     // Verify transport was created
-    try std.testing.expectEqual(.unix_socket, client.transport_kind);
+    if (builtin.os.tag == .windows) {
+        try std.testing.expectEqual(.named_pipe, client.transport_kind);
+    } else {
+        try std.testing.expectEqual(.unix_socket, client.transport_kind);
+    }
 
     client.deinit();
 
     // After deinit, transport_kind should be reset
     try std.testing.expectEqual(.none, client.transport_kind);
-    try std.testing.expect(client.transport_unix == null);
+    if (builtin.os.tag == .windows) {
+        try std.testing.expect(client.windows.pipe == null);
+    } else {
+        try std.testing.expect(client.transport_unix == null);
+    }
 }
 
 test "Client deinit clears transport pointers" {
@@ -175,11 +183,19 @@ test "Client deinit clears transport pointers" {
     });
 
     // Verify transport was initialized
-    try std.testing.expect(client.transport_unix != null);
+    if (builtin.os.tag == .windows) {
+        try std.testing.expect(client.windows.pipe != null);
+    } else {
+        try std.testing.expect(client.transport_unix != null);
+    }
 
     client.deinit();
 
     // After deinit, pointers should be null
-    try std.testing.expect(client.transport_unix == null);
+    if (builtin.os.tag == .windows) {
+        try std.testing.expect(client.windows.pipe == null);
+    } else {
+        try std.testing.expect(client.transport_unix == null);
+    }
     try std.testing.expectEqual(.none, client.transport_kind);
 }
