@@ -92,16 +92,16 @@ test "nvim api final tests" {
     _ = @import("tests/nvim_api_final_tests.zig");
 }
 
-test "nvim api extra1 tests" {
-    _ = @import("tests/nvim_api_extra1_tests.zig");
+test "nvim api ui and context tests" {
+    _ = @import("tests/nvim_api_ui_context_tests.zig");
 }
 
-test "nvim api extra2 tests" {
-    _ = @import("tests/nvim_api_extra2_tests.zig");
+test "nvim api io and events tests" {
+    _ = @import("tests/nvim_api_io_events_tests.zig");
 }
 
-test "nvim api extra3 tests" {
-    _ = @import("tests/nvim_api_extra3_tests.zig");
+test "nvim api highlight and marks tests" {
+    _ = @import("tests/nvim_api_highlight_marks_tests.zig");
 }
 
 test "nvim api lsp tests" {
@@ -154,4 +154,24 @@ test "boundary condition tests" {
 
 test "concurrency tests" {
     _ = @import("tests/concurrency_tests.zig");
+}
+
+test "manual fuzzing tests" {
+    _ = @import("tests/fuzz_manual_tests.zig");
+}
+
+test "client error path tests" {
+    _ = @import("tests/client_error_tests.zig");
+}
+
+test "api info tests" {
+    _ = @import("tests/api_info_tests.zig");
+}
+
+test "client setup tests" {
+    _ = @import("tests/client_setup_tests.zig");
+}
+
+test "client unix tests" {
+    _ = @import("tests/client_unix_tests.zig");
 }
