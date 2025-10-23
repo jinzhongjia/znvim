@@ -122,10 +122,7 @@ test "fuzz: truncated valid message" {
         } else |err| {
             // Expected to fail on truncated messages
             switch (err) {
-                error.LengthReading,
-                error.InvalidMessageFormat,
-                error.InvalidFieldType,
-                error.InvalidMessageType => {},
+                error.LengthReading, error.InvalidMessageFormat, error.InvalidFieldType, error.InvalidMessageType => {},
                 else => {
                     std.debug.print("Unexpected error on truncate_at={}: {}\n", .{ truncate_at, err });
                     return err;

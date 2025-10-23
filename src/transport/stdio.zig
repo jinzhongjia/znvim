@@ -43,13 +43,7 @@ pub const Stdio = struct {
         const self = tr.downcast(Stdio);
         return self.stdin_file.read(buffer) catch |err| switch (err) {
             error.WouldBlock, error.ConnectionTimedOut => Transport.ReadError.Timeout,
-            error.BrokenPipe,
-            error.ConnectionResetByPeer,
-            error.SocketNotConnected,
-            error.NotOpenForReading,
-            error.OperationAborted,
-            error.Canceled,
-            error.ProcessNotFound => Transport.ReadError.ConnectionClosed,
+            error.BrokenPipe, error.ConnectionResetByPeer, error.SocketNotConnected, error.NotOpenForReading, error.OperationAborted, error.Canceled, error.ProcessNotFound => Transport.ReadError.ConnectionClosed,
             else => Transport.ReadError.UnexpectedError,
         };
     }
@@ -58,10 +52,7 @@ pub const Stdio = struct {
         const self = tr.downcast(Stdio);
         self.stdout_file.writeAll(data) catch |err| switch (err) {
             error.BrokenPipe => return Transport.WriteError.BrokenPipe,
-            error.ConnectionResetByPeer,
-            error.NotOpenForWriting,
-            error.OperationAborted,
-            error.ProcessNotFound => return Transport.WriteError.ConnectionClosed,
+            error.ConnectionResetByPeer, error.NotOpenForWriting, error.OperationAborted, error.ProcessNotFound => return Transport.WriteError.ConnectionClosed,
             else => return Transport.WriteError.UnexpectedError,
         };
     }

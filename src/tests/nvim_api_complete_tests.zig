@@ -541,7 +541,6 @@ test "nvim_ui_try_resize_grid resizes grid" {
     defer msgpack.free(result, allocator);
 }
 
-
 // Test nvim_select_popupmenu_item
 test "nvim_select_popupmenu_item selects item" {
     const allocator = std.testing.allocator;

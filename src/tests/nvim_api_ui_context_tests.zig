@@ -77,7 +77,6 @@ test "nvim_ui_try_resize resizes UI" {
     defer msgpack.free(result, allocator);
 }
 
-
 // Test nvim_ui_try_resize_grid
 test "nvim_ui_try_resize_grid resizes grid" {
     const allocator = std.testing.allocator;

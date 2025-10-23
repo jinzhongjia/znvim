@@ -93,8 +93,7 @@ pub fn main() !void {
     {
         std.debug.print("Example 4: Create a user command\n", .{});
 
-        const cmd4 = try msgpack.string(
-            allocator,
+        const cmd4 = try msgpack.string(allocator,
             \\command! HelloZig echo 'This is a custom command from Zig!'
         );
         defer msgpack.free(cmd4, allocator);

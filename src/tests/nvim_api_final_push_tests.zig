@@ -600,7 +600,6 @@ test "nvim_get_hl_by_id gets highlight by ID" {
     try std.testing.expect(result == .map);
 }
 
-
 // Test nvim_get_option_info
 test "nvim_get_option_info gets option info" {
     const allocator = std.testing.allocator;

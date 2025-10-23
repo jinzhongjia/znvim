@@ -106,13 +106,7 @@ pub const ChildProcess = struct {
         const file = self.stdout_file orelse return Transport.ReadError.ConnectionClosed;
         return file.read(buffer) catch |err| switch (err) {
             error.WouldBlock, error.ConnectionTimedOut => Transport.ReadError.Timeout,
-            error.BrokenPipe,
-            error.ConnectionResetByPeer,
-            error.SocketNotConnected,
-            error.NotOpenForReading,
-            error.OperationAborted,
-            error.Canceled,
-            error.ProcessNotFound => Transport.ReadError.ConnectionClosed,
+            error.BrokenPipe, error.ConnectionResetByPeer, error.SocketNotConnected, error.NotOpenForReading, error.OperationAborted, error.Canceled, error.ProcessNotFound => Transport.ReadError.ConnectionClosed,
             else => Transport.ReadError.UnexpectedError,
         };
     }
@@ -122,10 +116,7 @@ pub const ChildProcess = struct {
         const file = self.stdin_file orelse return Transport.WriteError.ConnectionClosed;
         file.writeAll(data) catch |err| switch (err) {
             error.BrokenPipe => return Transport.WriteError.BrokenPipe,
-            error.ConnectionResetByPeer,
-            error.NotOpenForWriting,
-            error.OperationAborted,
-            error.ProcessNotFound => return Transport.WriteError.ConnectionClosed,
+            error.ConnectionResetByPeer, error.NotOpenForWriting, error.OperationAborted, error.ProcessNotFound => return Transport.WriteError.ConnectionClosed,
             else => return Transport.WriteError.UnexpectedError,
         };
     }
