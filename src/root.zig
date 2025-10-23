@@ -151,3 +151,7 @@ test "error recovery tests" {
 test "boundary condition tests" {
     _ = @import("tests/boundary_tests.zig");
 }
+
+test "concurrency tests" {
+    _ = @import("tests/concurrency_tests.zig");
+}
