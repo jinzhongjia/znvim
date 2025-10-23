@@ -175,3 +175,23 @@ test "client setup tests" {
 test "client unix tests" {
     _ = @import("tests/client_unix_tests.zig");
 }
+
+test "e2e concurrent tests" {
+    _ = @import("tests/e2e_concurrent_tests.zig");
+}
+
+test "e2e fault recovery tests" {
+    _ = @import("tests/e2e_fault_recovery_tests.zig");
+}
+
+test "e2e workflow tests" {
+    _ = @import("tests/e2e_workflow_tests.zig");
+}
+
+test "e2e long running tests" {
+    _ = @import("tests/e2e_long_running_tests.zig");
+}
+
+test "e2e large data tests" {
+    _ = @import("tests/e2e_large_data_tests.zig");
+}
