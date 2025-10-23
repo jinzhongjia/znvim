@@ -53,7 +53,6 @@ test "nvim_exec_lua with arguments" {
     try std.testing.expectEqual(@as(i64, 42), value);
 }
 
-
 // Test nvim_set_keymap
 test "nvim_set_keymap creates global key mapping" {
     const allocator = std.testing.allocator;
