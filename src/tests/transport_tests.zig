@@ -169,6 +169,43 @@ const ConnectionWaiter = struct {
         }
         return error.Timeout;
     }
+
+    /// 等待 Windows 命名管道可用
+    fn waitForWindowsPipe(allocator: std.mem.Allocator, pipe_path: []const u8) !void {
+        if (builtin.os.tag != .windows) return error.SkipZigTest;
+
+        const unicode = std.unicode;
+        var attempt: usize = 0;
+
+        while (attempt < max_attempts) : (attempt += 1) {
+            // 尝试转换路径为 UTF16
+            const wide_path = unicode.utf8ToUtf16LeAllocZ(allocator, pipe_path) catch {
+                std.Thread.sleep(retry_delay_ms * std.time.ns_per_ms);
+                attempt += 1;
+                continue;
+            };
+            defer allocator.free(wide_path);
+
+            // 尝试打开管道（只是测试是否存在）
+            const handle = windows.kernel32.CreateFileW(
+                wide_path.ptr,
+                windows.GENERIC_READ,
+                0,
+                null,
+                windows.OPEN_EXISTING,
+                windows.FILE_ATTRIBUTE_NORMAL,
+                null,
+            );
+
+            if (handle != windows.INVALID_HANDLE_VALUE) {
+                windows.CloseHandle(handle);
+                return;
+            }
+
+            std.Thread.sleep(retry_delay_ms * std.time.ns_per_ms);
+        }
+        return error.Timeout;
+    }
 };
 
 /// Unix 套接字传输测试
@@ -288,12 +325,71 @@ const ChildProcessTransport = struct {
     }
 };
 
+/// Windows 命名管道传输测试
+const WindowsPipeTransport = struct {
+    fn runTest() !void {
+        if (builtin.os.tag != .windows) return error.SkipZigTest;
+
+        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+        defer _ = gpa.deinit();
+        const allocator = gpa.allocator();
+
+        var ctx = TestContext.init(allocator);
+        defer ctx.deinit();
+
+        // 生成唯一的管道名称
+        const timestamp = std.time.timestamp();
+        const pipe_name = try std.fmt.allocPrint(
+            allocator,
+            "\\\\.\\pipe\\nvim-test-{d}",
+            .{timestamp},
+        );
+        defer allocator.free(pipe_name);
+
+        if (debug_output) std.debug.print("Spawning nvim with pipe: {s}\n", .{pipe_name});
+
+        // 启动 Nvim 进程监听命名管道
+        ctx.nvim_process = try NvimProcess.spawnListen(allocator, pipe_name);
+
+        // 等待命名管道就绪
+        if (debug_output) std.debug.print("Waiting for pipe {s}\n", .{pipe_name});
+        ConnectionWaiter.waitForWindowsPipe(allocator, pipe_name) catch |err| switch (err) {
+            error.Timeout => {
+                if (debug_output) std.debug.print("Pipe wait timeout, skipping test\n", .{});
+                return error.SkipZigTest;
+            },
+            else => return err,
+        };
+
+        // 创建并连接客户端
+        if (debug_output) std.debug.print("Connecting RPC client to {s}\n", .{pipe_name});
+        var client = try znvim.Client.init(allocator, .{
+            .socket_path = pipe_name,
+            .skip_api_info = true,
+        });
+        ctx.client = &client;
+
+        try client.connect();
+
+        // 执行测试
+        if (debug_output) std.debug.print("testEval via WindowsPipe transport\n", .{});
+        try ctx.testEval();
+
+        if (debug_output) std.debug.print("Sending quit via WindowsPipe transport\n", .{});
+        try ctx.sendQuitCommand();
+    }
+};
+
 test "Unix socket transport" {
     try UnixSocketTransport.runTest();
 }
 
 test "TCP socket transport" {
     try TcpSocketTransport.runTest();
+}
+
+test "Windows named pipe transport" {
+    try WindowsPipeTransport.runTest();
 }
 
 test "Child process transport" {
