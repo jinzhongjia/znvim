@@ -27,6 +27,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "eval_expression", .path = "examples/eval_expression.zig" },
         .{ .name = "print_api", .path = "examples/print_api.zig" },
         .{ .name = "run_command", .path = "examples/run_command.zig" },
+        .{ .name = "list_all_api", .path = "examples/list_all_api.zig" },
     };
 
     const examples_step = b.step("examples", "Build examples");
