@@ -18,7 +18,7 @@ jobs:
         runs-on: ${{ matrix.os }}
         steps:
             - name: Install Neovim
-              uses: jinzhongjia/neovim-action
+              uses: jinzhongjia/neovim-action@v1.0.1
               with:
                   version: stable # or nightly, 0.9.5, 0.10.3, 0.11.4, etc.
             - name: Setup Zig
