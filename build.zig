@@ -29,6 +29,8 @@ pub fn build(b: *std.Build) void {
         .{ .name = "run_command", .path = "examples/run_command.zig" },
         .{ .name = "list_all_api", .path = "examples/list_all_api.zig" },
         .{ .name = "event_handling", .path = "examples/event_handling.zig" },
+        .{ .name = "batch_file_processing", .path = "examples/batch_file_processing.zig" },
+        .{ .name = "live_linter", .path = "examples/live_linter.zig" },
     };
 
     const examples_step = b.step("examples", "Build examples");
