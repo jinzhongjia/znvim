@@ -72,6 +72,13 @@ const WindowsState = if (builtin.os.tag == .windows)
 else
     struct {};
 
+/// Event handler callback type for notifications
+pub const EventHandler = *const fn (
+    method: []const u8,
+    params: msgpack.Payload,
+    userdata: ?*anyopaque,
+) void;
+
 /// High-level Neovim RPC client that wraps transports, requests, and API metadata.
 pub const Client = struct {
     allocator: std.mem.Allocator,
@@ -90,6 +97,9 @@ pub const Client = struct {
     windows: WindowsState = .{},
     // Mutex to protect concurrent request/response handling
     mutex: std.Thread.Mutex = .{},
+    // Event handling
+    event_handler: ?EventHandler = null,
+    event_userdata: ?*anyopaque = null,
 
     /// Prepares a client with the requested connection options but does not open the transport yet.
     pub fn init(allocator: std.mem.Allocator, options: connection.ConnectionOptions) ClientInitError!Client {
@@ -356,6 +366,14 @@ pub const Client = struct {
         try (&self.transport).write(encoded);
     }
 
+    /// Set event handler for receiving notifications from Neovim.
+    /// The handler will be called for each notification received.
+    /// Pass null to remove the handler.
+    pub fn setEventHandler(self: *Client, handler: ?EventHandler, userdata: ?*anyopaque) void {
+        self.event_handler = handler;
+        self.event_userdata = userdata;
+    }
+
     pub fn nextMessageId(self: *Client) u32 {
         return self.next_msgid.fetchAdd(1, .monotonic);
     }
@@ -411,7 +429,11 @@ pub const Client = struct {
 
                     return msgpack.Payload.nilToPayload();
                 },
-                .Notification => {
+                .Notification => |notif| {
+                    // Call event handler if registered
+                    if (self.event_handler) |handler| {
+                        handler(notif.method, notif.params, self.event_userdata);
+                    }
                     continue;
                 },
                 .Request => {
