@@ -17,8 +17,10 @@ jobs:
             fail-fast: false
         runs-on: ${{ matrix.os }}
         steps:
-            - name: Setup neovim nightly
-              uses: ej-shafran/setup-neovim-action@v1.0.1
+            - name: Install Neovim
+              uses: jinzhongjia/neovim-action
+              with:
+                  version: stable # or nightly, 0.9.5, 0.10.3, 0.11.4, etc.
             - name: Setup Zig
               uses: goto-bus-stop/setup-zig@v2
               with:
