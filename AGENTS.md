@@ -901,31 +901,63 @@ Added 25 boundary condition tests:
 - Unicode and binary data
 - Mixed-type arrays and nested structures
 
-### Windows Platform Support ✅
+### Complete Test Coverage Achieved ✅
 
-**Windows-Specific Stdio Tests Added** (2025-10-24):
-- Created `stdio_windows_tests.zig` with 13 comprehensive tests
-- Uses temporary files for cross-platform compatibility (no POSIX pipe required)
-- Tests include: write/read operations, binary data, large transfers, ownership handling
-- Added real child process E2E test for Windows
-- **All Windows transport types now fully tested**: Named Pipe ✅, TCP ✅, Stdio ✅
+**Core Transport Tests Enhanced** (2025-10-24):
 
-**Windows Test Coverage:**
-- Named Pipe: 41 tests (`windows_pipe_integration_tests.zig` + `client_windows_tests.zig`)
-- TCP Socket: 19 tests (11 Windows-specific + 8 cross-platform)
-- Stdio: 18 tests (13 Windows-specific + 5 cross-platform basic)
-- ChildProcess: Covered in E2E tests
+1. **ChildProcess Transport** (`child_process_tests.zig` - 20 tests) **NEW**:
+   - Initialization, configuration, timeout handling
+   - Process spawning, connection, disconnection
+   - Read/write operations with real Neovim
+   - Error handling, reconnection logic
+   - VTable mechanism, state management
+   - End-to-end communication testing
+
+2. **UnixSocket Transport** (`unix_socket_unit_tests.zig` - 21 tests) **NEW**:
+   - Independent unit tests with custom Unix socket server
+   - Tests: basic/sequential reads-writes, binary data (null bytes, 0-255), large data (1KB-4KB)
+   - Advanced: disconnect/reconnect, error handling, MessagePack-RPC data
+   - No Neovim dependency, pure unit testing
+
+3. **Protocol Layer** (`protocol_message_tests.zig` - 27 tests) **NEW**:
+   - Request/Response/Notification message structures
+   - Encoder testing for all message types
+   - Roundtrip encode/decode verification
+   - Edge cases: empty methods, long names, complex params
+   - Message ownership and cleanup
+
+**Windows-Specific Tests** (Previously Added):
+
+4. **Stdio Transport** (`stdio_windows_tests.zig` - 13 tests):
+   - Uses temporary files for cross-platform compatibility (no POSIX pipe required)
+   - Tests: write/read operations, binary data, large transfers, ownership handling
+   - Real child process E2E test for Windows
+
+5. **Named Pipe Transport** (`windows_pipe_unit_tests.zig` - 12 tests):
+   - Independent unit tests with custom pipe server (no Neovim dependency)
+   - Tests: basic/sequential reads-writes, binary data, large data, MessagePack-RPC
+   - Complements existing integration tests
+
+**Complete Transport Test Coverage:**
+- ✅ **ChildProcess**: 20 unit tests + E2E coverage
+- ✅ **UnixSocket**: 21 unit tests + integration tests
+- ✅ **WindowsPipe**: 53 tests (20 state + 12 unit + 6 integration + 15 client)
+- ✅ **TCP Socket**: 19 tests (11 Windows + 8 cross-platform)
+- ✅ **Stdio**: 18 tests (13 Windows + 5 cross-platform)
+- ✅ **Protocol Layer**: 27 message/encoder tests + 20 comprehensive + 2 unit
+
+**All transport types and protocol components now have complete independent unit testing!**
 
 ### Test Statistics
 
 | Metric | Value |
 |--------|-------|
-| Test Files | 36 (+1 Windows Stdio, +6 E2E) |
-| Test Cases | 675 (+13 Windows Stdio) |
+| Test Files | 40 (+3 Core, +2 Windows, +6 E2E) |
+| Test Cases | 755 (+68 new core tests) |
 | Pass Rate | 100% |
-| Test Code | 16,500+ lines |
+| Test Code | 19,500+ lines |
 | Source Code | 3,200 lines |
-| Test/Code Ratio | 5:1 |
+| Test/Code Ratio | 6:1 |
 
 ### Quality Rating: A (87/100) - With Thread-Safe Client ✅
 
@@ -937,13 +969,17 @@ Added 25 boundary condition tests:
 - Memory safety: 100% ✅
 
 **Test Files:**
+- `child_process_tests.zig` (20 tests) - **NEW** ChildProcess transport unit tests
+- `unix_socket_unit_tests.zig` (21 tests) - **NEW** UnixSocket independent unit tests  
+- `protocol_message_tests.zig` (27 tests) - **NEW** Protocol layer comprehensive tests
 - `concurrency_tests.zig` (11 tests) - Atomic operations, thread safety
 - `concurrent_shared_client_tests.zig` (6 tests) - Shared Client concurrency with mutex
 - `error_recovery_tests.zig` (13 tests) - Partial reads, timeouts
 - `boundary_tests.zig` (25 tests) - Large data, edge cases
 - `fuzz_manual_tests.zig` (16 tests) - **All passing including random input!**
-- `stdio_windows_tests.zig` (13 tests) - **NEW** Windows-specific Stdio transport tests
-- `windows_pipe_integration_tests.zig` (6 tests) - Named pipe integration
+- `stdio_windows_tests.zig` (13 tests) - Windows-specific Stdio transport tests
+- `windows_pipe_unit_tests.zig` (12 tests) - Named pipe unit tests with custom server
+- `windows_pipe_integration_tests.zig` (6 tests) - Named pipe integration with Neovim
 - `client_windows_tests.zig` (35 tests) - Windows client functionality
 - `e2e_concurrent_tests.zig` (3 tests) - E2E concurrency scenarios
 - `e2e_fault_recovery_tests.zig` (17 tests) - Disconnect/reconnect
