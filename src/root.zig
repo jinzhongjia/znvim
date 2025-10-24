@@ -121,6 +121,10 @@ test "nvim api error tests" {
     _ = @import("tests/nvim_api_error_tests.zig");
 }
 
+test "connection options boundary tests" {
+    _ = @import("tests/connection_options_boundary_tests.zig");
+}
+
 test "nvim api batch tests" {
     _ = @import("tests/nvim_api_batch_tests.zig");
 }
