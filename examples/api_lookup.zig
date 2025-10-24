@@ -1,7 +1,7 @@
 const std = @import("std");
 const znvim = @import("znvim");
 
-const ExampleError = error{ MissingAddress, MissingArgument, FunctionNotFound };
+const ExampleError = error{ MissingArgument, FunctionNotFound };
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -24,17 +24,27 @@ pub fn main() !void {
         return ExampleError.MissingArgument;
     };
 
-    const address = std.process.getEnvVarOwned(allocator, "NVIM_LISTEN_ADDRESS") catch |err| switch (err) {
-        error.EnvironmentVariableNotFound => {
-            std.debug.print("Set NVIM_LISTEN_ADDRESS before running this example.\n", .{});
-            std.debug.print("Example: export NVIM_LISTEN_ADDRESS=/tmp/nvim.sock\n", .{});
-            return ExampleError.MissingAddress;
-        },
+    // Try to get NVIM_LISTEN_ADDRESS from environment
+    const maybe_address = std.process.getEnvVarOwned(allocator, "NVIM_LISTEN_ADDRESS") catch |err| switch (err) {
+        error.EnvironmentVariableNotFound => null,
         else => return err,
     };
-    defer allocator.free(address);
+    defer if (maybe_address) |addr| allocator.free(addr);
 
-    var client = try znvim.Client.init(allocator, .{ .socket_path = address });
+    // If environment variable is not set, spawn a clean Neovim instance
+    const use_spawn = maybe_address == null;
+    var client = if (use_spawn) blk: {
+        std.debug.print("NVIM_LISTEN_ADDRESS not set, spawning clean Neovim instance...\n", .{});
+        break :blk try znvim.Client.init(allocator, .{
+            .spawn_process = true,
+            .nvim_path = "nvim",
+        });
+    } else blk: {
+        std.debug.print("Connecting to Neovim at {s}...\n", .{maybe_address.?});
+        break :blk try znvim.Client.init(allocator, .{
+            .socket_path = maybe_address.?,
+        });
+    };
     defer client.deinit();
     try client.connect();
 
