@@ -10,6 +10,7 @@ const transport_mod = @import("transport/mod.zig");
 pub const Client = client_mod.Client;
 pub const ClientError = client_mod.ClientError;
 pub const ClientInitError = client_mod.ClientInitError;
+pub const EventHandler = client_mod.EventHandler;
 
 pub const ApiInfo = client_mod.ApiInfo;
 pub const ApiVersion = client_mod.ApiVersion;
@@ -198,4 +199,16 @@ test "e2e long running tests" {
 
 test "e2e large data tests" {
     _ = @import("tests/e2e_large_data_tests.zig");
+}
+
+test "e2e event handling tests" {
+    _ = @import("tests/e2e_event_handling_tests.zig");
+}
+
+test "stdio transport tests" {
+    _ = @import("tests/stdio_transport_tests.zig");
+}
+
+test "protocol comprehensive tests" {
+    _ = @import("tests/protocol_comprehensive_tests.zig");
 }
