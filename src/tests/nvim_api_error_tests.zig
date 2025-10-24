@@ -25,8 +25,6 @@ fn destroyTestClient(client: *znvim.Client, allocator: std.mem.Allocator) void {
 // ============================================================================
 
 test "nvim error: explore error structure from invalid buffer" {
-    if (true) return error.SkipZigTest; // 探索性测试，先跳过
-
     const allocator = std.testing.allocator;
     const client = try createTestClient(allocator);
     defer destroyTestClient(client, allocator);
@@ -37,21 +35,15 @@ test "nvim error: explore error structure from invalid buffer" {
 
     const params = [_]msgpack.Value{invalid_buf};
 
-    // 这应该会返回 NvimError，我们想看看错误的具体内容
-    const result = client.request("nvim_buf_is_valid", &params);
+    // nvim_buf_is_valid 对无效的 buffer 返回 false，而不是错误
+    const result = try client.request("nvim_buf_is_valid", &params);
+    defer msgpack.free(result, allocator);
 
-    if (result) |payload| {
-        defer msgpack.free(payload, allocator);
-        std.debug.print("Unexpected success: {any}\n", .{payload});
-    } else |err| {
-        std.debug.print("Got error: {}\n", .{err});
-        // 在实际实现中，我们想能够获取错误详情
-    }
+    const is_valid = try msgpack.expectBool(result);
+    try std.testing.expect(!is_valid);
 }
 
 test "nvim error: explore error structure from invalid command" {
-    if (true) return error.SkipZigTest; // 探索性测试，先跳过
-
     const allocator = std.testing.allocator;
     const client = try createTestClient(allocator);
     defer destroyTestClient(client, allocator);
@@ -63,18 +55,10 @@ test "nvim error: explore error structure from invalid command" {
     const params = [_]msgpack.Value{cmd};
 
     const result = client.request("nvim_command", &params);
-
-    if (result) |payload| {
-        defer msgpack.free(payload, allocator);
-        std.debug.print("Unexpected success: {any}\n", .{payload});
-    } else |err| {
-        std.debug.print("Got error: {}\n", .{err});
-    }
+    try std.testing.expectError(error.NvimError, result);
 }
 
 test "nvim error: explore error structure from invalid eval" {
-    if (true) return error.SkipZigTest; // 探索性测试，先跳过
-
     const allocator = std.testing.allocator;
     const client = try createTestClient(allocator);
     defer destroyTestClient(client, allocator);
@@ -86,13 +70,7 @@ test "nvim error: explore error structure from invalid eval" {
     const params = [_]msgpack.Value{expr};
 
     const result = client.request("nvim_eval", &params);
-
-    if (result) |payload| {
-        defer msgpack.free(payload, allocator);
-        std.debug.print("Unexpected success: {any}\n", .{payload});
-    } else |err| {
-        std.debug.print("Got error: {}\n", .{err});
-    }
+    try std.testing.expectError(error.NvimError, result);
 }
 
 // ============================================================================

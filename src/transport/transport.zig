@@ -20,7 +20,7 @@ pub const Transport = struct {
         disconnect: *const fn (*Transport) void,
         read: *const fn (*Transport, buffer: []u8) ReadError!usize,
         write: *const fn (*Transport, data: []const u8) WriteError!void,
-        is_connected: *const fn (*Transport) bool,
+        is_connected: *const fn (*const Transport) bool,
     };
 
     vtable: *const VTable,
@@ -47,7 +47,7 @@ pub const Transport = struct {
         return self.vtable.write(self, data);
     }
 
-    pub fn isConnected(self: *Transport) bool {
+    pub fn isConnected(self: *const Transport) bool {
         return self.vtable.is_connected(self);
     }
 

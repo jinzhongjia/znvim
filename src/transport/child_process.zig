@@ -121,7 +121,7 @@ pub const ChildProcess = struct {
         };
     }
 
-    fn isConnected(tr: *Transport) bool {
+    fn isConnected(tr: *const Transport) bool {
         const self = tr.downcastConst(ChildProcess);
         return self.child != null;
     }

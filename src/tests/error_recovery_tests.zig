@@ -56,7 +56,7 @@ const PartialReadTransport = struct {
         }
     }
 
-    fn isConnected(tr: *transport.Transport) bool {
+    fn isConnected(tr: *const transport.Transport) bool {
         return tr.downcastConst(PartialReadTransport).connected;
     }
 
@@ -132,7 +132,7 @@ const DisconnectingTransport = struct {
         }
     }
 
-    fn isConnected(tr: *transport.Transport) bool {
+    fn isConnected(tr: *const transport.Transport) bool {
         return tr.downcastConst(DisconnectingTransport).connected;
     }
 
@@ -307,7 +307,7 @@ test "transport handles zero-byte read buffer" {
 
         fn write(_: *transport.Transport, _: []const u8) transport.Transport.WriteError!void {}
 
-        fn isConnected(tr: *transport.Transport) bool {
+        fn isConnected(tr: *const transport.Transport) bool {
             return tr.downcastConst(@This()).connected;
         }
 

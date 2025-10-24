@@ -134,7 +134,7 @@ pub const TcpSocket = struct {
         };
     }
 
-    fn isConnected(tr: *Transport) bool {
+    fn isConnected(tr: *const Transport) bool {
         const self = tr.downcastConst(TcpSocket);
         return self.stream != null;
     }
