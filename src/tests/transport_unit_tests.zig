@@ -30,7 +30,7 @@ test "transport wrapper dispatches to concrete implementation" {
             tr.downcast(@This()).last_write_len = data.len;
         }
 
-        fn isConnected(tr: *Transport) bool {
+        fn isConnected(tr: *const Transport) bool {
             return tr.downcastConst(@This()).connected;
         }
 

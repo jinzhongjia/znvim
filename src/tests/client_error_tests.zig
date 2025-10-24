@@ -116,7 +116,7 @@ test "Client handles NvimError in response" {
 
         fn write(_: *transport.Transport, _: []const u8) transport.Transport.WriteError!void {}
 
-        fn isConnected(tr: *transport.Transport) bool {
+        fn isConnected(tr: *const transport.Transport) bool {
             return tr.downcastConst(@This()).connected;
         }
 
@@ -168,7 +168,7 @@ test "Client handles ConnectionClosed during request" {
 
         fn write(_: *transport.Transport, _: []const u8) transport.Transport.WriteError!void {}
 
-        fn isConnected(tr: *transport.Transport) bool {
+        fn isConnected(tr: *const transport.Transport) bool {
             return tr.downcastConst(@This()).connected;
         }
 
@@ -221,7 +221,7 @@ test "Client detects ConnectionClosed and updates state" {
 
         fn write(_: *transport.Transport, _: []const u8) transport.Transport.WriteError!void {}
 
-        fn isConnected(tr: *transport.Transport) bool {
+        fn isConnected(tr: *const transport.Transport) bool {
             return tr.downcastConst(@This()).connected;
         }
 
@@ -349,7 +349,7 @@ test "Client handles UnexpectedMessage error" {
 
         fn write(_: *transport.Transport, _: []const u8) transport.Transport.WriteError!void {}
 
-        fn isConnected(tr: *transport.Transport) bool {
+        fn isConnected(tr: *const transport.Transport) bool {
             return tr.downcastConst(@This()).connected;
         }
 

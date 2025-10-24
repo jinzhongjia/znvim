@@ -61,7 +61,7 @@ pub const UnixSocket = struct {
         };
     }
 
-    fn isConnected(tr: *Transport) bool {
+    fn isConnected(tr: *const Transport) bool {
         const self = tr.downcastConst(UnixSocket);
         return self.stream != null;
     }

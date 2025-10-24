@@ -57,7 +57,7 @@ pub const Stdio = struct {
         };
     }
 
-    fn isConnected(tr: *Transport) bool {
+    fn isConnected(tr: *const Transport) bool {
         _ = tr;
         return true;
     }

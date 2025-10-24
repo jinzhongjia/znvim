@@ -57,4 +57,28 @@ pub fn build(b: *std.Build) void {
 
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_mod_tests.step);
+
+    // Benchmark executable
+    const benchmark_module = b.createModule(.{
+        .root_source_file = b.path("benchmark/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    benchmark_module.addImport("znvim", mod);
+
+    const benchmark_exe = b.addExecutable(.{
+        .name = "benchmark",
+        .root_module = benchmark_module,
+    });
+
+    const install_benchmark = b.addInstallArtifact(benchmark_exe, .{});
+    const benchmark_step = b.step("benchmark", "Build and install benchmark tool");
+    benchmark_step.dependOn(&install_benchmark.step);
+
+    // Run benchmark
+    const run_benchmark = b.addRunArtifact(benchmark_exe);
+    run_benchmark.step.dependOn(&install_benchmark.step);
+
+    const run_benchmark_step = b.step("run-benchmark", "Run performance benchmarks");
+    run_benchmark_step.dependOn(&run_benchmark.step);
 }

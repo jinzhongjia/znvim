@@ -72,7 +72,24 @@ const WindowsState = if (builtin.os.tag == .windows)
 else
     struct {};
 
-/// Event handler callback type for notifications
+/// Event handler callback type for notifications.
+///
+/// IMPORTANT: The `params` payload is only valid for the duration of the handler call.
+/// If you need to store the payload for later use, you MUST clone it using your own allocator.
+/// The payload will be freed immediately after the handler returns, and using it after that
+/// will result in use-after-free errors.
+///
+/// Example of safe usage:
+/// ```zig
+/// fn myHandler(method: []const u8, params: msgpack.Payload, userdata: ?*anyopaque) void {
+///     const allocator = @as(*std.mem.Allocator, @ptrCast(@alignCast(userdata.?))).*;
+///
+///     // If you need to store params, clone it:
+///     const cloned = payload_utils.clone(allocator, params) catch return;
+///     // Now you can safely store `cloned` and use it later
+///     // Remember to free it when done: msgpack.free(cloned, allocator);
+/// }
+/// ```
 pub const EventHandler = *const fn (
     method: []const u8,
     params: msgpack.Payload,
@@ -274,15 +291,12 @@ pub const Client = struct {
     pub fn isConnected(self: *const Client) bool {
         if (!self.connected) return false;
 
-        // 需要临时转换为可变指针以调用 Transport.isConnected
-        // 这是安全的，因为 isConnected 实际上并不修改状态
-        var mutable_self = @constCast(self);
         return switch (self.transport_kind) {
-            .unix_socket => (&mutable_self.transport).isConnected(),
-            .named_pipe => (&mutable_self.transport).isConnected(),
-            .tcp_socket => (&mutable_self.transport).isConnected(),
-            .stdio => (&mutable_self.transport).isConnected(),
-            .child_process => (&mutable_self.transport).isConnected(),
+            .unix_socket => (&self.transport).isConnected(),
+            .named_pipe => (&self.transport).isConnected(),
+            .tcp_socket => (&self.transport).isConnected(),
+            .stdio => (&self.transport).isConnected(),
+            .child_process => (&self.transport).isConnected(),
             .none => false,
         };
     }
@@ -672,7 +686,7 @@ const TestTransport = struct {
         self.written.appendSlice(self.allocator, data) catch return transport.Transport.WriteError.UnexpectedError;
     }
 
-    fn isConnected(tr: *transport.Transport) bool {
+    fn isConnected(tr: *const transport.Transport) bool {
         const self = tr.downcastConst(TestTransport);
         return self.connected;
     }
