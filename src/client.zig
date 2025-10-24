@@ -88,6 +88,8 @@ pub const Client = struct {
     api_arena: std.heap.ArenaAllocator,
     api_info: ?ApiInfo = null,
     windows: WindowsState = .{},
+    // Mutex to protect concurrent request/response handling
+    mutex: std.Thread.Mutex = .{},
 
     /// Prepares a client with the requested connection options but does not open the transport yet.
     pub fn init(allocator: std.mem.Allocator, options: connection.ConnectionOptions) ClientInitError!Client {
@@ -205,6 +207,9 @@ pub const Client = struct {
 
     /// Connects the prepared transport and eagerly fetches API metadata unless disabled.
     pub fn connect(self: *Client) ClientError!void {
+        self.mutex.lock();
+        defer self.mutex.unlock();
+
         if (self.connected) return error.AlreadyConnected;
         switch (self.transport_kind) {
             .unix_socket => {
@@ -238,6 +243,9 @@ pub const Client = struct {
     }
 
     pub fn disconnect(self: *Client) void {
+        self.mutex.lock();
+        defer self.mutex.unlock();
+
         if (!self.connected) return;
         switch (self.transport_kind) {
             .unix_socket => (&self.transport).disconnect(),
@@ -279,7 +287,8 @@ pub const Client = struct {
     }
 
     pub fn refreshApiInfo(self: *Client) ClientError!void {
-        const response = try self.request("nvim_get_api_info", &.{});
+        // Use internal locked version to avoid deadlock (connect already holds lock)
+        const response = try self.requestLocked("nvim_get_api_info", &.{});
         defer response.free(self.allocator);
         self.loadApiInfo(response) catch |err| switch (err) {
             ApiParseError.OutOfMemory => return error.OutOfMemory,
@@ -288,6 +297,15 @@ pub const Client = struct {
     }
 
     pub fn request(self: *Client, method: []const u8, params: []const msgpack.Payload) ClientError!msgpack.Payload {
+        // Lock to ensure thread-safe request/response handling
+        self.mutex.lock();
+        defer self.mutex.unlock();
+
+        return self.requestLocked(method, params);
+    }
+
+    /// Internal request implementation without locking (assumes caller holds lock)
+    fn requestLocked(self: *Client, method: []const u8, params: []const msgpack.Payload) ClientError!msgpack.Payload {
         if (!self.connected) return error.NotConnected;
 
         const msgid = self.nextMessageId();
@@ -314,6 +332,10 @@ pub const Client = struct {
     }
 
     pub fn notify(self: *Client, method: []const u8, params: []const msgpack.Payload) ClientError!void {
+        // Lock to ensure thread-safe notification handling
+        self.mutex.lock();
+        defer self.mutex.unlock();
+
         if (!self.connected) return error.NotConnected;
 
         // Notifications also duplicate params for the same ownership reason as requests.

@@ -14,36 +14,31 @@ fn createTestClient(allocator: std.mem.Allocator) !znvim.Client {
     return client;
 }
 
-// Test: Multiple independent clients sending concurrent requests
-test "concurrent clients sending independent requests" {
+// Test: Shared client with concurrent requests (now thread-safe with mutex)
+test "shared client: concurrent requests with mutex protection" {
     const allocator = std.testing.allocator;
 
-    const thread_count = 5;
+    var client = try createTestClient(allocator);
+    defer client.deinit();
+
+    const thread_count = 8;
     const requests_per_thread = 15;
 
     var threads = try allocator.alloc(std.Thread, thread_count);
     defer allocator.free(threads);
 
     var success_count = std.atomic.Value(usize).init(0);
-    var error_count = std.atomic.Value(usize).init(0);
 
     const ThreadContext = struct {
+        client: *znvim.Client,
         allocator: std.mem.Allocator,
         thread_id: usize,
         requests: usize,
         success: *std.atomic.Value(usize),
-        errors: *std.atomic.Value(usize),
     };
 
     const worker = struct {
         fn run(ctx: ThreadContext) void {
-            // Each thread creates its own client
-            var client = createTestClient(ctx.allocator) catch {
-                _ = ctx.errors.fetchAdd(ctx.requests, .monotonic);
-                return;
-            };
-            defer client.deinit();
-
             var i: usize = 0;
             while (i < ctx.requests) : (i += 1) {
                 // Each thread evaluates a different expression
@@ -51,49 +46,35 @@ test "concurrent clients sending independent requests" {
                     ctx.allocator,
                     "{d} * {d}",
                     .{ ctx.thread_id, i },
-                ) catch {
-                    _ = ctx.errors.fetchAdd(1, .monotonic);
-                    continue;
-                };
+                ) catch continue;
                 defer ctx.allocator.free(expr_text);
 
-                const expr = msgpack.string(ctx.allocator, expr_text) catch {
-                    _ = ctx.errors.fetchAdd(1, .monotonic);
-                    continue;
-                };
+                const expr = msgpack.string(ctx.allocator, expr_text) catch continue;
                 defer msgpack.free(expr, ctx.allocator);
 
                 const params = [_]msgpack.Value{expr};
-                const result = client.request("nvim_eval", &params) catch {
-                    _ = ctx.errors.fetchAdd(1, .monotonic);
-                    continue;
-                };
+                const result = ctx.client.request("nvim_eval", &params) catch continue;
                 defer msgpack.free(result, ctx.allocator);
 
-                const value = msgpack.expectI64(result) catch {
-                    _ = ctx.errors.fetchAdd(1, .monotonic);
-                    continue;
-                };
+                const value = msgpack.expectI64(result) catch continue;
 
                 const expected = @as(i64, @intCast(ctx.thread_id * i));
                 if (value == expected) {
                     _ = ctx.success.fetchAdd(1, .monotonic);
-                } else {
-                    _ = ctx.errors.fetchAdd(1, .monotonic);
                 }
             }
         }
     }.run;
 
-    // Spawn threads
+    // Spawn threads that share the same client
     var i: usize = 0;
     while (i < thread_count) : (i += 1) {
         const ctx = ThreadContext{
+            .client = &client,
             .allocator = allocator,
             .thread_id = i,
             .requests = requests_per_thread,
             .success = &success_count,
-            .errors = &error_count,
         };
         threads[i] = try std.Thread.spawn(.{}, worker, .{ctx});
     }
@@ -107,8 +88,8 @@ test "concurrent clients sending independent requests" {
     const total_expected = thread_count * requests_per_thread;
     const successes = success_count.load(.monotonic);
 
-    // At least 80% should succeed (each spawns its own nvim)
-    try std.testing.expect(successes >= (total_expected * 8 / 10));
+    // With mutex protection, should have high success rate
+    try std.testing.expect(successes >= (total_expected * 95 / 100));
 }
 
 // Test: Sequential rapid buffer operations (simulating concurrent load)
@@ -182,7 +163,3 @@ test "high frequency sequential message stress test" {
     // Should complete most messages
     try std.testing.expect(successful >= (message_count * 9 / 10));
 }
-
-// Note: Remaining concurrent E2E tests removed to avoid shared Client issues.
-// znvim Clients are not thread-safe for concurrent requests - each thread should
-// create its own Client instance (as demonstrated in the first test above).
