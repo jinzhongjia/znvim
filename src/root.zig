@@ -156,6 +156,10 @@ test "concurrency tests" {
     _ = @import("tests/concurrency_tests.zig");
 }
 
+test "concurrent shared client tests" {
+    _ = @import("tests/concurrent_shared_client_tests.zig");
+}
+
 test "manual fuzzing tests" {
     _ = @import("tests/fuzz_manual_tests.zig");
 }
