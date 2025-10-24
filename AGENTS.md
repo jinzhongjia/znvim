@@ -901,14 +901,29 @@ Added 25 boundary condition tests:
 - Unicode and binary data
 - Mixed-type arrays and nested structures
 
+### Windows Platform Support ✅
+
+**Windows-Specific Stdio Tests Added** (2025-10-24):
+- Created `stdio_windows_tests.zig` with 13 comprehensive tests
+- Uses temporary files for cross-platform compatibility (no POSIX pipe required)
+- Tests include: write/read operations, binary data, large transfers, ownership handling
+- Added real child process E2E test for Windows
+- **All Windows transport types now fully tested**: Named Pipe ✅, TCP ✅, Stdio ✅
+
+**Windows Test Coverage:**
+- Named Pipe: 41 tests (`windows_pipe_integration_tests.zig` + `client_windows_tests.zig`)
+- TCP Socket: 19 tests (11 Windows-specific + 8 cross-platform)
+- Stdio: 18 tests (13 Windows-specific + 5 cross-platform basic)
+- ChildProcess: Covered in E2E tests
+
 ### Test Statistics
 
 | Metric | Value |
 |--------|-------|
-| Test Files | 35 (+6 E2E) |
-| Test Cases | 662 (+142 new) |
+| Test Files | 36 (+1 Windows Stdio, +6 E2E) |
+| Test Cases | 675 (+13 Windows Stdio) |
 | Pass Rate | 100% |
-| Test Code | 16,000+ lines |
+| Test Code | 16,500+ lines |
 | Source Code | 3,200 lines |
 | Test/Code Ratio | 5:1 |
 
@@ -923,15 +938,18 @@ Added 25 boundary condition tests:
 
 **Test Files:**
 - `concurrency_tests.zig` (11 tests) - Atomic operations, thread safety
-- `concurrent_shared_client_tests.zig` (6 tests) - **NEW** Shared Client concurrency with mutex
+- `concurrent_shared_client_tests.zig` (6 tests) - Shared Client concurrency with mutex
 - `error_recovery_tests.zig` (13 tests) - Partial reads, timeouts
 - `boundary_tests.zig` (25 tests) - Large data, edge cases
 - `fuzz_manual_tests.zig` (16 tests) - **All passing including random input!**
-- `e2e_concurrent_tests.zig` (3 tests) - **NEW** E2E concurrency scenarios
-- `e2e_fault_recovery_tests.zig` (17 tests) - **NEW** Disconnect/reconnect
-- `e2e_workflow_tests.zig` (9 tests) - **NEW** Real editing workflows
-- `e2e_long_running_tests.zig` (9 tests) - **NEW** Sustained operations
-- `e2e_large_data_tests.zig` (11 tests) - **NEW** Large data transfers
-- Plus 25 other test files (~542 tests)
+- `stdio_windows_tests.zig` (13 tests) - **NEW** Windows-specific Stdio transport tests
+- `windows_pipe_integration_tests.zig` (6 tests) - Named pipe integration
+- `client_windows_tests.zig` (35 tests) - Windows client functionality
+- `e2e_concurrent_tests.zig` (3 tests) - E2E concurrency scenarios
+- `e2e_fault_recovery_tests.zig` (17 tests) - Disconnect/reconnect
+- `e2e_workflow_tests.zig` (9 tests) - Real editing workflows
+- `e2e_long_running_tests.zig` (9 tests) - Sustained operations
+- `e2e_large_data_tests.zig` (11 tests) - Large data transfers
+- Plus 26 other test files (~540 tests)
 
 ---

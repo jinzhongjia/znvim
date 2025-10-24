@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const znvim = @import("../root.zig");
 const msgpack = @import("../msgpack.zig");
 
@@ -153,8 +154,9 @@ test "performance: latency - single request" {
     const latency_us = end_time - start_time;
     const latency_ms = @as(f64, @floatFromInt(latency_us)) / 1000.0;
 
-    // 单个请求延迟应该小于 100ms
-    try std.testing.expect(latency_ms < 100.0);
+    // 单个请求延迟应该小于 100ms（Windows 上放宽到 500ms，因为进程启动和IPC开销更大）
+    const max_latency_ms: f64 = if (builtin.os.tag == .windows) 500.0 else 100.0;
+    try std.testing.expect(latency_ms < max_latency_ms);
 }
 
 test "performance: latency - average over 100 requests" {
