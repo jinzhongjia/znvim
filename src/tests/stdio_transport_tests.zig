@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const znvim = @import("../root.zig");
 const Stdio = @import("../transport/stdio.zig").Stdio;
 const Transport = @import("../transport/transport.zig").Transport;
@@ -12,6 +13,10 @@ const PipePair = struct {
     write_end: std.fs.File,
 
     fn create() !PipePair {
+        // POSIX pipe is not available on Windows
+        if (builtin.os.tag == .windows) {
+            return error.PlatformNotSupported;
+        }
         const pipe_fds = try std.posix.pipe();
         return PipePair{
             .read_end = std.fs.File{ .handle = pipe_fds[0] },
@@ -39,6 +44,7 @@ test "stdio transport: init creates valid transport" {
 }
 
 test "stdio transport: initWithFiles creates valid transport" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
     var pipe_in = try PipePair.create();
     defer pipe_in.close();
 
@@ -93,6 +99,7 @@ test "stdio transport: isConnected always returns true" {
 // ============================================================================
 
 test "stdio transport: write and read data through pipes" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
     var pipe_in = try PipePair.create();
     defer pipe_in.close();
 
@@ -116,6 +123,7 @@ test "stdio transport: write and read data through pipes" {
 }
 
 test "stdio transport: read data written to stdin pipe" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
     var pipe_in = try PipePair.create();
     defer pipe_in.close();
 
@@ -139,6 +147,7 @@ test "stdio transport: read data written to stdin pipe" {
 }
 
 test "stdio transport: multiple sequential writes" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
     var pipe_in = try PipePair.create();
     defer pipe_in.close();
 
@@ -162,6 +171,7 @@ test "stdio transport: multiple sequential writes" {
 }
 
 test "stdio transport: multiple sequential reads" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
     var pipe_in = try PipePair.create();
     defer pipe_in.close();
 
@@ -197,6 +207,7 @@ test "stdio transport: multiple sequential reads" {
 // ============================================================================
 
 test "stdio transport: write empty data" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
     var pipe_in = try PipePair.create();
     defer pipe_in.close();
 
@@ -213,6 +224,7 @@ test "stdio transport: write empty data" {
 }
 
 test "stdio transport: read into empty buffer" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
     var pipe_in = try PipePair.create();
     defer pipe_in.close();
 
@@ -234,6 +246,7 @@ test "stdio transport: read into empty buffer" {
 }
 
 test "stdio transport: write large data chunk" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
     var pipe_in = try PipePair.create();
     defer pipe_in.close();
 
@@ -261,6 +274,7 @@ test "stdio transport: write large data chunk" {
 }
 
 test "stdio transport: read partial data from small buffer" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
     var pipe_in = try PipePair.create();
     defer pipe_in.close();
 
@@ -293,6 +307,7 @@ test "stdio transport: read partial data from small buffer" {
 // ============================================================================
 
 test "stdio transport: handle binary data with null bytes" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
     var pipe_in = try PipePair.create();
     defer pipe_in.close();
 
@@ -315,6 +330,7 @@ test "stdio transport: handle binary data with null bytes" {
 }
 
 test "stdio transport: handle all byte values (0-255)" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
     var pipe_in = try PipePair.create();
     defer pipe_in.close();
 
@@ -345,6 +361,7 @@ test "stdio transport: handle all byte values (0-255)" {
 // ============================================================================
 
 test "stdio transport: read from closed pipe returns ConnectionClosed" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
     var pipe_in = try PipePair.create();
     // Close the write end immediately to simulate closed connection
     pipe_in.write_end.close();
@@ -372,6 +389,7 @@ test "stdio transport: read from closed pipe returns ConnectionClosed" {
 }
 
 test "stdio transport: write to closed pipe returns error" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
     var pipe_in = try PipePair.create();
     defer pipe_in.close();
 
@@ -399,6 +417,7 @@ test "stdio transport: write to closed pipe returns error" {
 // ============================================================================
 
 test "stdio transport: deinit with owns_handles=false does not close files" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
     var pipe_in = try PipePair.create();
     defer pipe_in.close();
 
@@ -415,6 +434,7 @@ test "stdio transport: deinit with owns_handles=false does not close files" {
 }
 
 test "stdio transport: deinit with owns_handles=true closes files" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
     const pipe_in = try PipePair.create();
     const pipe_out = try PipePair.create();
 
@@ -432,6 +452,7 @@ test "stdio transport: deinit with owns_handles=true closes files" {
 // ============================================================================
 
 test "stdio transport: simulated msgpack-rpc message exchange" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
     var pipe_in = try PipePair.create();
     defer pipe_in.close();
 
