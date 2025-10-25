@@ -84,4 +84,19 @@ pub fn build(b: *std.Build) void {
 
     const run_benchmark_step = b.step("run-benchmark", "Run performance benchmarks");
     run_benchmark_step.dependOn(&run_benchmark.step);
+
+    // 文档生成
+    const docs_obj = b.addObject(.{
+        .name = "znvim",
+        .root_module = mod,
+    });
+
+    const install_docs = b.addInstallDirectory(.{
+        .install_dir = .prefix,
+        .install_subdir = "docs",
+        .source_dir = docs_obj.getEmittedDocs(),
+    });
+
+    const docs_step = b.step("docs", "Generate documentation");
+    docs_step.dependOn(&install_docs.step);
 }

@@ -136,6 +136,20 @@ Run tests:
 zig build test
 ```
 
+Generate API documentation:
+
+```sh
+zig build docs
+```
+
+The generated documentation will be in the `zig-out/docs/` directory. Open `zig-out/docs/index.html` in your browser.
+
+Run performance benchmarks:
+
+```sh
+zig build run-benchmark
+```
+
 To work on the documentation, keep the English `README.md` and the Chinese translation `README.zh.md` in sync.
 
 ## License

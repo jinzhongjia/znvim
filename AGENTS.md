@@ -770,6 +770,16 @@ zig build examples
 # Run specific example
 ./zig-out/bin/simple_spawn
 
+# Generate API documentation
+zig build docs
+# Open zig-out/docs/index.html in browser
+
+# Build benchmark tool
+zig build benchmark
+
+# Run performance benchmarks
+zig build run-benchmark
+
 # Clean build artifacts
 rm -rf zig-cache zig-out
 

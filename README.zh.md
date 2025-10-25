@@ -135,6 +135,20 @@ const parsed = msgpack.expectArray(arr) catch return error.NotArray;
 zig build test
 ```
 
+生成 API 文档：
+
+```sh
+zig build docs
+```
+
+生成的文档将位于 `zig-out/docs/` 目录，用浏览器打开 `zig-out/docs/index.html` 即可查看。
+
+运行性能基准测试：
+
+```sh
+zig build run-benchmark
+```
+
 维护文档时请同步更新英文版 `README.md` 与中文版 `README.zh.md`。
 
 ## 许可证
