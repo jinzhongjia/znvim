@@ -6,9 +6,17 @@ on:
     push:
         branches:
             - "*"
+        paths:
+            - "**.zig"
+            - "build.zig.zon"
+            - ".github/workflows/benchmark.yml"
     pull_request:
         branches:
             - "*"
+        paths:
+            - "**.zig"
+            - "build.zig.zon"
+            - ".github/workflows/benchmark.yml"
     workflow_dispatch:
 
 jobs:

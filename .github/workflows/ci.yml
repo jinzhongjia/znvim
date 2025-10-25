@@ -6,6 +6,10 @@ on:
     push:
         branches:
             - "*"
+        paths:
+            - "**.zig"
+            - "build.zig.zon"
+            - ".github/workflows/ci.yml"
     schedule:
         - cron: "0 2 * * *"  # 每天 UTC 02:00，仅在 main 分支运行
     workflow_dispatch:

@@ -5,6 +5,10 @@ run-name: "Deploy Docs 📚 [${{ github.ref_name }}] by @${{ github.actor }}"
 on:
   push:
     branches: [main]
+    paths:
+      - "**.zig"
+      - "build.zig.zon"
+      - ".github/workflows/deploy_docs.yml"
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
     inputs:
