@@ -10,7 +10,6 @@ const znvim = @import("znvim");
 /// 4. Save changes
 ///
 /// Use case: Adding license headers to all source files in a project
-
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer switch (gpa.deinit()) {

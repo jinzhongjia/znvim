@@ -471,7 +471,7 @@ test "function call workflow: use vimscript functions" {
 
         const list = try msgpack.array(allocator, &.{ 1, 2, 3, 4, 5 });
         // ownership transferred to args
-        
+
         const args = try msgpack.array(allocator, &.{list});
         defer msgpack.free(args, allocator);
 
@@ -488,7 +488,7 @@ test "function call workflow: use vimscript functions" {
 
         const list = try msgpack.array(allocator, &.{ 10, 5, 20, 15 });
         // ownership transferred to args
-        
+
         const args = try msgpack.array(allocator, &.{list});
         defer msgpack.free(args, allocator);
 
@@ -574,4 +574,3 @@ test "plugin scenario: auto-save on buffer changes" {
     const lines = try msgpack.expectArray(get_lines);
     try std.testing.expectEqualStrings("Saved content", try msgpack.expectString(lines[0]));
 }
-

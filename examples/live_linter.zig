@@ -10,7 +10,6 @@ const znvim = @import("znvim");
 /// 4. Provide real-time feedback to users
 ///
 /// Use case: Building a language server or code quality tool
-
 const DiagnosticSeverity = enum {
     Error,
     Warning,

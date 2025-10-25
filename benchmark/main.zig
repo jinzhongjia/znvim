@@ -422,9 +422,9 @@ pub fn main() !void {
     std.debug.print("✅ 所有基准测试完成！\n\n", .{});
     std.debug.print("平均性能指标:\n", .{});
     const overall_throughput = (throughput_result.throughput + mixed_result.throughput +
-                                memory_result.throughput + burst_result.throughput) / 4.0;
+        memory_result.throughput + burst_result.throughput) / 4.0;
     const overall_avg_latency = (throughput_result.avg_time_ms + mixed_result.avg_time_ms +
-                                 memory_result.avg_time_ms + burst_result.avg_time_ms) / 4.0;
+        memory_result.avg_time_ms + burst_result.avg_time_ms) / 4.0;
 
     std.debug.print("  总体吞吐量:   {d:.2} req/s\n", .{overall_throughput});
     std.debug.print("  总体平均延迟: {d:.2} ms\n", .{overall_avg_latency});
