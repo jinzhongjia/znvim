@@ -1,6 +1,6 @@
 name: CI
 
-run-name: "CI 🧪 [${{ github.ref_name }}] ${{ github.event_name == 'schedule' && '⏰ Scheduled' || github.event_name == 'workflow_dispatch' && '🔧 Manual' || github.event.head_commit.message }} @${{ github.actor }}"
+run-name: "CI 🧪 [${{ github.ref_name }}] ${{ github.event_name == 'schedule' && '⏰ Scheduled' || github.event_name == 'workflow_dispatch' && '🔧 Manual' || github.sha }} by @${{ github.actor }}"
 
 on:
     push:

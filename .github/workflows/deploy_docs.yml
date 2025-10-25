@@ -1,6 +1,6 @@
 name: Deploy Docs
 
-run-name: "Deploy Docs 📚 [${{ github.ref_name }}] ${{ github.event_name == 'workflow_dispatch' && '🔧 Manual' || github.event.head_commit.message }} @${{ github.actor }}"
+run-name: "Deploy Docs 📚 [${{ github.ref_name }}] ${{ github.event_name == 'workflow_dispatch' && '🔧 Manual' || github.sha }} by @${{ github.actor }}"
 
 on:
   push:

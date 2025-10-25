@@ -1,6 +1,6 @@
 name: Benchmark Build
 
-run-name: "Benchmark ⚡ [${{ github.event_name == 'pull_request' && format('PR #{0}', github.event.pull_request.number) || github.ref_name }}] ${{ github.event_name == 'workflow_dispatch' && '🔧 Manual' || github.event.pull_request.title || github.event.head_commit.message }} @${{ github.actor }}"
+run-name: "Benchmark ⚡ [${{ github.event_name == 'pull_request' && format('PR #{0}', github.event.pull_request.number) || github.ref_name }}] ${{ github.event_name == 'workflow_dispatch' && '🔧 Manual' || github.sha }} by @${{ github.actor }}"
 
 on:
     push:
