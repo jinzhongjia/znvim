@@ -21,16 +21,21 @@ pub fn build(b: *std.Build) void {
         name: []const u8,
         path: []const u8,
     }{
+        // 基础示例
         .{ .name = "simple_spawn", .path = "examples/simple_spawn.zig" },
-        .{ .name = "api_lookup", .path = "examples/api_lookup.zig" },
+        .{ .name = "api_info", .path = "examples/api_info.zig" },
         .{ .name = "buffer_lines", .path = "examples/buffer_lines.zig" },
         .{ .name = "eval_expression", .path = "examples/eval_expression.zig" },
         .{ .name = "print_api", .path = "examples/print_api.zig" },
         .{ .name = "run_command", .path = "examples/run_command.zig" },
-        .{ .name = "list_all_api", .path = "examples/list_all_api.zig" },
         .{ .name = "event_handling", .path = "examples/event_handling.zig" },
         .{ .name = "batch_file_processing", .path = "examples/batch_file_processing.zig" },
         .{ .name = "live_linter", .path = "examples/live_linter.zig" },
+        // 生产环境示例（支持所有平台和连接方式）
+        .{ .name = "code_formatter", .path = "examples/code_formatter.zig" },
+        .{ .name = "batch_search_replace", .path = "examples/batch_search_replace.zig" },
+        .{ .name = "remote_edit_session", .path = "examples/remote_edit_session.zig" },
+        .{ .name = "code_statistics", .path = "examples/code_statistics.zig" },
     };
 
     const examples_step = b.step("examples", "Build examples");
