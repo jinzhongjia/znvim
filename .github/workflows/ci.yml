@@ -1,9 +1,16 @@
 name: CI
 
-run-name: "CI 🧪 [${{ github.ref_name }}] by @${{ github.actor }}"
+run-name: "CI 🧪 [${{ github.event_name == 'pull_request' && format('PR #{0}', github.event.pull_request.number) || github.ref_name }}] by @${{ github.actor }}"
 
 on:
     push:
+        branches:
+            - "*"
+        paths:
+            - "**.zig"
+            - "build.zig.zon"
+            - ".github/workflows/ci.yml"
+    pull_request:
         branches:
             - "*"
         paths:
