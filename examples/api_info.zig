@@ -49,48 +49,48 @@ fn lookupFunction(info: znvim.ApiInfo, target_name: []const u8) !void {
 
     // Print detailed function information
     std.debug.print("\n", .{});
-    std.debug.print("╭─ Function: {s}\n", .{fn_info.name});
-    std.debug.print("│\n", .{});
-    std.debug.print("│  API Level:   {d}\n", .{fn_info.since});
-    std.debug.print("│  Method:      {}\n", .{fn_info.method});
-    std.debug.print("│  Return Type: {s}\n", .{fn_info.return_type});
-    std.debug.print("│\n", .{});
+    std.debug.print("+--- Function: {s}\n", .{fn_info.name});
+    std.debug.print("|\n", .{});
+    std.debug.print("|  API Level:   {d}\n", .{fn_info.since});
+    std.debug.print("|  Method:      {}\n", .{fn_info.method});
+    std.debug.print("|  Return Type: {s}\n", .{fn_info.return_type});
+    std.debug.print("|\n", .{});
 
     if (fn_info.parameters.len == 0) {
-        std.debug.print("│  Parameters: (none)\n", .{});
+        std.debug.print("|  Parameters: (none)\n", .{});
     } else {
-        std.debug.print("│  Parameters ({d}):\n", .{fn_info.parameters.len});
+        std.debug.print("|  Parameters ({d}):\n", .{fn_info.parameters.len});
         for (fn_info.parameters, 0..) |param, i| {
-            const prefix = if (i == fn_info.parameters.len - 1) "└─" else "├─";
-            std.debug.print("│    {s} {s}: {s}\n", .{ prefix, param.name, param.type_name });
+            const prefix = if (i == fn_info.parameters.len - 1) "+--" else "|--";
+            std.debug.print("|    {s} {s}: {s}\n", .{ prefix, param.name, param.type_name });
         }
     }
-    std.debug.print("╰\n", .{});
+    std.debug.print("+---\n", .{});
 }
 
 fn listAllFunctions(allocator: std.mem.Allocator, info: znvim.ApiInfo) !void {
     std.debug.print("\n=== Neovim API Information ===\n\n", .{});
 
     // Print Neovim Version Information
-    std.debug.print("╭─────────────────────────────────────────────────────\n", .{});
-    std.debug.print("│ Neovim Version Information\n", .{});
-    std.debug.print("├─────────────────────────────────────────────────────\n", .{});
-    std.debug.print("│  Version:        {d}.{d}.{d}\n", .{
+    std.debug.print("+-----------------------------------------------------\n", .{});
+    std.debug.print("| Neovim Version Information\n", .{});
+    std.debug.print("+-----------------------------------------------------\n", .{});
+    std.debug.print("|  Version:        {d}.{d}.{d}\n", .{
         info.version.major,
         info.version.minor,
         info.version.patch,
     });
-    std.debug.print("│  API Level:      {d}\n", .{info.version.api_level});
-    std.debug.print("│  API Compatible: {d}\n", .{info.version.api_compatible});
-    std.debug.print("│  Channel ID:     {d}\n", .{info.channel_id});
-    std.debug.print("│  Prerelease:     {}\n", .{info.version.prerelease});
-    std.debug.print("│  API Prerelease: {}\n", .{info.version.api_prerelease});
+    std.debug.print("|  API Level:      {d}\n", .{info.version.api_level});
+    std.debug.print("|  API Compatible: {d}\n", .{info.version.api_compatible});
+    std.debug.print("|  Channel ID:     {d}\n", .{info.channel_id});
+    std.debug.print("|  Prerelease:     {}\n", .{info.version.prerelease});
+    std.debug.print("|  API Prerelease: {}\n", .{info.version.api_prerelease});
 
     if (info.version.build) |build| {
-        std.debug.print("│  Build:          {s}\n", .{build});
+        std.debug.print("|  Build:          {s}\n", .{build});
     }
 
-    std.debug.print("╰─────────────────────────────────────────────────────\n\n", .{});
+    std.debug.print("+-----------------------------------------------------\n\n", .{});
 
     // Categorize API Functions
     var buf_functions = std.ArrayListUnmanaged(*const znvim.ApiFunction){};
@@ -128,116 +128,116 @@ fn listAllFunctions(allocator: std.mem.Allocator, info: znvim.ApiInfo) !void {
     }
 
     // Print Statistics
-    std.debug.print("╭─────────────────────────────────────────────────────\n", .{});
-    std.debug.print("│ API Function Statistics\n", .{});
-    std.debug.print("├─────────────────────────────────────────────────────\n", .{});
-    std.debug.print("│  Core Functions:       {d:4}\n", .{core_functions.items.len});
-    std.debug.print("│  Buffer Functions:     {d:4}\n", .{buf_functions.items.len});
-    std.debug.print("│  Window Functions:     {d:4}\n", .{win_functions.items.len});
-    std.debug.print("│  Tabpage Functions:    {d:4}\n", .{tabpage_functions.items.len});
-    std.debug.print("│  UI Functions:         {d:4}\n", .{ui_functions.items.len});
-    std.debug.print("│  Extmark Functions:    {d:4}\n", .{extmark_functions.items.len});
-    std.debug.print("│  ─────────────────────────────\n", .{});
-    std.debug.print("│  Total:                {d:4}\n", .{info.functions.len});
-    std.debug.print("╰─────────────────────────────────────────────────────\n\n", .{});
+    std.debug.print("+-----------------------------------------------------\n", .{});
+    std.debug.print("| API Function Statistics\n", .{});
+    std.debug.print("+-----------------------------------------------------\n", .{});
+    std.debug.print("|  Core Functions:       {d:4}\n", .{core_functions.items.len});
+    std.debug.print("|  Buffer Functions:     {d:4}\n", .{buf_functions.items.len});
+    std.debug.print("|  Window Functions:     {d:4}\n", .{win_functions.items.len});
+    std.debug.print("|  Tabpage Functions:    {d:4}\n", .{tabpage_functions.items.len});
+    std.debug.print("|  UI Functions:         {d:4}\n", .{ui_functions.items.len});
+    std.debug.print("|  Extmark Functions:    {d:4}\n", .{extmark_functions.items.len});
+    std.debug.print("|  ------------------------------\n", .{});
+    std.debug.print("|  Total:                {d:4}\n", .{info.functions.len});
+    std.debug.print("+-----------------------------------------------------\n\n", .{});
 
     // Print All Functions by Category
-    std.debug.print("Legend: ● = method call, ○ = regular function\n\n", .{});
+    std.debug.print("Legend: * = method call,   = regular function\n\n", .{});
 
     // Print Core Functions
-    std.debug.print("╭─ Core Functions ({d})\n", .{core_functions.items.len});
+    std.debug.print("+--- Core Functions ({d})\n", .{core_functions.items.len});
     for (core_functions.items) |fn_info| {
-        const method_indicator = if (fn_info.method) "●" else "○";
-        std.debug.print("│  {s} {s:<45} -> {s}\n", .{
+        const method_indicator = if (fn_info.method) "*" else " ";
+        std.debug.print("|  {s} {s:<45} -> {s}\n", .{
             method_indicator,
             fn_info.name,
             fn_info.return_type,
         });
     }
-    std.debug.print("╰\n\n", .{});
+    std.debug.print("+---\n\n", .{});
 
     // Print Buffer Functions
     if (buf_functions.items.len > 0) {
-        std.debug.print("╭─ Buffer Functions ({d})\n", .{buf_functions.items.len});
+        std.debug.print("+--- Buffer Functions ({d})\n", .{buf_functions.items.len});
         for (buf_functions.items) |fn_info| {
-            const method_indicator = if (fn_info.method) "●" else "○";
-            std.debug.print("│  {s} {s:<45} -> {s}\n", .{
+            const method_indicator = if (fn_info.method) "*" else " ";
+            std.debug.print("|  {s} {s:<45} -> {s}\n", .{
                 method_indicator,
                 fn_info.name,
                 fn_info.return_type,
             });
         }
-        std.debug.print("╰\n\n", .{});
+        std.debug.print("+---\n\n", .{});
     }
 
     // Print Window Functions
     if (win_functions.items.len > 0) {
-        std.debug.print("╭─ Window Functions ({d})\n", .{win_functions.items.len});
+        std.debug.print("+--- Window Functions ({d})\n", .{win_functions.items.len});
         for (win_functions.items) |fn_info| {
-            const method_indicator = if (fn_info.method) "●" else "○";
-            std.debug.print("│  {s} {s:<45} -> {s}\n", .{
+            const method_indicator = if (fn_info.method) "*" else " ";
+            std.debug.print("|  {s} {s:<45} -> {s}\n", .{
                 method_indicator,
                 fn_info.name,
                 fn_info.return_type,
             });
         }
-        std.debug.print("╰\n\n", .{});
+        std.debug.print("+---\n\n", .{});
     }
 
     // Print Tabpage Functions
     if (tabpage_functions.items.len > 0) {
-        std.debug.print("╭─ Tabpage Functions ({d})\n", .{tabpage_functions.items.len});
+        std.debug.print("+--- Tabpage Functions ({d})\n", .{tabpage_functions.items.len});
         for (tabpage_functions.items) |fn_info| {
-            const method_indicator = if (fn_info.method) "●" else "○";
-            std.debug.print("│  {s} {s:<45} -> {s}\n", .{
+            const method_indicator = if (fn_info.method) "*" else " ";
+            std.debug.print("|  {s} {s:<45} -> {s}\n", .{
                 method_indicator,
                 fn_info.name,
                 fn_info.return_type,
             });
         }
-        std.debug.print("╰\n\n", .{});
+        std.debug.print("+---\n\n", .{});
     }
 
     // Print UI Functions
     if (ui_functions.items.len > 0) {
-        std.debug.print("╭─ UI Functions ({d})\n", .{ui_functions.items.len});
+        std.debug.print("+--- UI Functions ({d})\n", .{ui_functions.items.len});
         for (ui_functions.items) |fn_info| {
-            const method_indicator = if (fn_info.method) "●" else "○";
-            std.debug.print("│  {s} {s:<45} -> {s}\n", .{
+            const method_indicator = if (fn_info.method) "*" else " ";
+            std.debug.print("|  {s} {s:<45} -> {s}\n", .{
                 method_indicator,
                 fn_info.name,
                 fn_info.return_type,
             });
         }
-        std.debug.print("╰\n\n", .{});
+        std.debug.print("+---\n\n", .{});
     }
 
     // Print Extmark Functions
     if (extmark_functions.items.len > 0) {
-        std.debug.print("╭─ Extmark Functions ({d})\n", .{extmark_functions.items.len});
+        std.debug.print("+--- Extmark Functions ({d})\n", .{extmark_functions.items.len});
         for (extmark_functions.items) |fn_info| {
-            const method_indicator = if (fn_info.method) "●" else "○";
-            std.debug.print("│  {s} {s:<45} -> {s}\n", .{
+            const method_indicator = if (fn_info.method) "*" else " ";
+            std.debug.print("|  {s} {s:<45} -> {s}\n", .{
                 method_indicator,
                 fn_info.name,
                 fn_info.return_type,
             });
         }
-        std.debug.print("╰\n\n", .{});
+        std.debug.print("+---\n\n", .{});
     }
 
     // Summary
-    std.debug.print("╭─────────────────────────────────────────────────────\n", .{});
-    std.debug.print("│ Complete API List\n", .{});
-    std.debug.print("├─────────────────────────────────────────────────────\n", .{});
-    std.debug.print("│  Total Functions: {d}\n", .{info.functions.len});
-    std.debug.print("│  Neovim Version:  {d}.{d}.{d}\n", .{
+    std.debug.print("+-----------------------------------------------------\n", .{});
+    std.debug.print("| Complete API List\n", .{});
+    std.debug.print("+-----------------------------------------------------\n", .{});
+    std.debug.print("|  Total Functions: {d}\n", .{info.functions.len});
+    std.debug.print("|  Neovim Version:  {d}.{d}.{d}\n", .{
         info.version.major,
         info.version.minor,
         info.version.patch,
     });
-    std.debug.print("│  API Level:       {d}\n", .{info.version.api_level});
-    std.debug.print("╰─────────────────────────────────────────────────────\n\n", .{});
+    std.debug.print("|  API Level:       {d}\n", .{info.version.api_level});
+    std.debug.print("+-----------------------------------------------------\n\n", .{});
 
     std.debug.print("Tip: Run with function name to see details (e.g., api_info nvim_buf_set_lines)\n", .{});
 }

@@ -193,7 +193,9 @@ fn demonstrateStatistics(client: *znvim.Client, allocator: std.mem.Allocator, ve
 
     // Analyze code
     std.debug.print("Analyzing code...\n\n", .{});
-    const stats = try analyzeBuffer(client, allocator, buf, "demo.zig", verbose);
+    var stats = try analyzeBuffer(client, allocator, buf, "demo.zig", verbose);
+    // Override filetype for demo (avoid encoding issues on Windows)
+    stats.filetype = "zig";
 
     // Display results
     printFileStats(stats, detailed);
@@ -202,7 +204,7 @@ fn demonstrateStatistics(client: *znvim.Client, allocator: std.mem.Allocator, ve
 
     if (verbose) {
         std.debug.print("Code content:\n", .{});
-        std.debug.print("═══════════════════════════════════════════\n", .{});
+        std.debug.print("===========================================\n", .{});
         for (sample_code, 0..) |line, i| {
             const line_type = classifyLine(line);
             const type_symbol = switch (line_type) {
@@ -212,7 +214,7 @@ fn demonstrateStatistics(client: *znvim.Client, allocator: std.mem.Allocator, ve
             };
             std.debug.print("{s} {d:2} | {s}\n", .{ type_symbol, i + 1, line });
         }
-        std.debug.print("═══════════════════════════════════════════\n\n", .{});
+        std.debug.print("===========================================\n\n", .{});
         std.debug.print("Legend: C = code line, # = comment line\n\n", .{});
     }
 
@@ -299,7 +301,12 @@ fn analyzeBuffer(
     const ft_result = try client.request("nvim_buf_get_option", &[_]msgpack.Value{ buf, ft_name });
     defer msgpack.free(ft_result, allocator);
 
-    stats.filetype = msgpack.asString(ft_result) orelse "unknown";
+    // Handle filetype - it might be empty string or different encoding
+    if (msgpack.asString(ft_result)) |ft_str| {
+        stats.filetype = if (ft_str.len == 0) "(not set)" else ft_str;
+    } else {
+        stats.filetype = "(unknown type)";
+    }
 
     // Get all lines
     const lines_result = try client.request("nvim_buf_get_lines", &[_]msgpack.Value{
@@ -364,10 +371,10 @@ fn classifyLine(line: []const u8) LineType {
 }
 
 fn printFileStats(stats: FileStats, detailed: bool) void {
-    std.debug.print("  ───────────────────────────────────────────\n", .{});
+    std.debug.print("  -------------------------------------------\n", .{});
     std.debug.print("  File: {s}\n", .{stats.filepath});
     std.debug.print("  File type: {s}\n", .{stats.filetype});
-    std.debug.print("  ───────────────────────────────────────────\n", .{});
+    std.debug.print("  -------------------------------------------\n", .{});
     std.debug.print("  Total lines:   {d:6}\n", .{stats.total_lines});
     std.debug.print("  Code lines:    {d:6} ({d:5.1}%)\n", .{
         stats.code_lines,
@@ -399,13 +406,13 @@ fn printFileStats(stats: FileStats, detailed: bool) void {
         }
     }
 
-    std.debug.print("  ───────────────────────────────────────────\n", .{});
+    std.debug.print("  -------------------------------------------\n", .{});
 }
 
 fn printProjectStats(stats: ProjectStats) void {
-    std.debug.print("\n═══════════════════════════════════════════\n", .{});
+    std.debug.print("\n===========================================\n", .{});
     std.debug.print("Project Statistics Summary\n", .{});
-    std.debug.print("═══════════════════════════════════════════\n", .{});
+    std.debug.print("===========================================\n", .{});
     std.debug.print("Total files:    {d:6}\n", .{stats.total_files});
     std.debug.print("Total lines:    {d:6}\n", .{stats.total_lines});
     std.debug.print("Code lines:     {d:6} ({d:5.1}%)\n", .{
@@ -430,7 +437,7 @@ fn printProjectStats(stats: ProjectStats) void {
             0.0,
     });
     std.debug.print("Total chars:    {d:6}\n", .{stats.total_chars});
-    std.debug.print("═══════════════════════════════════════════\n", .{});
+    std.debug.print("===========================================\n", .{});
 
     if (stats.total_files > 0) {
         const avg_lines = @as(f64, @floatFromInt(stats.total_lines)) / @as(f64, @floatFromInt(stats.total_files));
@@ -442,7 +449,7 @@ fn printProjectStats(stats: ProjectStats) void {
         std.debug.print("Comment ratio:  {d:.2} (comments/code)\n", .{comment_ratio});
     }
 
-    std.debug.print("═══════════════════════════════════════════\n", .{});
+    std.debug.print("===========================================\n", .{});
 }
 
 fn printUsage() void {

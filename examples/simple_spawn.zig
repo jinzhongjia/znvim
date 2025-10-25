@@ -23,7 +23,7 @@ pub fn main() !void {
 
     std.debug.print("Starting Neovim process...\n", .{});
     try client.connect();
-    std.debug.print("✓ Connected to embedded Neovim!\n\n", .{});
+    std.debug.print("[OK] Connected to embedded Neovim!\n\n", .{});
 
     // Get API info
     const info = client.getApiInfo() orelse return error.ApiInfoUnavailable;
@@ -121,6 +121,6 @@ pub fn main() !void {
         }
     }
 
-    std.debug.print("✓ All examples completed successfully!\n", .{});
-    std.debug.print("✓ Neovim process will be terminated automatically\n", .{});
+    std.debug.print("[OK] All examples completed successfully!\n", .{});
+    std.debug.print("[OK] Neovim process will be terminated automatically\n", .{});
 }

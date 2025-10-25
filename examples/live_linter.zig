@@ -1,5 +1,6 @@
 const std = @import("std");
 const znvim = @import("znvim");
+const helper = @import("connection_helper.zig");
 
 /// Production example: Live code linter/checker
 ///
@@ -28,47 +29,29 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer switch (gpa.deinit()) {
         .ok => {},
-        .leak => std.debug.print("warning: leaked allocations\n", .{}),
+        .leak => std.debug.print("Warning: Memory leak detected\n", .{}),
     };
     const allocator = gpa.allocator();
 
-    // Get connection info or spawn clean instance
-    const maybe_address = std.process.getEnvVarOwned(allocator, "NVIM_LISTEN_ADDRESS") catch |err| switch (err) {
-        error.EnvironmentVariableNotFound => null,
-        else => return err,
-    };
-    defer if (maybe_address) |addr| allocator.free(addr);
+    std.debug.print("=== Live Linter Example ===\n\n", .{});
 
-    var client = if (maybe_address == null) blk: {
-        std.debug.print("🚀 Spawning Neovim instance for live linting...\n", .{});
-        break :blk try znvim.Client.init(allocator, .{
-            .spawn_process = true,
-            .nvim_path = "nvim",
-        });
-    } else blk: {
-        std.debug.print("📡 Connecting to Neovim at {s}...\n", .{maybe_address.?});
-        break :blk try znvim.Client.init(allocator, .{
-            .socket_path = maybe_address.?,
-        });
-    };
+    // Smart connect to Neovim
+    var client = try helper.smartConnect(allocator);
     defer client.deinit();
-    try client.connect();
-
-    std.debug.print("✅ Connected to Neovim\n\n", .{});
 
     try demonstrateLiveLinting(&client, allocator);
 }
 
 fn demonstrateLiveLinting(client: *znvim.Client, allocator: std.mem.Allocator) !void {
     std.debug.print("=== Live Linter Demo ===\n\n", .{});
-    std.debug.print("💡 This example demonstrates real-time code checking\n", .{});
+    std.debug.print("This example demonstrates real-time code checking\n", .{});
     std.debug.print("   In production, you would:\n", .{});
     std.debug.print("   1. Subscribe to nvim_buf_attach events\n", .{});
     std.debug.print("   2. Run linter when buffer changes\n", .{});
     std.debug.print("   3. Display results using virtual text or signs\n\n", .{});
 
     // Step 1: Create a buffer with some code
-    std.debug.print("📝 Creating buffer with sample Zig code...\n", .{});
+    std.debug.print("Creating buffer with sample Zig code...\n", .{});
 
     const buf = try client.request("nvim_create_buf", &[_]znvim.msgpack.Value{
         znvim.msgpack.boolean(true), // listed
@@ -111,14 +94,14 @@ fn demonstrateLiveLinting(client: *znvim.Client, allocator: std.mem.Allocator) !
     });
     defer znvim.msgpack.free(set_result, allocator);
 
-    std.debug.print("📄 Sample code loaded:\n", .{});
+    std.debug.print("Sample code loaded:\n", .{});
     for (sample_code, 0..) |line, i| {
         std.debug.print("   {d:2} | {s}\n", .{ i + 1, line });
     }
     std.debug.print("\n", .{});
 
     // Step 3: Simulate linting - analyze the code
-    std.debug.print("🔍 Running linter analysis...\n\n", .{});
+    std.debug.print("Running linter analysis...\n\n", .{});
 
     const diagnostics = [_]Diagnostic{
         .{
@@ -135,14 +118,14 @@ fn demonstrateLiveLinting(client: *znvim.Client, allocator: std.mem.Allocator) !
         },
     };
 
-    std.debug.print("⚠️  Found {d} issue(s):\n\n", .{diagnostics.len});
+    std.debug.print("Found {d} issue(s):\n\n", .{diagnostics.len});
 
     for (diagnostics) |diag| {
         const severity_icon = switch (diag.severity) {
-            .Error => "❌",
-            .Warning => "⚠️ ",
-            .Info => "💡",
-            .Hint => "💭",
+            .Error => "[ERROR]",
+            .Warning => "[WARN] ",
+            .Info => "[INFO] ",
+            .Hint => "[HINT] ",
         };
 
         const severity_name = switch (diag.severity) {
@@ -162,7 +145,7 @@ fn demonstrateLiveLinting(client: *znvim.Client, allocator: std.mem.Allocator) !
     }
 
     // Step 4: Create namespace for diagnostics
-    std.debug.print("📍 Creating diagnostic namespace...\n", .{});
+    std.debug.print("Creating diagnostic namespace...\n", .{});
 
     const ns_name = try znvim.msgpack.string(allocator, "live_linter_demo");
     defer znvim.msgpack.free(ns_name, allocator);
@@ -174,7 +157,7 @@ fn demonstrateLiveLinting(client: *znvim.Client, allocator: std.mem.Allocator) !
     std.debug.print("   Namespace ID: {d}\n\n", .{ns_id});
 
     // Step 5: Add virtual text to show diagnostics
-    std.debug.print("💬 Adding virtual text diagnostics...\n", .{});
+    std.debug.print("Adding virtual text diagnostics...\n", .{});
 
     for (diagnostics) |diag| {
         const virt_text_msg = try std.fmt.allocPrint(
@@ -216,13 +199,13 @@ fn demonstrateLiveLinting(client: *znvim.Client, allocator: std.mem.Allocator) !
         defer znvim.msgpack.free(extmark_result, allocator);
         defer znvim.msgpack.free(opts, allocator); // Free opts after request
 
-        std.debug.print("   ✓ Added diagnostic at line {d}\n", .{diag.line + 1});
+        std.debug.print("   [OK] Added diagnostic at line {d}\n", .{diag.line + 1});
     }
 
     std.debug.print("\n", .{});
 
     // Step 6: Summary and recommendations
-    std.debug.print("📊 Linting Summary:\n", .{});
+    std.debug.print("Linting Summary:\n", .{});
     std.debug.print("   Total issues: {d}\n", .{diagnostics.len});
 
     var error_count: usize = 0;
@@ -241,7 +224,7 @@ fn demonstrateLiveLinting(client: *znvim.Client, allocator: std.mem.Allocator) !
     std.debug.print("   Warnings: {d}\n", .{warning_count});
     std.debug.print("   Info: {d}\n\n", .{info_count});
 
-    std.debug.print("💡 In a production linter, you would:\n", .{});
+    std.debug.print("In a production linter, you would:\n", .{});
     std.debug.print("   1. Use nvim_buf_attach to get real-time change events\n", .{});
     std.debug.print("   2. Debounce changes to avoid too frequent checks\n", .{});
     std.debug.print("   3. Run actual linter (e.g., zig fmt --check, clippy)\n", .{});
@@ -249,7 +232,7 @@ fn demonstrateLiveLinting(client: *znvim.Client, allocator: std.mem.Allocator) !
     std.debug.print("   5. Update extmarks and signs based on diagnostics\n", .{});
     std.debug.print("   6. Provide code actions for auto-fixes\n\n", .{});
 
-    std.debug.print("✨ Live linter demo complete!\n", .{});
+    std.debug.print("Live linter demo complete!\n", .{});
     std.debug.print("   The diagnostics have been added to the buffer\n", .{});
     std.debug.print("   In a real editor, you would see virtual text next to the issues\n", .{});
 }

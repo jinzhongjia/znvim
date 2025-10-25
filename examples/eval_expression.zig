@@ -1,30 +1,21 @@
 const std = @import("std");
 const znvim = @import("znvim");
 const msgpack = znvim.msgpack;
-
-const ExampleError = error{MissingAddress};
+const helper = @import("connection_helper.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer switch (gpa.deinit()) {
         .ok => {},
-        .leak => std.debug.print("warning: leaked allocations\n", .{}),
+        .leak => std.debug.print("Warning: Memory leak detected\n", .{}),
     };
     const allocator = gpa.allocator();
 
-    const address = std.process.getEnvVarOwned(allocator, "NVIM_LISTEN_ADDRESS") catch |err| switch (err) {
-        error.EnvironmentVariableNotFound => {
-            std.debug.print("Set NVIM_LISTEN_ADDRESS before running this example.\n", .{});
-            std.debug.print("Example: export NVIM_LISTEN_ADDRESS=/tmp/nvim.sock\n", .{});
-            return ExampleError.MissingAddress;
-        },
-        else => return err,
-    };
-    defer allocator.free(address);
+    std.debug.print("=== Evaluate Expression Example ===\n\n", .{});
 
-    var client = try znvim.Client.init(allocator, .{ .socket_path = address });
+    // Smart connect to Neovim
+    var client = try helper.smartConnect(allocator);
     defer client.deinit();
-    try client.connect();
 
     std.debug.print("Connected to Neovim!\n\n", .{});
 

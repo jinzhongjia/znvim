@@ -130,16 +130,15 @@ pub fn main() !void {
 
 fn demonstrateFormatter(client: *znvim.Client, allocator: std.mem.Allocator, config: FormatterConfig) !void {
     std.debug.print("=== Formatter Demo ===\n\n", .{});
+    std.debug.print("Note: This demo shows text transformation capabilities.\n", .{});
+    std.debug.print("      In production, integrate external formatters for your languages.\n\n", .{});
 
-    // Create sample Zig code (intentionally unformatted)
+    // Create sample text with mixed case (easier to see the change)
     const sample_code = [_][]const u8{
-        "const std=@import(\"std\");",
-        "",
-        "pub fn main() !void{",
-        "const x=42;",
-        "    const y =   10  ;",
-        "std.debug.print(\"x={}, y={}\\n\",.{x,y});",
-        "}",
+        "hello world from znvim",
+        "this is a test file",
+        "demonstrating text processing",
+        "with neovim rpc client",
     };
 
     std.debug.print("Creating test buffer...\n", .{});
@@ -148,19 +147,6 @@ fn demonstrateFormatter(client: *znvim.Client, allocator: std.mem.Allocator, con
         msgpack.boolean(false), // not scratch
     });
     defer msgpack.free(buf, allocator);
-
-    // Set file type
-    const ft_name = try msgpack.string(allocator, "filetype");
-    defer msgpack.free(ft_name, allocator);
-    const ft_value = try msgpack.string(allocator, "zig");
-    defer msgpack.free(ft_value, allocator);
-
-    const set_opt_result = try client.request("nvim_buf_set_option", &[_]msgpack.Value{
-        buf,
-        ft_name,
-        ft_value,
-    });
-    defer msgpack.free(set_opt_result, allocator);
 
     // Write sample code
     var lines_list = std.array_list.AlignedManaged(msgpack.Value, null).init(allocator);
@@ -183,32 +169,30 @@ fn demonstrateFormatter(client: *znvim.Client, allocator: std.mem.Allocator, con
     });
     defer msgpack.free(set_lines_result, allocator);
 
-    std.debug.print("\nBefore formatting:\n", .{});
-    std.debug.print("─────────────────\n", .{});
+    std.debug.print("\nBefore transformation:\n", .{});
+    std.debug.print("---------------------------------------------\n", .{});
     for (sample_code) |line| {
-        std.debug.print("{s}\n", .{line});
+        std.debug.print("  {s}\n", .{line});
     }
-    std.debug.print("─────────────────\n\n", .{});
+    std.debug.print("---------------------------------------------\n\n", .{});
 
-    // Format
-    std.debug.print("Running zig fmt...\n\n", .{});
-
-    // Set current buffer (some format commands require this)
+    // Set current buffer
     const set_buf_result = try client.request("nvim_set_current_buf", &[_]msgpack.Value{buf});
     defer msgpack.free(set_buf_result, allocator);
 
-    // Execute format command
-    const fmt_cmd = try msgpack.string(allocator, "silent! %!zig fmt --stdin");
-    defer msgpack.free(fmt_cmd, allocator);
+    // Demonstrate text transformation: Convert to UPPERCASE
+    std.debug.print("Applying transformation: Convert to UPPERCASE...\n\n", .{});
+    const upper_cmd = try msgpack.string(allocator, "silent! %s/.*/\\U&/g");
+    defer msgpack.free(upper_cmd, allocator);
 
-    var opts = msgpack.Value.mapPayload(allocator);
-    defer msgpack.free(opts, allocator);
-    try opts.mapPut("output", msgpack.boolean(false));
+    var upper_opts = msgpack.Value.mapPayload(allocator);
+    defer msgpack.free(upper_opts, allocator);
+    try upper_opts.mapPut("output", msgpack.boolean(false));
 
-    const exec_result = try client.request("nvim_exec2", &[_]msgpack.Value{ fmt_cmd, opts });
-    defer msgpack.free(exec_result, allocator);
+    const upper_result = try client.request("nvim_exec2", &[_]msgpack.Value{ upper_cmd, upper_opts });
+    defer msgpack.free(upper_result, allocator);
 
-    // Read formatted content
+    // Read transformed content
     const get_lines_result = try client.request("nvim_buf_get_lines", &[_]msgpack.Value{
         buf,
         msgpack.int(0),
@@ -217,23 +201,27 @@ fn demonstrateFormatter(client: *znvim.Client, allocator: std.mem.Allocator, con
     });
     defer msgpack.free(get_lines_result, allocator);
 
-    const formatted_lines = try msgpack.expectArray(get_lines_result);
+    const transformed_lines = try msgpack.expectArray(get_lines_result);
 
-    std.debug.print("After formatting:\n", .{});
-    std.debug.print("─────────────────\n", .{});
-    for (formatted_lines) |line| {
+    std.debug.print("After transformation:\n", .{});
+    std.debug.print("---------------------------------------------\n", .{});
+    for (transformed_lines) |line| {
         const line_str = msgpack.asString(line) orelse "";
-        std.debug.print("{s}\n", .{line_str});
+        std.debug.print("  {s}\n", .{line_str});
     }
-    std.debug.print("─────────────────\n\n", .{});
+    std.debug.print("---------------------------------------------\n\n", .{});
 
-    std.debug.print("Formatting complete!\n\n", .{});
+    std.debug.print("Transformation complete!\n\n", .{});
 
     if (config.verbose) {
         std.debug.print("Tips:\n", .{});
-        std.debug.print("  - In production, you can batch format multiple files\n", .{});
-        std.debug.print("  - Use --check mode to check only without modifying files\n", .{});
-        std.debug.print("  - You can customize format commands for different languages\n", .{});
+        std.debug.print("  - This demo shows Neovim's built-in text transformations\n", .{});
+        std.debug.print("  - In production, use external formatters:\n", .{});
+        std.debug.print("    * Zig: zig fmt (requires zig installation)\n", .{});
+        std.debug.print("    * Python: black, autopep8\n", .{});
+        std.debug.print("    * JavaScript/TypeScript: prettier, eslint\n", .{});
+        std.debug.print("    * Rust: rustfmt\n", .{});
+        std.debug.print("  - Use --check mode to verify without modifying files\n", .{});
     }
 }
 
@@ -301,7 +289,8 @@ fn formatFile(
     const ft_result = try client.request("nvim_buf_get_option", &[_]msgpack.Value{ buf, ft_name });
     defer msgpack.free(ft_result, allocator);
 
-    const filetype = msgpack.asString(ft_result) orelse "unknown";
+    const ft_str = msgpack.asString(ft_result) orelse "unknown";
+    const filetype = if (ft_str.len == 0) "(not set)" else ft_str;
 
     if (config.verbose) {
         std.debug.print("  File type: {s}\n", .{filetype});

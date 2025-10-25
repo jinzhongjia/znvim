@@ -181,12 +181,15 @@ fn demonstrateSession(client: *znvim.Client, allocator: std.mem.Allocator, confi
 
     // 6.3 Move cursor
     std.debug.print("   3. Move cursor to line 5 column 1\n", .{});
+    const cursor_pos = try msgpack.array(allocator, &[_]msgpack.Value{
+        msgpack.int(5),
+        msgpack.int(0),
+    });
+    defer msgpack.free(cursor_pos, allocator);
+
     const set_cursor_result = try client.request("nvim_win_set_cursor", &[_]msgpack.Value{
         msgpack.int(0), // current window
-        try msgpack.array(allocator, &[_]msgpack.Value{
-            msgpack.int(5),
-            msgpack.int(0),
-        }),
+        cursor_pos,
     });
     defer msgpack.free(set_cursor_result, allocator);
 
@@ -194,7 +197,7 @@ fn demonstrateSession(client: *znvim.Client, allocator: std.mem.Allocator, confi
 
     // 7. Display final content
     std.debug.print("Final buffer content:\n", .{});
-    std.debug.print("═══════════════════════════════════════════\n", .{});
+    std.debug.print("===========================================\n", .{});
 
     const final_lines_result = try client.request("nvim_buf_get_lines", &[_]msgpack.Value{
         buf,
@@ -209,7 +212,7 @@ fn demonstrateSession(client: *znvim.Client, allocator: std.mem.Allocator, confi
         const line_str = msgpack.asString(line) orelse "";
         std.debug.print("{d:2} | {s}\n", .{ i + 1, line_str });
     }
-    std.debug.print("═══════════════════════════════════════════\n\n", .{});
+    std.debug.print("===========================================\n\n", .{});
 
     // 8. Buffer information
     try printBufferInfo(client, allocator, buf);
@@ -272,7 +275,7 @@ fn editFile(client: *znvim.Client, allocator: std.mem.Allocator, config: Session
         std.debug.print("... ({d} lines not shown)\n", .{lines.len - preview_lines});
     }
 
-    std.debug.print("═══════════════════════════════════════════\n\n", .{});
+    std.debug.print("===========================================\n\n", .{});
 
     if (config.show_cursor_position) {
         try showCursorInfo(client, allocator);
@@ -289,7 +292,7 @@ fn editFile(client: *znvim.Client, allocator: std.mem.Allocator, config: Session
 
 fn printEditorState(client: *znvim.Client, allocator: std.mem.Allocator) !void {
     std.debug.print("Editor state:\n", .{});
-    std.debug.print("───────────────────────────────────────────\n", .{});
+    std.debug.print("-------------------------------------------\n", .{});
 
     // Get all buffers
     const bufs_result = try client.request("nvim_list_bufs", &[_]msgpack.Value{});
@@ -324,12 +327,12 @@ fn printEditorState(client: *znvim.Client, allocator: std.mem.Allocator) !void {
         }
     }
 
-    std.debug.print("───────────────────────────────────────────\n\n", .{});
+    std.debug.print("-------------------------------------------\n\n", .{});
 }
 
 fn printBufferInfo(client: *znvim.Client, allocator: std.mem.Allocator, buf: msgpack.Value) !void {
     std.debug.print("Buffer information:\n", .{});
-    std.debug.print("───────────────────────────────────────────\n", .{});
+    std.debug.print("-------------------------------------------\n", .{});
 
     // Get buffer name
     const name_result = try client.request("nvim_buf_get_name", &[_]msgpack.Value{buf});
@@ -352,7 +355,8 @@ fn printBufferInfo(client: *znvim.Client, allocator: std.mem.Allocator, buf: msg
     const ft_result = try client.request("nvim_buf_get_option", &[_]msgpack.Value{ buf, ft_name });
     defer msgpack.free(ft_result, allocator);
 
-    const filetype = msgpack.asString(ft_result) orelse "(not set)";
+    const ft_str = msgpack.asString(ft_result) orelse "(not set)";
+    const filetype = if (ft_str.len == 0) "(not set)" else ft_str;
     std.debug.print("  File type: {s}\n", .{filetype});
 
     // Check if modified
@@ -365,7 +369,7 @@ fn printBufferInfo(client: *znvim.Client, allocator: std.mem.Allocator, buf: msg
     const modified = msgpack.asBool(mod_result) orelse false;
     std.debug.print("  Modified: {}\n", .{modified});
 
-    std.debug.print("───────────────────────────────────────────\n", .{});
+    std.debug.print("-------------------------------------------\n", .{});
 }
 
 fn showCursorInfo(client: *znvim.Client, allocator: std.mem.Allocator) !void {

@@ -162,11 +162,11 @@ fn demonstrateSearchReplace(client: *znvim.Client, allocator: std.mem.Allocator,
     defer msgpack.free(set_lines_result, allocator);
 
     std.debug.print("Original code:\n", .{});
-    std.debug.print("════════════════════════════════════════════\n", .{});
+    std.debug.print("============================================\n", .{});
     for (sample_code, 0..) |line, i| {
         std.debug.print("{d:2} | {s}\n", .{ i + 1, line });
     }
-    std.debug.print("════════════════════════════════════════════\n\n", .{});
+    std.debug.print("============================================\n\n", .{});
 
     // Demo 1: Simple replace
     std.debug.print("Example 1: Replace 'oldName' with 'newName'\n\n", .{});
@@ -190,7 +190,7 @@ fn demonstrateSearchReplace(client: *znvim.Client, allocator: std.mem.Allocator,
     const modified_lines = try msgpack.expectArray(get_lines_result);
 
     std.debug.print("Modified code:\n", .{});
-    std.debug.print("════════════════════════════════════════════\n", .{});
+    std.debug.print("============================================\n", .{});
     for (modified_lines, 0..) |line, i| {
         const line_str = msgpack.asString(line) orelse "";
         // Highlight modified lines
@@ -200,7 +200,7 @@ fn demonstrateSearchReplace(client: *znvim.Client, allocator: std.mem.Allocator,
             std.debug.print("{d:2} | {s}\n", .{ i + 1, line_str });
         }
     }
-    std.debug.print("════════════════════════════════════════════\n\n", .{});
+    std.debug.print("============================================\n\n", .{});
 
     std.debug.print("Demo complete!\n\n", .{});
 
@@ -369,14 +369,14 @@ fn replaceInFile(
 }
 
 fn printStats(stats: ReplaceStats) void {
-    std.debug.print("═══════════════════════════════════════════\n", .{});
+    std.debug.print("===========================================\n", .{});
     std.debug.print("Replace Statistics\n", .{});
-    std.debug.print("═══════════════════════════════════════════\n", .{});
+    std.debug.print("===========================================\n", .{});
     std.debug.print("Files scanned:   {d}\n", .{stats.files_scanned});
     std.debug.print("Files modified:  {d}\n", .{stats.files_modified});
     std.debug.print("Total replaces:  {d}\n", .{stats.total_replacements});
     std.debug.print("Errors:          {d}\n", .{stats.errors});
-    std.debug.print("═══════════════════════════════════════════\n", .{});
+    std.debug.print("===========================================\n", .{});
 
     if (stats.files_modified > 0) {
         const avg = @as(f64, @floatFromInt(stats.total_replacements)) / @as(f64, @floatFromInt(stats.files_modified));

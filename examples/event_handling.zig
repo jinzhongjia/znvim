@@ -1,6 +1,7 @@
 const std = @import("std");
 const znvim = @import("znvim");
 const msgpack = znvim.msgpack;
+const helper = @import("connection_helper.zig");
 
 fn eventHandler(method: []const u8, params: msgpack.Value, userdata: ?*anyopaque) void {
     _ = userdata;
@@ -16,22 +17,17 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    std.debug.print("Creating client...\n", .{});
-    var client = try znvim.Client.init(allocator, .{
-        .spawn_process = true,
-        .nvim_path = "nvim",
-        .timeout_ms = 5000,
-    });
-    defer client.deinit();
+    std.debug.print("=== Event Handling Example ===\n\n", .{});
 
-    std.debug.print("Connecting...\n", .{});
-    try client.connect();
+    // Smart connect to Neovim
+    var client = try helper.smartConnect(allocator);
+    defer client.deinit();
 
     std.debug.print("Setting event handler...\n", .{});
     client.setEventHandler(eventHandler, null);
 
     const api_info = client.getApiInfo() orelse return error.NoApiInfo;
-    std.debug.print("Channel ID: {d}\n", .{api_info.channel_id});
+    std.debug.print("Channel ID: {d}\n\n", .{api_info.channel_id});
 
     std.debug.print("Sending notification via lua...\n", .{});
     const lua_code_str = try std.fmt.allocPrint(
@@ -51,7 +47,7 @@ pub fn main() !void {
     const result = try client.request("nvim_exec_lua", &.{ lua_code, empty_arr });
     defer msgpack.free(result, allocator);
 
-    std.debug.print("Lua executed successfully\n", .{});
+    std.debug.print("Lua executed successfully\n\n", .{});
 
     // Wait a bit for the notification to arrive
     std.debug.print("Waiting for events...\n", .{});
