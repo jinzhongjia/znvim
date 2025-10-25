@@ -1,4 +1,4 @@
-name: Benchmark Build
+name: Benchmark
 
 run-name: "Benchmark ⚡ [${{ github.event_name == 'pull_request' && format('PR #{0}', github.event.pull_request.number) || github.ref_name }}] by @${{ github.actor }}"
 
@@ -10,6 +10,7 @@ on:
             - "**.zig"
             - "build.zig.zon"
             - ".github/workflows/benchmark.yml"
+            - ".github/workflows/test.yml"
     pull_request:
         branches:
             - "*"
@@ -17,11 +18,22 @@ on:
             - "**.zig"
             - "build.zig.zon"
             - ".github/workflows/benchmark.yml"
+            - ".github/workflows/test.yml"
     workflow_dispatch:
+    workflow_run:
+        workflows: ["Test"]
+        types:
+            - completed
 
 jobs:
-    build-benchmark:
+    benchmark:
         name: "Benchmark on ${{ matrix.os }} (Zig ${{ matrix.version }})"
+        # 只在 Test 成功后运行，或者是 workflow_dispatch 触发
+        if: |
+            (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+            github.event_name == 'workflow_dispatch' ||
+            github.event_name == 'push' ||
+            github.event_name == 'pull_request'
         strategy:
             matrix:
                 os: [ubuntu-latest, macos-latest, windows-latest]
@@ -51,4 +63,3 @@ jobs:
                   path: |
                       zig-out/bin/benchmark*
                   retention-days: 7
-

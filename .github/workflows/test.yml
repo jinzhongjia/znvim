@@ -1,6 +1,6 @@
-name: CI
+name: Test
 
-run-name: "CI 🧪 [${{ github.event_name == 'pull_request' && format('PR #{0}', github.event.pull_request.number) || github.ref_name }}] by @${{ github.actor }}"
+run-name: "Test 🧪 [${{ github.event_name == 'pull_request' && format('PR #{0}', github.event.pull_request.number) || github.ref_name }}] by @${{ github.actor }}"
 
 on:
     push:
@@ -9,45 +9,59 @@ on:
         paths:
             - "**.zig"
             - "build.zig.zon"
-            - ".github/workflows/ci.yml"
+            - ".github/workflows/test.yml"
+            - ".github/workflows/format-check.yml"
     pull_request:
         branches:
             - "*"
         paths:
             - "**.zig"
             - "build.zig.zon"
-            - ".github/workflows/ci.yml"
+            - ".github/workflows/test.yml"
+            - ".github/workflows/format-check.yml"
     schedule:
         - cron: "0 2 * * *"  # 每天 UTC 02:00，仅在 main 分支运行
     workflow_dispatch:
+    workflow_run:
+        workflows: ["Format Check"]
+        types:
+            - completed
 
 jobs:
-    build:
+    test:
         name: "Test on ${{ matrix.os }} (Zig ${{ matrix.version }})"
-        # 定时任务只在 main 分支运行，其他事件在所有分支运行
+        # 只在 Format Check 成功后运行，或者是 schedule/workflow_dispatch 触发
         if: |
-            github.event_name != 'schedule' || 
-            (github.event_name == 'schedule' && github.ref == 'refs/heads/main')
+            (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+            github.event_name == 'schedule' ||
+            github.event_name == 'workflow_dispatch' ||
+            github.event_name == 'push' ||
+            github.event_name == 'pull_request'
+        # 定时任务只在 main 分支运行
+        runs-on: ${{ matrix.os }}
         strategy:
             matrix:
                 os: [ubuntu-latest, macos-latest, windows-latest]
                 # 定时任务只测试 Zig master 版本，其他事件测试两个版本
                 version: ${{ github.event_name == 'schedule' && fromJSON('["master"]') || fromJSON('["0.15.1", "master"]') }}
             fail-fast: false
-        runs-on: ${{ matrix.os }}
         steps:
             - name: Install Neovim
               uses: jinzhongjia/neovim-action@v1.0.2
               with:
-                  version: stable # or nightly, 0.9.5, 0.10.3, 0.11.4, etc.
+                  version: stable
+
             - name: Setup Zig
               uses: goto-bus-stop/setup-zig@v2
               with:
                   version: ${{ matrix.version }}
+
             - uses: actions/checkout@v4
               with:
                   fetch-depth: 0
+
             - name: Build and test with Zig
               run: zig build test --summary all
+
             - name: Build examples
               run: zig build examples

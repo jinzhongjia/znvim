@@ -1,16 +1,25 @@
 name: Format Check
 
+run-name: "Format Check 📝 [${{ github.event_name == 'pull_request' && format('PR #{0}', github.event.pull_request.number) || github.ref_name }}] by @${{ github.actor }}"
+
 on:
     push:
         branches:
             - "*"
+        paths:
+            - "**.zig"
+            - ".github/workflows/format-check.yml"
     pull_request:
         branches:
             - "*"
+        paths:
+            - "**.zig"
+            - ".github/workflows/format-check.yml"
     workflow_dispatch:
 
 jobs:
     format:
+        name: "Check Zig code formatting"
         runs-on: ubuntu-latest
         steps:
             - name: Setup Zig
@@ -22,4 +31,3 @@ jobs:
             
             - name: Check Zig code formatting
               run: zig fmt --check .
-

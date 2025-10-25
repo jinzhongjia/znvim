@@ -8,7 +8,8 @@ on:
     paths:
       - "**.zig"
       - "build.zig.zon"
-  # Allows you to run this workflow manually from the Actions tab
+      - ".github/workflows/deploy_docs.yml"
+      - ".github/workflows/test.yml"
   workflow_dispatch:
     inputs:
       logLevel:
@@ -17,33 +18,50 @@ on:
         default: "warning"
       tags:
         description: "deploy docs"
+  workflow_run:
+    workflows: ["Test"]
+    types:
+      - completed
+    branches:
+      - main
+
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: write
   pages: write
   id-token: write
+
 # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
 # However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
   group: pages
   cancel-in-progress: false
+
 jobs:
-  # Build job
   build:
     name: "Build Docs"
+    # 只在 Test 成功后运行，或者是 workflow_dispatch 触发
+    if: |
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0 # Not needed if lastUpdated is not enabled
+          fetch-depth: 0
+
       - uses: goto-bus-stop/setup-zig@v2
+
       - name: Generate Docs
         run: zig build docs
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./zig-out/docs
+
   deploy:
     name: "Deploy to GitHub Pages"
     environment:
