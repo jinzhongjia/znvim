@@ -348,22 +348,22 @@ test "message id counter persists across disconnect" {
     _ = client.nextMessageId();
 
     const id_before = client.next_msgid.load(.monotonic);
-    
+
     // Verify we generated exactly 3 IDs (may be offset if other tests ran first)
     try std.testing.expectEqual(@as(u32, 3), id_before - id_start);
 
     // Disconnect and reconnect
     client.disconnect();
     try client.connect();
-    
+
     // Note: connect() calls refreshApiInfo() which makes a request (consuming 1 ID)
     // So the ID after reconnect will be start + 3 (before disconnect) + 1 (api info request)
     const id_after_connect = client.next_msgid.load(.monotonic);
     const id_consumed_by_reconnect = id_after_connect - id_before;
-    
+
     // Verify ID wasn't reset to 0, and we consumed some IDs for reconnection
     try std.testing.expect(id_after_connect > id_before);
-    try std.testing.expect(id_consumed_by_reconnect >= 1);  // At least api info request
+    try std.testing.expect(id_consumed_by_reconnect >= 1); // At least api info request
 }
 
 // Test: Sequential errors don't break the client (concurrent version removed due to thread safety)
@@ -391,4 +391,3 @@ test "sequential errors don't break client state" {
     defer msgpack.free(result, allocator);
     try std.testing.expectEqual(@as(i64, 123), try msgpack.expectI64(result));
 }
-
