@@ -5,15 +5,20 @@ on:
         branches:
             - "*"
     schedule:
-        - cron: "0 2 * * *"
+        - cron: "0 2 * * *"  # 每天 UTC 02:00，仅在 main 分支运行
     workflow_dispatch:
 
 jobs:
     build:
+        # 定时任务只在 main 分支运行，其他事件在所有分支运行
+        if: |
+            github.event_name != 'schedule' || 
+            (github.event_name == 'schedule' && github.ref == 'refs/heads/main')
         strategy:
             matrix:
                 os: [ubuntu-latest, macos-latest, windows-latest]
-                version: [0.15.1, master]
+                # 定时任务只测试 Zig master 版本，其他事件测试两个版本
+                version: ${{ github.event_name == 'schedule' && fromJSON('["master"]') || fromJSON('["0.15.1", "master"]') }}
             fail-fast: false
         runs-on: ${{ matrix.os }}
         steps:
