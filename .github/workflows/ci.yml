@@ -1,5 +1,7 @@
 name: CI
 
+run-name: "CI 🧪 [${{ github.ref_name }}] ${{ github.event_name == 'schedule' && '⏰ Scheduled' || github.event_name == 'workflow_dispatch' && '🔧 Manual' || github.event.head_commit.message }} @${{ github.actor }}"
+
 on:
     push:
         branches:
@@ -10,6 +12,7 @@ on:
 
 jobs:
     build:
+        name: "Test on ${{ matrix.os }} (Zig ${{ matrix.version }})"
         # 定时任务只在 main 分支运行，其他事件在所有分支运行
         if: |
             github.event_name != 'schedule' || 

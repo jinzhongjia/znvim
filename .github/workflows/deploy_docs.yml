@@ -1,4 +1,7 @@
-name: DeployDocs
+name: Deploy Docs
+
+run-name: "Deploy Docs 📚 [${{ github.ref_name }}] ${{ github.event_name == 'workflow_dispatch' && '🔧 Manual' || github.event.head_commit.message }} @${{ github.actor }}"
+
 on:
   push:
     branches: [main]
@@ -24,6 +27,7 @@ concurrency:
 jobs:
   # Build job
   build:
+    name: "Build Docs"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -38,6 +42,7 @@ jobs:
         with:
           path: ./zig-out/docs
   deploy:
+    name: "Deploy to GitHub Pages"
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
