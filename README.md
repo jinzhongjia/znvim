@@ -2,8 +2,6 @@
 
 A lightweight Neovim RPC client for Zig that discovers the runtime API via `nvim_get_api_info`, manages transports, and ships a high-level MessagePack helper so application code never needs to touch the raw `zig-msgpack` API.
 
-> **Status:** experimental. Core transports (Unix socket, Windows named pipe, TCP, stdio, embedded child process) are present but the library surface may change while stabilising the msgpack façade.
-
 ## Highlights
 
 - **Runtime API discovery** – obtain structured metadata (`ApiInfo`, `ApiFunction`, `ApiParameter`) describing exactly what the connected Neovim instance exposes.
@@ -96,6 +94,20 @@ zig build examples
 | `api_lookup.zig` | Looks up metadata for a single API function by name. |
 
 Build all examples in one go with `zig build examples`; binaries are placed under `zig-out/bin/`.
+
+## Documentation
+
+Comprehensive documentation is available in the [`doc/`](doc/) directory:
+
+- **[Quick Start](doc/00-quick-start.md)** - Get started in 5 minutes
+- **[Connection Methods](doc/01-connections.md)** - Learn all connection options (Unix Socket, Named Pipe, TCP, ChildProcess, Stdio)
+- **[API Usage](doc/02-api-usage.md)** - Complete guide to calling Neovim APIs with examples
+- **[Event Subscription](doc/03-events.md)** - Handle buffer events, autocommands, and UI events
+- **[Advanced Usage](doc/04-advanced.md)** - Thread safety, memory management, performance optimization
+- **[Code Examples](doc/05-examples.md)** - Real-world examples (file editor, REPL, formatter, etc.)
+- **[Common Patterns](doc/06-patterns.md)** - Best practices and design patterns
+
+👉 **Start here**: [doc/README.md](doc/README.md)
 
 ## MessagePack helper overview
 

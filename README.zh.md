@@ -2,8 +2,6 @@
 
 轻量级的 Neovim RPC 客户端，使用 Zig 编写。znvim 通过 `nvim_get_api_info` 动态获取运行时 API，提供多种传输方式，并自带易用的 MessagePack 封装，使用者无需直接对接 `zig-msgpack`。
 
-> **状态：实验性**。核心传输支持（Unix 套接字、Windows 命名管道、TCP、stdio、自动启动 `nvim --embed`）已实现，但在 msgpack 外观接口稳定之前，公共 API 仍可能调整。
-
 ## 特性
 
 - **运行时 API 发现**：通过 `ApiInfo`、`ApiFunction`、`ApiParameter` 等结构返回完整的 Neovim API 元数据。
@@ -95,6 +93,20 @@ zig build examples
 | `api_lookup.zig` | 根据名称查询单个 API 函数的元数据。 |
 
 执行 `zig build examples` 后可在 `zig-out/bin/` 目录中找到全部示例可执行文件。
+
+## 文档
+
+完整的英文文档位于 [`doc/`](doc/) 目录：
+
+- **[快速开始](doc/00-quick-start.md)** - 5 分钟快速入门
+- **[连接方式](doc/01-connections.md)** - 学习所有连接选项（Unix Socket、Named Pipe、TCP、ChildProcess、Stdio）
+- **[API 使用](doc/02-api-usage.md)** - 完整的 Neovim API 调用指南和示例
+- **[事件订阅](doc/03-events.md)** - 处理缓冲区事件、autocommand 和 UI 事件
+- **[高级用法](doc/04-advanced.md)** - 线程安全、内存管理、性能优化
+- **[代码示例](doc/05-examples.md)** - 真实世界的示例（文件编辑器、REPL、格式化工具等）
+- **[常用模式](doc/06-patterns.md)** - 最佳实践和设计模式
+
+👉 **从这里开始**: [doc/README.md](doc/README.md)
 
 ## MessagePack 辅助层概览
 
