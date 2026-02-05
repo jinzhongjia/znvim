@@ -67,23 +67,18 @@ pub fn main() !void {
         }
     }
 
-    // Example 3: Get Neovim mode
+    // Example 3: Get Neovim mode (using nvim_eval instead of nvim_get_mode due to Neovim bug #21630)
     std.debug.print("Example 3: Getting current mode\n", .{});
     {
-        const result = try client.request("nvim_get_mode", &.{});
+        const mode_expr = try msgpack.string(allocator, "mode()");
+        defer msgpack.free(mode_expr, allocator);
+
+        const params = [_]msgpack.Value{mode_expr};
+        const result = try client.request("nvim_eval", &params);
         defer msgpack.free(result, allocator);
 
-        if (result == .map) {
-            if (result.map.get("mode")) |mode_val| {
-                if (msgpack.asString(mode_val)) |mode| {
-                    std.debug.print("  Current mode: {s}\n", .{mode});
-                }
-            }
-            if (result.map.get("blocking")) |blocking_val| {
-                if (msgpack.asBool(blocking_val)) |blocking| {
-                    std.debug.print("  Blocking: {}\n\n", .{blocking});
-                }
-            }
+        if (msgpack.asString(result)) |mode| {
+            std.debug.print("  Current mode: {s}\n\n", .{mode});
         }
     }
 

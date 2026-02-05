@@ -105,7 +105,7 @@ pub fn spawnChildProcess(allocator: std.mem.Allocator, nvim_path: []const u8) Co
     var child = std.process.Child.init(&argv, allocator);
     child.stdin_behavior = .Pipe;
     child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Pipe;
+    child.stderr_behavior = .Inherit; // Let stderr go to parent's stderr (avoid pipe buffer issues)
 
     child.spawn() catch |err| {
         std.log.err("Failed to spawn child process: {s}, error: {}", .{ nvim_path, err });

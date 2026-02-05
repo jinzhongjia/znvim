@@ -45,8 +45,11 @@ test "performance: throughput - 1000 sequential requests" {
 
     var i: usize = 0;
     while (i < iterations) : (i += 1) {
-        const params = [_]msgpack.Value{};
-        const result = try client.request("nvim_get_mode", &params);
+        // Use nvim_eval("mode()") instead of nvim_get_mode (Neovim bug #21630)
+        const mode_expr = try msgpack.string(allocator, "mode()");
+        defer msgpack.free(mode_expr, allocator);
+        const params = [_]msgpack.Value{mode_expr};
+        const result = try client.request("nvim_eval", &params);
         defer msgpack.free(result, allocator);
     }
 
@@ -97,10 +100,12 @@ test "performance: throughput - mixed operations" {
 
     var i: usize = 0;
     while (i < iterations) : (i += 4) {
-        // 操作 1: 获取模式
+        // 操作 1: 获取模式 (使用 nvim_eval 替代 nvim_get_mode)
         {
-            const params = [_]msgpack.Value{};
-            const result = try client.request("nvim_get_mode", &params);
+            const mode_expr = try msgpack.string(allocator, "mode()");
+            defer msgpack.free(mode_expr, allocator);
+            const params = [_]msgpack.Value{mode_expr};
+            const result = try client.request("nvim_eval", &params);
             defer msgpack.free(result, allocator);
         }
 
@@ -144,10 +149,12 @@ test "performance: latency - single request" {
     const client = try createBenchmarkClient(allocator);
     defer destroyBenchmarkClient(client, allocator);
 
-    // 测量单个请求的延迟
+    // 测量单个请求的延迟 (使用 nvim_eval 替代 nvim_get_mode)
     const start_time = std.time.microTimestamp();
-    const params = [_]msgpack.Value{};
-    const result = try client.request("nvim_get_mode", &params);
+    const mode_expr = try msgpack.string(allocator, "mode()");
+    defer msgpack.free(mode_expr, allocator);
+    const params = [_]msgpack.Value{mode_expr};
+    const result = try client.request("nvim_eval", &params);
     defer msgpack.free(result, allocator);
     const end_time = std.time.microTimestamp();
 
@@ -170,8 +177,11 @@ test "performance: latency - average over 100 requests" {
     var i: usize = 0;
     while (i < iterations) : (i += 1) {
         const start_time = std.time.microTimestamp();
-        const params = [_]msgpack.Value{};
-        const result = try client.request("nvim_get_mode", &params);
+        // 使用 nvim_eval 替代 nvim_get_mode
+        const mode_expr = try msgpack.string(allocator, "mode()");
+        defer msgpack.free(mode_expr, allocator);
+        const params = [_]msgpack.Value{mode_expr};
+        const result = try client.request("nvim_eval", &params);
         defer msgpack.free(result, allocator);
         const end_time = std.time.microTimestamp();
 
@@ -202,11 +212,13 @@ test "performance: memory - leak detection over 1000 iterations" {
     const client = try createBenchmarkClient(allocator);
     defer destroyBenchmarkClient(client, allocator);
 
-    // 执行 1000 次请求，检查内存泄漏
+    // 执行 1000 次请求，检查内存泄漏 (使用 nvim_eval 替代 nvim_get_mode)
     var i: usize = 0;
     while (i < 1000) : (i += 1) {
-        const params = [_]msgpack.Value{};
-        const result = try client.request("nvim_get_mode", &params);
+        const mode_expr = try msgpack.string(allocator, "mode()");
+        defer msgpack.free(mode_expr, allocator);
+        const params = [_]msgpack.Value{mode_expr};
+        const result = try client.request("nvim_eval", &params);
         defer msgpack.free(result, allocator);
     }
 
@@ -234,9 +246,11 @@ test "performance: memory - repeated connect/disconnect cycles" {
 
         try client.connect();
 
-        // 执行一些操作
-        const params = [_]msgpack.Value{};
-        const result = try client.request("nvim_get_mode", &params);
+        // 执行一些操作 (使用 nvim_eval 替代 nvim_get_mode)
+        const mode_expr = try msgpack.string(allocator, "mode()");
+        defer msgpack.free(mode_expr, allocator);
+        const params = [_]msgpack.Value{mode_expr};
+        const result = try client.request("nvim_eval", &params);
         defer msgpack.free(result, allocator);
 
         client.disconnect();
@@ -305,8 +319,11 @@ test "performance: stability - sustained load 5000 requests" {
 
     var i: usize = 0;
     while (i < iterations) : (i += 1) {
-        const params = [_]msgpack.Value{};
-        const result = client.request("nvim_get_mode", &params);
+        // 使用 nvim_eval 替代 nvim_get_mode
+        const mode_expr = msgpack.string(allocator, "mode()") catch continue;
+        defer msgpack.free(mode_expr, allocator);
+        const params = [_]msgpack.Value{mode_expr};
+        const result = client.request("nvim_eval", &params);
 
         if (result) |res| {
             defer msgpack.free(res, allocator);
@@ -333,11 +350,13 @@ test "performance: stability - burst traffic pattern" {
 
     var burst: usize = 0;
     while (burst < bursts) : (burst += 1) {
-        // 突发：快速发送请求
-        var i: usize = 0;
-        while (i < requests_per_burst) : (i += 1) {
-            const params = [_]msgpack.Value{};
-            const result = try client.request("nvim_get_mode", &params);
+        // 突发：快速发送请求 (使用 nvim_eval 替代 nvim_get_mode)
+        var j: usize = 0;
+        while (j < requests_per_burst) : (j += 1) {
+            const mode_expr = try msgpack.string(allocator, "mode()");
+            defer msgpack.free(mode_expr, allocator);
+            const params = [_]msgpack.Value{mode_expr};
+            const result = try client.request("nvim_eval", &params);
             defer msgpack.free(result, allocator);
             total_success += 1;
         }
@@ -363,10 +382,12 @@ test "performance: stability - error recovery under load" {
     while (i < iterations) : (i += 2) {
         // 交替执行成功和失败的请求
 
-        // 成功的请求
+        // 成功的请求 (使用 nvim_eval 替代 nvim_get_mode)
         {
-            const params = [_]msgpack.Value{};
-            const result = try client.request("nvim_get_mode", &params);
+            const mode_expr = try msgpack.string(allocator, "mode()");
+            defer msgpack.free(mode_expr, allocator);
+            const params = [_]msgpack.Value{mode_expr};
+            const result = try client.request("nvim_eval", &params);
             defer msgpack.free(result, allocator);
             success_count += 1;
         }
@@ -413,9 +434,11 @@ test "performance: resource limits - max message size" {
     // 这可能成功也可能失败，取决于 Neovim 的限制
     const params = [_]msgpack.Value{expr};
     _ = client.request("nvim_eval", &params) catch {
-        // 如果失败，至少客户端应该能恢复
-        const test_params = [_]msgpack.Value{};
-        const result = try client.request("nvim_get_mode", &test_params);
+        // 如果失败，至少客户端应该能恢复 (使用 nvim_eval 替代 nvim_get_mode)
+        const mode_expr = try msgpack.string(allocator, "mode()");
+        defer msgpack.free(mode_expr, allocator);
+        const test_params = [_]msgpack.Value{mode_expr};
+        const result = try client.request("nvim_eval", &test_params);
         defer msgpack.free(result, allocator);
     };
 }
@@ -435,9 +458,11 @@ test "performance: resource limits - rapid connection cycling" {
 
         try client.connect();
 
-        // 执行单个请求
-        const params = [_]msgpack.Value{};
-        const result = try client.request("nvim_get_mode", &params);
+        // 执行单个请求 (使用 nvim_eval 替代 nvim_get_mode)
+        const mode_expr = try msgpack.string(allocator, "mode()");
+        defer msgpack.free(mode_expr, allocator);
+        const params = [_]msgpack.Value{mode_expr};
+        const result = try client.request("nvim_eval", &params);
         defer msgpack.free(result, allocator);
 
         client.disconnect();
@@ -471,12 +496,14 @@ test "performance: concurrency - multiple clients sequential" {
 
     const start_time = std.time.milliTimestamp();
 
-    // 每个客户端依次执行请求
+    // 每个客户端依次执行请求 (使用 nvim_eval 替代 nvim_get_mode)
     for (clients) |client| {
-        var i: usize = 0;
-        while (i < requests_per_client) : (i += 1) {
-            const params = [_]msgpack.Value{};
-            const result = try client.request("nvim_get_mode", &params);
+        var j: usize = 0;
+        while (j < requests_per_client) : (j += 1) {
+            const mode_expr = try msgpack.string(allocator, "mode()");
+            defer msgpack.free(mode_expr, allocator);
+            const params = [_]msgpack.Value{mode_expr};
+            const result = try client.request("nvim_eval", &params);
             defer msgpack.free(result, allocator);
         }
     }

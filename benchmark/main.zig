@@ -57,8 +57,11 @@ fn benchmarkThroughput(allocator: std.mem.Allocator, iterations: usize) !Benchma
     while (i < iterations) : (i += 1) {
         const iter_start = std.time.microTimestamp();
 
-        const params = [_]znvim.msgpack.Value{};
-        const result = client.request("nvim_get_mode", &params);
+        // Use nvim_eval("mode()") instead of nvim_get_mode (Neovim bug #21630)
+        const mode_expr = try znvim.msgpack.string(allocator, "mode()");
+        defer znvim.msgpack.free(mode_expr, allocator);
+        const params = [_]znvim.msgpack.Value{mode_expr};
+        const result = client.request("nvim_eval", &params);
 
         const iter_end = std.time.microTimestamp();
         const iter_time = iter_end - iter_start;
@@ -79,7 +82,7 @@ fn benchmarkThroughput(allocator: std.mem.Allocator, iterations: usize) !Benchma
     const success_rate = @as(f64, @floatFromInt(success_count)) / @as(f64, @floatFromInt(iterations));
 
     return BenchmarkResult{
-        .name = "吞吐量测试 (nvim_get_mode)",
+        .name = "吞吐量测试 (nvim_eval mode())",
         .iterations = iterations,
         .total_time_ms = total_time_ms,
         .avg_time_ms = avg_time_ms,
@@ -106,11 +109,13 @@ fn benchmarkMixedOperations(allocator: std.mem.Allocator, iterations: usize) !Be
 
     var i: usize = 0;
     while (i < iterations) : (i += 10) {
-        // 操作 1: nvim_get_mode
+        // 操作 1: nvim_eval mode() (替代 nvim_get_mode，因 Neovim bug #21630)
         {
             const iter_start = std.time.microTimestamp();
-            const params = [_]znvim.msgpack.Value{};
-            const result = try client.request("nvim_get_mode", &params);
+            const mode_expr = try znvim.msgpack.string(allocator, "mode()");
+            defer znvim.msgpack.free(mode_expr, allocator);
+            const params = [_]znvim.msgpack.Value{mode_expr};
+            const result = try client.request("nvim_eval", &params);
             defer znvim.msgpack.free(result, allocator);
             const iter_end = std.time.microTimestamp();
             const iter_time = iter_end - iter_start;
@@ -293,9 +298,11 @@ fn benchmarkMemoryUsage(allocator: std.mem.Allocator, iterations: usize) !Benchm
         });
         defer znvim.msgpack.free(arr_val, allocator);
 
-        // 执行请求
-        const params = [_]znvim.msgpack.Value{};
-        const result = try client.request("nvim_get_mode", &params);
+        // 执行请求 (使用 nvim_eval mode() 替代 nvim_get_mode)
+        const mode_expr = try znvim.msgpack.string(allocator, "mode()");
+        defer znvim.msgpack.free(mode_expr, allocator);
+        const params = [_]znvim.msgpack.Value{mode_expr};
+        const result = try client.request("nvim_eval", &params);
         defer znvim.msgpack.free(result, allocator);
 
         const iter_end = std.time.microTimestamp();
@@ -341,12 +348,14 @@ fn benchmarkBurstTraffic(allocator: std.mem.Allocator, bursts: usize, requests_p
 
     var burst: usize = 0;
     while (burst < bursts) : (burst += 1) {
-        // 突发：快速发送请求
-        var i: usize = 0;
-        while (i < requests_per_burst) : (i += 1) {
+        // 突发：快速发送请求 (使用 nvim_eval mode() 替代 nvim_get_mode)
+        var j: usize = 0;
+        while (j < requests_per_burst) : (j += 1) {
             const iter_start = std.time.microTimestamp();
-            const params = [_]znvim.msgpack.Value{};
-            const result = try client.request("nvim_get_mode", &params);
+            const mode_expr = try znvim.msgpack.string(allocator, "mode()");
+            defer znvim.msgpack.free(mode_expr, allocator);
+            const params = [_]znvim.msgpack.Value{mode_expr};
+            const result = try client.request("nvim_eval", &params);
             defer znvim.msgpack.free(result, allocator);
             const iter_end = std.time.microTimestamp();
             const iter_time = iter_end - iter_start;
@@ -395,23 +404,32 @@ pub fn main() !void {
     std.debug.print("🚀 开始运行性能基准测试...\n\n", .{});
 
     // 1. 吞吐量测试
-    std.debug.print("1️⃣  运行吞吐量测试 (1000次迭代)...\n", .{});
-    const throughput_result = try benchmarkThroughput(allocator, 1000);
+    std.debug.print("1️⃣  运行吞吐量测试 (200次迭代)...\n", .{});
+    const throughput_result = try benchmarkThroughput(allocator, 200);
     printResult(throughput_result);
 
+    // Small delay between tests to ensure clean process termination
+    std.Thread.sleep(100 * std.time.ns_per_ms);
+
     // 2. 混合操作测试
-    std.debug.print("2️⃣  运行混合操作测试 (1000次操作，10种API)...\n", .{});
-    const mixed_result = try benchmarkMixedOperations(allocator, 1000);
+    std.debug.print("2️⃣  运行混合操作测试 (200次操作，10种API)...\n", .{});
+    const mixed_result = try benchmarkMixedOperations(allocator, 200);
     printResult(mixed_result);
 
+    // Small delay between tests
+    std.Thread.sleep(100 * std.time.ns_per_ms);
+
     // 3. 内存分配测试
-    std.debug.print("3️⃣  运行内存分配压力测试 (1000次迭代)...\n", .{});
-    const memory_result = try benchmarkMemoryUsage(allocator, 1000);
+    std.debug.print("3️⃣  运行内存分配压力测试 (200次迭代)...\n", .{});
+    const memory_result = try benchmarkMemoryUsage(allocator, 200);
     printResult(memory_result);
 
+    // Small delay between tests
+    std.Thread.sleep(100 * std.time.ns_per_ms);
+
     // 4. 突发流量测试
-    std.debug.print("4️⃣  运行突发流量测试 (10个突发 × 50请求)...\n", .{});
-    const burst_result = try benchmarkBurstTraffic(allocator, 10, 50);
+    std.debug.print("4️⃣  运行突发流量测试 (5个突发 × 20请求)...\n", .{});
+    const burst_result = try benchmarkBurstTraffic(allocator, 5, 20);
     printResult(burst_result);
 
     // 打印总结

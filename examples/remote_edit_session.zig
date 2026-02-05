@@ -315,16 +315,14 @@ fn printEditorState(client: *znvim.Client, allocator: std.mem.Allocator) !void {
     const tabs = try msgpack.expectArray(tabs_result);
     std.debug.print("  Tabpages: {d}\n", .{tabs.len});
 
-    // Get current mode
-    const mode_result = try client.request("nvim_get_mode", &[_]msgpack.Value{});
+    // Get current mode (using nvim_eval due to Neovim bug #21630 with embedded processes)
+    const mode_expr = try msgpack.string(allocator, "mode()");
+    defer msgpack.free(mode_expr, allocator);
+    const mode_result = try client.request("nvim_eval", &[_]msgpack.Value{mode_expr});
     defer msgpack.free(mode_result, allocator);
 
-    if (mode_result == .map) {
-        if (mode_result.map.get("mode")) |mode_val| {
-            if (msgpack.asString(mode_val)) |mode| {
-                std.debug.print("  Current mode: {s}\n", .{mode});
-            }
-        }
+    if (msgpack.asString(mode_result)) |mode| {
+        std.debug.print("  Current mode: {s}\n", .{mode});
     }
 
     std.debug.print("-------------------------------------------\n\n", .{});

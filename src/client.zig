@@ -399,7 +399,9 @@ pub const Client = struct {
     fn processIncomingMessages(self: *Client, expected_msgid: u32) ClientError!?msgpack.Payload {
         while (true) {
             const decoded_opt = try self.tryDecodeMessage();
-            if (decoded_opt == null) return null;
+            if (decoded_opt == null) {
+                return null;
+            }
 
             var decoded = decoded_opt.?;
             defer protocol.message.deinitMessage(&decoded.message, self.allocator);

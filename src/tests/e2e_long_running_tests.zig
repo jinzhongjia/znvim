@@ -148,8 +148,13 @@ test "extended session: mixed operations for sustained period" {
                 defer msgpack.free(set_result, allocator);
             },
             2 => {
-                // Get API info
-                const result = client.request("nvim_get_mode", &.{}) catch {
+                // Get mode (using nvim_eval due to Neovim bug #21630)
+                const mode_expr = msgpack.string(allocator, "mode()") catch {
+                    errors += 1;
+                    continue;
+                };
+                defer msgpack.free(mode_expr, allocator);
+                const result = client.request("nvim_eval", &.{mode_expr}) catch {
                     errors += 1;
                     continue;
                 };

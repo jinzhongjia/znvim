@@ -319,10 +319,12 @@ test "nvim error: multiple consecutive errors" {
         try std.testing.expectError(error.NvimError, result);
     }
 
-    // 确保在多个错误后仍然可以正常请求
+    // 确保在多个错误后仍然可以正常请求 (使用 nvim_eval 替代 nvim_get_mode)
     {
-        const params = [_]msgpack.Value{};
-        const result = try client.request("nvim_get_mode", &params);
+        const mode_expr = try msgpack.string(allocator, "mode()");
+        defer msgpack.free(mode_expr, allocator);
+        const params = [_]msgpack.Value{mode_expr};
+        const result = try client.request("nvim_eval", &params);
         defer msgpack.free(result, allocator);
         // 应该成功
     }
@@ -340,14 +342,15 @@ test "nvim error: error followed by success" {
         try std.testing.expectError(error.NvimError, result);
     }
 
-    // 然后正常请求应该成功
+    // 然后正常请求应该成功 (使用 nvim_eval 替代 nvim_get_mode)
     {
-        const params = [_]msgpack.Value{};
-        const result = try client.request("nvim_get_mode", &params);
+        const mode_expr = try msgpack.string(allocator, "mode()");
+        defer msgpack.free(mode_expr, allocator);
+        const params = [_]msgpack.Value{mode_expr};
+        const result = try client.request("nvim_eval", &params);
         defer msgpack.free(result, allocator);
 
-        // 验证返回值是 map 类型
-        try std.testing.expect(result == .map);
-        try std.testing.expect(result.map.count() > 0);
+        // 验证返回值是字符串类型
+        try std.testing.expect(result == .str);
     }
 }
