@@ -15,8 +15,7 @@ test "Client setupTransport chooses UnixSocket for socket_path on non-Windows" {
     });
     defer client.deinit();
 
-    try std.testing.expectEqual(.unix_socket, client.transport_kind);
-    try std.testing.expect(client.transport_unix != null);
+    try std.testing.expect(client.zio_stream != null);
 }
 
 test "Client setupTransport chooses TcpSocket for tcp_address" {
@@ -28,8 +27,7 @@ test "Client setupTransport chooses TcpSocket for tcp_address" {
     });
     defer client.deinit();
 
-    try std.testing.expectEqual(.tcp_socket, client.transport_kind);
-    try std.testing.expect(client.transport_tcp != null);
+    try std.testing.expect(client.zio_stream != null);
 }
 
 test "Client setupTransport chooses ChildProcess for spawn_process" {
@@ -41,8 +39,7 @@ test "Client setupTransport chooses ChildProcess for spawn_process" {
     });
     defer client.deinit();
 
-    try std.testing.expectEqual(.child_process, client.transport_kind);
-    try std.testing.expect(client.transport_child != null);
+    try std.testing.expect(client.child_conn != null);
 }
 
 test "Client setupTransport chooses Stdio for use_stdio" {
@@ -53,8 +50,7 @@ test "Client setupTransport chooses Stdio for use_stdio" {
     });
     defer client.deinit();
 
-    try std.testing.expectEqual(.stdio, client.transport_kind);
-    try std.testing.expect(client.transport_stdio != null);
+    try std.testing.expect(client.stdio_conn != null);
 }
 
 test "Client setupTransport priority: spawn_process highest" {
@@ -69,7 +65,7 @@ test "Client setupTransport priority: spawn_process highest" {
     });
     defer client.deinit();
 
-    try std.testing.expectEqual(.child_process, client.transport_kind);
+    try std.testing.expect(client.child_conn != null);
 }
 
 test "Client setupTransport priority: use_stdio over socket" {
@@ -81,7 +77,7 @@ test "Client setupTransport priority: use_stdio over socket" {
     });
     defer client.deinit();
 
-    try std.testing.expectEqual(.stdio, client.transport_kind);
+    try std.testing.expect(client.stdio_conn != null);
 }
 
 test "Client setupTransport priority: tcp over socket on non-Windows" {
@@ -96,7 +92,7 @@ test "Client setupTransport priority: tcp over socket on non-Windows" {
     });
     defer client.deinit();
 
-    try std.testing.expectEqual(.tcp_socket, client.transport_kind);
+    try std.testing.expect(client.zio_stream != null);
 }
 
 test "Client setupTransport fails without tcp_port for tcp_address" {
@@ -158,21 +154,12 @@ test "Client deinit cleans up transport resources" {
     });
 
     // Verify transport was created
-    if (builtin.os.tag == .windows) {
-        try std.testing.expectEqual(.named_pipe, client.transport_kind);
-    } else {
-        try std.testing.expectEqual(.unix_socket, client.transport_kind);
-    }
+    try std.testing.expect(client.zio_stream != null);
 
     client.deinit();
 
-    // After deinit, transport_kind should be reset
-    try std.testing.expectEqual(.none, client.transport_kind);
-    if (builtin.os.tag == .windows) {
-        try std.testing.expect(client.windows.pipe == null);
-    } else {
-        try std.testing.expect(client.transport_unix == null);
-    }
+    // After deinit, zio_stream should be null
+    try std.testing.expect(client.zio_stream == null);
 }
 
 test "Client deinit clears transport pointers" {
@@ -183,19 +170,10 @@ test "Client deinit clears transport pointers" {
     });
 
     // Verify transport was initialized
-    if (builtin.os.tag == .windows) {
-        try std.testing.expect(client.windows.pipe != null);
-    } else {
-        try std.testing.expect(client.transport_unix != null);
-    }
+    try std.testing.expect(client.zio_stream != null);
 
     client.deinit();
 
-    // After deinit, pointers should be null
-    if (builtin.os.tag == .windows) {
-        try std.testing.expect(client.windows.pipe == null);
-    } else {
-        try std.testing.expect(client.transport_unix == null);
-    }
-    try std.testing.expectEqual(.none, client.transport_kind);
+    // After deinit, zio_stream should be null
+    try std.testing.expect(client.zio_stream == null);
 }

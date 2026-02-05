@@ -9,6 +9,7 @@ A lightweight Neovim RPC client for Zig that discovers the runtime API via `nvim
 - **Allocator-friendly client** – the caller keeps ownership of allocations and can decide how long payloads live.
 - **MessagePack façade** – `znvim.msgpack` wraps `zig-msgpack` with ergonomic constructors (`msgpack.array`, `msgpack.object`, `msgpack.encode`, …) plus type-safe readers (`msgpack.expectString`, `msgpack.asArray`, …).
 - **Examples ready to build** – `zig build examples` produces runnable binaries that demonstrate common workflows.
+- **High-performance async I/O** – built on [zio](https://github.com/Hejsil/zio) async runtime with io_uring/epoll/kqueue backends for efficient I/O.
 
 ## Requirements
 
@@ -127,6 +128,46 @@ const parsed = msgpack.expectArray(arr) catch return error.NotArray;
 ```
 
 Use `msgpack.encode(allocator, value)` for generic encoding of common Zig types, and the `expect*` / `as*` helpers when decoding responses.
+
+## Async I/O with zio
+
+znvim uses the [zio](https://github.com/Hejsil/zio) library for high-performance async I/O with io_uring (Linux), epoll, kqueue (macOS/BSD), and IOCP (Windows) backends.
+
+### Runtime modes
+
+You can choose how the zio runtime is managed:
+
+```zig
+// Default: Client manages its own runtime (recommended for most use cases)
+var client = try znvim.Client.init(allocator, .{
+    .socket_path = "/tmp/nvim.sock",
+    .runtime_mode = .owned_background_thread,
+});
+
+// Advanced: Provide your own zio runtime
+var client = try znvim.Client.init(allocator, .{
+    .socket_path = "/tmp/nvim.sock",
+    .runtime_mode = .external,
+    .zio_runtime = my_runtime,
+});
+```
+
+### Async request API
+
+You can use non-blocking requests:
+
+```zig
+// Start an async request
+var task = try client.requestAsync("nvim_eval", &params);
+
+// Do other work...
+
+// Wait for the result when needed
+const result = try task.wait();
+defer msgpack.free(result, allocator);
+```
+
+**Note**: The zio transport is under active development. For production use, stick with the default synchronous transport.
 
 ## Development
 

@@ -8,6 +8,10 @@
             .url = "https://github.com/zigcc/zig-msgpack/archive/refs/tags/0.0.14.tar.gz",
             .hash = "zig_msgpack-0.0.14-evvueBpfAwBSXibTQiU8q43njtWmdnHKPguZASsrZz7k",
         },
+        .zio = .{
+            .url = "git+https://github.com/lalinsky/zio?ref=v0.6.0#1d2bd4ebcc7666b45cc6cc29be547f5addd0fb5d",
+            .hash = "zio-0.6.0-xHbVVKDvFgD-QdmTVTh3RMmvaxyDiO21FbP5njC_VpK7",
+        },
     },
     .paths = .{
         "build.zig",

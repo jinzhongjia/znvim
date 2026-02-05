@@ -322,14 +322,17 @@ test "transport state consistent with connection state" {
     var client = try createTestClient(allocator);
     defer client.deinit();
 
-    // After connection, transport should report connected
+    // After connection, client should report connected
     try std.testing.expect(client.isConnected());
-    try std.testing.expect(client.transport.isConnected());
 
-    // After disconnect, both should be false
+    // Check child_conn is set (zio-based transport)
+    try std.testing.expect(client.child_conn != null);
+
+    // After disconnect, should be false
     client.disconnect();
     try std.testing.expect(!client.isConnected());
-    try std.testing.expect(!client.transport.isConnected());
+
+    try std.testing.expect(client.child_conn == null);
 }
 
 // Test: Message ID counter survives disconnect

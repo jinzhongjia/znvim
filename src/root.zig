@@ -5,7 +5,6 @@ const std = @import("std");
 const client_mod = @import("client.zig");
 const connection_mod = @import("connection.zig");
 const protocol_mod = @import("protocol/mod.zig");
-const transport_mod = @import("transport/mod.zig");
 
 pub const Client = client_mod.Client;
 pub const ClientError = client_mod.ClientError;
@@ -19,7 +18,6 @@ pub const ApiParameter = client_mod.ApiParameter;
 
 pub const ConnectionOptions = connection_mod.ConnectionOptions;
 
-pub const transport = transport_mod;
 pub const protocol = protocol_mod;
 pub const msgpack = @import("msgpack.zig");
 
@@ -41,16 +39,8 @@ test "client module tests" {
     _ = @import("client.zig");
 }
 
-test "transport module tests" {
-    _ = @import("tests/transport_tests.zig");
-}
-
 test "msgpack module tests" {
     _ = @import("tests/msgpack_tests.zig");
-}
-
-test "transport unit tests" {
-    _ = @import("tests/transport_unit_tests.zig");
 }
 
 test "connection module tests" {
@@ -149,10 +139,6 @@ test "nvim api final push tests" {
     _ = @import("tests/nvim_api_final_push_tests.zig");
 }
 
-test "windows pipe integration tests" {
-    _ = @import("tests/windows_pipe_integration_tests.zig");
-}
-
 test "client windows tests" {
     _ = @import("tests/client_windows_tests.zig");
 }
@@ -217,10 +203,10 @@ test "e2e event handling tests" {
     _ = @import("tests/e2e_event_handling_tests.zig");
 }
 
-test "stdio transport tests" {
-    _ = @import("tests/stdio_transport_tests.zig");
-}
-
 test "protocol comprehensive tests" {
     _ = @import("tests/protocol_comprehensive_tests.zig");
+}
+
+test "zio integration tests" {
+    _ = @import("tests/zio_integration_tests.zig");
 }

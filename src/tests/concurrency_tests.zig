@@ -387,7 +387,6 @@ test "concurrent read-only client operations" {
             while (i < 1000) : (i += 1) {
                 _ = ctx.client.isConnected();
                 _ = ctx.client.options;
-                _ = ctx.client.transport_kind;
             }
         }
     }.run;

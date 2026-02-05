@@ -9,9 +9,11 @@
 - **Protocol**: MessagePack-RPC (binary serialization)
 - **License**: MIT
 - **Status**: Experimental (core functionality stable, API may evolve)
-- **Primary Dependency**: zig-msgpack (v0.0.14) for MessagePack serialization
+- **Primary Dependencies**: 
+  - zig-msgpack (v0.0.14) for MessagePack serialization
+  - zio (v0.6.0) for async I/O (optional, experimental)
 - **Thread Safety**: Full thread-safe Client with mutex protection for shared usage
-- **Test Coverage**: 625 tests with 100% pass rate (A rating)
+- **Test Coverage**: 738+ tests with high pass rate
 
 ### Design Philosophy
 1. **Zero-cost abstractions**: Caller maintains ownership of allocations
@@ -60,15 +62,17 @@
 ```
 znvim/
 ├── build.zig              # Build configuration
-├── build.zig.zon          # Package dependencies
+├── build.zig.zon          # Package dependencies (includes zio v0.6.0)
 ├── README.md              # English documentation
 ├── README.zh.md           # Chinese documentation
 ├── TECHNICAL_PLAN.md      # Detailed technical specifications
+├── ZIO_INTEGRATION_DESIGN.md # zio async I/O integration design
 ├── AGENTS.md              # This file - LLM guide
 ├── src/
 │   ├── root.zig           # Library entry point, public API exports
-│   ├── client.zig         # Core Client implementation (788 LOC)
-│   ├── connection.zig     # ConnectionOptions struct
+│   ├── client.zig         # Core Client implementation (~1000 LOC)
+│   ├── connection.zig     # ConnectionOptions struct (includes zio options)
+│   ├── zio_transport.zig  # zio-based transport helpers (experimental)
 │   ├── msgpack.zig        # MessagePack facade (304 LOC)
 │   ├── protocol/
 │   │   ├── mod.zig        # Protocol layer exports
@@ -85,11 +89,12 @@ znvim/
 │   │   ├── windows_pipe.zig# Windows named pipe (460 LOC)
 │   │   ├── stdio.zig      # Stdio pipe impl
 │   │   └── child_process.zig # Spawning nvim subprocess
-│   └── tests/             # Comprehensive test suite (28 test files)
+│   └── tests/             # Comprehensive test suite (40+ test files)
 │       ├── transport_tests.zig
 │       ├── msgpack_tests.zig
 │       ├── nvim_api_tests.zig
-│       └── ...            # 25+ additional test files
+│       ├── zio_integration_tests.zig # zio transport tests
+│       └── ...            # 35+ additional test files
 └── examples/
     ├── simple_spawn.zig   # Auto-spawn Neovim example
     ├── buffer_lines.zig   # Buffer manipulation

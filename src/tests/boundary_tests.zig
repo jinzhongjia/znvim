@@ -2,7 +2,6 @@ const std = @import("std");
 const znvim = @import("../root.zig");
 const msgpack = znvim.msgpack;
 const protocol = znvim.protocol;
-const transport = znvim.transport;
 const Client = znvim.Client;
 
 // Test: Client handles extremely large arrays

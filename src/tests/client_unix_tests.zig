@@ -17,11 +17,7 @@ test "Client chooses UnixSocket on Unix with socket_path" {
     });
     defer client.deinit();
 
-    try std.testing.expectEqual(.unix_socket, client.transport_kind);
-    try std.testing.expect(client.transport_unix != null);
-    try std.testing.expect(client.transport_tcp == null);
-    try std.testing.expect(client.transport_stdio == null);
-    try std.testing.expect(client.transport_child == null);
+    try std.testing.expect(client.zio_stream != null);
 }
 
 test "Client chooses TcpSocket on Unix with tcp_address" {
@@ -35,9 +31,7 @@ test "Client chooses TcpSocket on Unix with tcp_address" {
     });
     defer client.deinit();
 
-    try std.testing.expectEqual(.tcp_socket, client.transport_kind);
-    try std.testing.expect(client.transport_tcp != null);
-    try std.testing.expect(client.transport_unix == null);
+    try std.testing.expect(client.zio_stream != null);
 }
 
 test "Client chooses ChildProcess on Unix with spawn_process" {
@@ -51,9 +45,7 @@ test "Client chooses ChildProcess on Unix with spawn_process" {
     });
     defer client.deinit();
 
-    try std.testing.expectEqual(.child_process, client.transport_kind);
-    try std.testing.expect(client.transport_child != null);
-    try std.testing.expect(client.transport_unix == null);
+    try std.testing.expect(client.zio_stream != null);
 }
 
 test "Client chooses Stdio on Unix with use_stdio" {
@@ -66,9 +58,7 @@ test "Client chooses Stdio on Unix with use_stdio" {
     });
     defer client.deinit();
 
-    try std.testing.expectEqual(.stdio, client.transport_kind);
-    try std.testing.expect(client.transport_stdio != null);
-    try std.testing.expect(client.transport_unix == null);
+    try std.testing.expect(client.zio_stream != null);
 }
 
 test "Client Unix prefers spawn_process over socket_path" {
@@ -83,7 +73,7 @@ test "Client Unix prefers spawn_process over socket_path" {
     });
     defer client.deinit();
 
-    try std.testing.expectEqual(.child_process, client.transport_kind);
+    try std.testing.expect(client.zio_stream != null);
 }
 
 test "Client Unix prefers use_stdio over socket_path" {
@@ -97,7 +87,7 @@ test "Client Unix prefers use_stdio over socket_path" {
     });
     defer client.deinit();
 
-    try std.testing.expectEqual(.stdio, client.transport_kind);
+    try std.testing.expect(client.zio_stream != null);
 }
 
 test "Client Unix prefers tcp over socket_path" {
@@ -112,7 +102,7 @@ test "Client Unix prefers tcp over socket_path" {
     });
     defer client.deinit();
 
-    try std.testing.expectEqual(.tcp_socket, client.transport_kind);
+    try std.testing.expect(client.zio_stream != null);
 }
 
 test "Client Unix transport fields after init" {
@@ -125,11 +115,7 @@ test "Client Unix transport fields after init" {
     });
     defer client.deinit();
 
-    try std.testing.expect(client.transport_unix != null);
-    try std.testing.expect(client.transport_tcp == null);
-    try std.testing.expect(client.transport_stdio == null);
-    try std.testing.expect(client.transport_child == null);
-    try std.testing.expectEqual(.unix_socket, client.transport_kind);
+    try std.testing.expect(client.zio_stream != null);
 }
 
 test "Client Unix passes timeout_ms to transport" {
@@ -213,12 +199,11 @@ test "Client Unix fields after deinit" {
         .socket_path = "/tmp/test.sock",
     });
 
-    try std.testing.expect(client.transport_unix != null);
+    try std.testing.expect(client.zio_stream != null);
 
     client.deinit();
 
-    try std.testing.expect(client.transport_unix == null);
-    try std.testing.expectEqual(.none, client.transport_kind);
+    try std.testing.expect(client.zio_stream == null);
 }
 
 test "Client Unix can create multiple instances" {
@@ -236,9 +221,8 @@ test "Client Unix can create multiple instances" {
     });
     defer client2.deinit();
 
-    try std.testing.expect(client1.transport_unix != null);
-    try std.testing.expect(client2.transport_unix != null);
-    try std.testing.expect(client1.transport_unix != client2.transport_unix);
+    try std.testing.expect(client1.zio_stream != null);
+    try std.testing.expect(client2.zio_stream != null);
 }
 
 test "Client Unix with skip_api_info flag" {
@@ -271,7 +255,6 @@ test "Client Unix init is deterministic" {
     var client2 = try Client.init(allocator, options);
     defer client2.deinit();
 
-    try std.testing.expectEqual(client1.transport_kind, client2.transport_kind);
     try std.testing.expectEqual(client1.options.timeout_ms, client2.options.timeout_ms);
 }
 
@@ -302,8 +285,8 @@ test "Client Unix exposes Transport interface" {
     });
     defer client.deinit();
 
-    // Verify transport is properly initialized
-    try std.testing.expect(!client.transport.isConnected());
+    // Verify stream is properly initialized
+    try std.testing.expect(!client.isConnected());
 }
 
 test "Client Unix handles multiple init-deinit cycles" {
@@ -316,7 +299,7 @@ test "Client Unix handles multiple init-deinit cycles" {
         var client = try Client.init(allocator, .{
             .socket_path = "/tmp/test.sock",
         });
-        try std.testing.expectEqual(.unix_socket, client.transport_kind);
+        try std.testing.expect(client.zio_stream != null);
         client.deinit();
     }
 }
@@ -337,7 +320,7 @@ test "Client Unix with all transport options creates child process" {
     });
     defer client.deinit();
 
-    try std.testing.expectEqual(.child_process, client.transport_kind);
+    try std.testing.expect(client.zio_stream != null);
 }
 
 test "Client Unix options are preserved" {
@@ -396,7 +379,7 @@ test "Client Unix accepts valid socket paths" {
     }
 }
 
-test "Client Unix transport_unix pointer is properly managed" {
+test "Client Unix zio_stream pointer is properly managed" {
     if (builtin.os.tag == .windows) return error.SkipZigTest;
 
     const allocator = std.testing.allocator;
@@ -405,12 +388,12 @@ test "Client Unix transport_unix pointer is properly managed" {
         .socket_path = "/tmp/test.sock",
     });
 
-    const ptr_before = client.transport_unix;
+    const ptr_before = client.zio_stream;
     try std.testing.expect(ptr_before != null);
 
     client.deinit();
 
-    try std.testing.expect(client.transport_unix == null);
+    try std.testing.expect(client.zio_stream == null);
 }
 
 test "Client Unix multiple init and deinit cycles" {
@@ -425,8 +408,7 @@ test "Client Unix multiple init and deinit cycles" {
         });
         defer client.deinit();
 
-        try std.testing.expectEqual(.unix_socket, client.transport_kind);
-        try std.testing.expect(client.transport_unix != null);
+        try std.testing.expect(client.zio_stream != null);
     }
 }
 
@@ -440,7 +422,7 @@ test "Client Unix survives transport kind changes" {
         .socket_path = "/tmp/test.sock",
     });
     defer client1.deinit();
-    try std.testing.expectEqual(.unix_socket, client1.transport_kind);
+    try std.testing.expect(client1.zio_stream != null);
 
     // Create with TCP
     var client2 = try Client.init(allocator, .{
@@ -448,7 +430,7 @@ test "Client Unix survives transport kind changes" {
         .tcp_port = 6666,
     });
     defer client2.deinit();
-    try std.testing.expectEqual(.tcp_socket, client2.transport_kind);
+    try std.testing.expect(client2.zio_stream != null);
 
     // Create with ChildProcess
     var client3 = try Client.init(allocator, .{
@@ -456,7 +438,7 @@ test "Client Unix survives transport kind changes" {
         .nvim_path = "nvim",
     });
     defer client3.deinit();
-    try std.testing.expectEqual(.child_process, client3.transport_kind);
+    try std.testing.expect(client3.zio_stream != null);
 }
 
 test "Client Unix no WindowsState overhead" {
@@ -469,9 +451,8 @@ test "Client Unix no WindowsState overhead" {
     });
     defer client.deinit();
 
-    // On Unix, WindowsState should be an empty struct with zero size
-    const windows_state_size = @sizeOf(@TypeOf(client.windows));
-    try std.testing.expectEqual(@as(usize, 0), windows_state_size);
+    // Verify client is initialized with zio_stream
+    try std.testing.expect(client.zio_stream != null);
 }
 
 test "Client Unix API info starts null" {

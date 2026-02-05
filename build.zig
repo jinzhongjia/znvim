@@ -10,12 +10,19 @@ pub fn build(b: *std.Build) void {
     });
     const msgpack_module = msgpack_dep.module("msgpack");
 
+    const zio_dep = b.dependency("zio", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const zio_module = zio_dep.module("zio");
+
     const mod = b.addModule("znvim", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
     });
     mod.addImport("msgpack", msgpack_module);
+    mod.addImport("zio", zio_module);
 
     const example_sources = [_]struct {
         name: []const u8,

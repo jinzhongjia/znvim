@@ -329,7 +329,7 @@ test "connection options: spawn_process takes priority" {
     defer client.deinit();
 
     // spawn_process 应该被选择
-    try std.testing.expect(client.transport_kind == .child_process);
+    try std.testing.expect(client.child_conn != null);
 }
 
 test "connection options: use_stdio takes priority over socket and tcp" {
@@ -344,7 +344,7 @@ test "connection options: use_stdio takes priority over socket and tcp" {
 
     if (result) |*client| {
         defer client.deinit();
-        try std.testing.expect(client.transport_kind == .stdio);
+        try std.testing.expect(client.stdio_conn != null);
     } else |_| {
         // init 失败也可以接受
     }
@@ -360,7 +360,7 @@ test "connection options: tcp takes priority over socket" {
     });
     defer client.deinit();
 
-    try std.testing.expect(client.transport_kind == .tcp_socket);
+    try std.testing.expect(client.zio_stream != null);
 }
 
 // ============================================================================
