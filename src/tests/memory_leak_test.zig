@@ -38,7 +38,7 @@ test "msgpack encode struct handles mapPut failure correctly" {
 
     try std.testing.expect(obj == .map);
 
-    const field1_val = obj.map.get("field1");
+    const field1_val = obj.map.getByString("field1");
     try std.testing.expect(field1_val != null);
 }
 

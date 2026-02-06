@@ -36,7 +36,7 @@ pub fn main() !void {
         defer msgpack.free(result1, allocator);
 
         if (result1 == .map) {
-            if (result1.map.get("output")) |output| {
+            if (result1.map.getByString("output")) |output| {
                 if (msgpack.asString(output)) |text| {
                     std.debug.print("Output: {s}\n\n", .{text});
                 }

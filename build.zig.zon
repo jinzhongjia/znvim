@@ -5,12 +5,12 @@
     .minimum_zig_version = "0.15.1",
     .dependencies = .{
         .zig_msgpack = .{
-            .url = "https://github.com/zigcc/zig-msgpack/archive/refs/tags/0.0.14.tar.gz",
-            .hash = "zig_msgpack-0.0.14-evvueBpfAwBSXibTQiU8q43njtWmdnHKPguZASsrZz7k",
+            .url = "https://github.com/zigcc/zig-msgpack/archive/refs/tags/0.0.16.tar.gz",
+            .hash = "zig_msgpack-0.0.14-evvueHImBQA5zzdD7c4Sl9yJ4JECWb4JaWgvbInsk7Zt",
         },
         .zio = .{
-            .url = "git+https://github.com/lalinsky/zio?ref=v0.6.0#1d2bd4ebcc7666b45cc6cc29be547f5addd0fb5d",
-            .hash = "zio-0.6.0-xHbVVKDvFgD-QdmTVTh3RMmvaxyDiO21FbP5njC_VpK7",
+            .url = "git+https://github.com/lalinsky/zio?ref=v0.7.0",
+            .hash = "zio-0.7.0-xHbVVGbTFwC1DHT1UPsn0Kdu8Ga7CJWSGWNzZVkdJuQ6",
         },
     },
     .paths = .{

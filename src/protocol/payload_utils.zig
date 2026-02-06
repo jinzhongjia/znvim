@@ -26,14 +26,13 @@ pub fn clonePayload(allocator: std.mem.Allocator, value: msgpack.Payload) !msgpa
 
             var it = value.map.iterator();
             while (it.next()) |entry| {
-                const key_slice = entry.key_ptr.*;
-                const key_copy = try allocator.dupe(u8, key_slice);
+                const key_copy = try clonePayload(allocator, entry.key_ptr.*);
                 const val_copy = clonePayload(allocator, entry.value_ptr.*) catch |err| {
-                    allocator.free(key_copy);
+                    key_copy.free(allocator);
                     return err;
                 };
                 map_payload.map.put(key_copy, val_copy) catch |err| {
-                    allocator.free(key_copy);
+                    key_copy.free(allocator);
                     val_copy.free(allocator);
                     return err;
                 };

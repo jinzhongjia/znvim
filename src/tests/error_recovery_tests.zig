@@ -52,16 +52,16 @@ test "msgpack handles map with multiple keys" {
     try std.testing.expect(obj == .map);
     try std.testing.expectEqual(@as(usize, 5), obj.map.count());
 
-    const a_val = obj.map.get("a").?;
+    const a_val = obj.map.getByString("a").?;
     try std.testing.expectEqual(@as(i64, 42), try msgpack.expectI64(a_val));
 
-    const b_val = obj.map.get("b").?;
+    const b_val = obj.map.getByString("b").?;
     try std.testing.expectEqualStrings("hello", try msgpack.expectString(b_val));
 
-    const c_val = obj.map.get("c").?;
+    const c_val = obj.map.getByString("c").?;
     try std.testing.expectEqual(true, try msgpack.expectBool(c_val));
 
-    const e_val = obj.map.get("e").?;
+    const e_val = obj.map.getByString("e").?;
     try std.testing.expect(e_val == .nil);
 }
 

@@ -71,12 +71,12 @@ test "msgpack object helper encodes struct" {
 
     try std.testing.expect(obj_value == .map);
 
-    const foo_payload_opt = obj_value.map.get("foo");
+    const foo_payload_opt = obj_value.map.getByString("foo");
     try std.testing.expect(foo_payload_opt != null);
     const foo_payload = foo_payload_opt.?;
     try std.testing.expectEqual(@as(u64, 9), try msgpack.expectU64(foo_payload));
 
-    const bar_payload_opt = obj_value.map.get("bar");
+    const bar_payload_opt = obj_value.map.getByString("bar");
     try std.testing.expect(bar_payload_opt != null);
     const bar_payload = bar_payload_opt.?;
     const text = try msgpack.expectString(bar_payload);

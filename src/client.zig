@@ -192,9 +192,7 @@ pub const Client = struct {
         self.shutdown.store(true, .release);
 
         if (self.zio_stream) |stream| {
-            if (self.zio_runtime) |rt| {
-                stream.close(rt);
-            }
+            stream.close();
             self.zio_stream = null;
         }
 
@@ -260,18 +258,14 @@ pub const Client = struct {
             self.stdio_conn = zio_transport.StdioConnection.init();
         } else if (self.options.tcp_address) |host| {
             // TCP: use zio network stream
-            try self.ensureZioRuntime();
-            const rt = self.zio_runtime orelse return error.TransportNotInitialized;
             const port = self.options.tcp_port orelse return error.UnsupportedTransport;
-            const conn = zio_transport.connectTcp(rt, host, port) catch
+            const conn = zio_transport.connectTcp(host, port) catch
                 return error.TransportNotInitialized;
             self.zio_stream = conn.stream;
         } else if (self.options.socket_path) |path| {
             // Unix socket: use zio network stream
             if (comptime zio.net.has_unix_sockets) {
-                try self.ensureZioRuntime();
-                const rt = self.zio_runtime orelse return error.TransportNotInitialized;
-                const conn = zio_transport.connectUnixSocket(rt, path) catch
+                const conn = zio_transport.connectUnixSocket(path) catch
                     return error.TransportNotInitialized;
                 self.zio_stream = conn.stream;
             } else {
@@ -297,9 +291,7 @@ pub const Client = struct {
         if (!self.connected) return;
 
         if (self.zio_stream) |stream| {
-            if (self.zio_runtime) |rt| {
-                stream.close(rt);
-            }
+            stream.close();
             self.zio_stream = null;
         }
 
@@ -331,8 +323,7 @@ pub const Client = struct {
     /// Read data from the connection into the read buffer.
     fn readFromConnection(self: *Client, buffer: []u8) !usize {
         if (self.zio_stream) |stream| {
-            const rt = self.zio_runtime orelse return error.NotConnected;
-            return stream.read(rt, buffer, .none) catch |err| {
+            return stream.read(buffer, .none) catch |err| {
                 std.log.err("zio stream read error: {}", .{err});
                 return error.ConnectionClosed;
             };
@@ -353,8 +344,7 @@ pub const Client = struct {
     /// Write data to the connection.
     fn writeToConnection(self: *Client, data: []const u8) !void {
         if (self.zio_stream) |stream| {
-            const rt = self.zio_runtime orelse return error.NotConnected;
-            stream.writeAll(rt, data, .none) catch |err| {
+            stream.writeAll(data, .none) catch |err| {
                 std.log.err("zio stream write error: {}", .{err});
                 return error.ConnectionClosed;
             };
@@ -690,14 +680,14 @@ fn payloadToString(arena: std.mem.Allocator, payload: msgpack.Payload) ApiParseE
 
 fn mapGetRequired(map: msgpack.Payload, key: []const u8) ApiParseError!msgpack.Payload {
     return switch (map) {
-        .map => |m| m.get(key) orelse ApiParseError.MissingField,
+        .map => |m| m.getByString(key) orelse ApiParseError.MissingField,
         else => ApiParseError.InvalidFormat,
     };
 }
 
 fn mapGetOptional(map: msgpack.Payload, key: []const u8) ?msgpack.Payload {
     return switch (map) {
-        .map => |m| m.get(key),
+        .map => |m| m.getByString(key),
         else => null,
     };
 }

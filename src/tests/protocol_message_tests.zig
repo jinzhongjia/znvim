@@ -368,7 +368,7 @@ test "Encoder encodes response with complex result" {
     defer map_result.free(allocator);
 
     const key_str = try msgpack.string(allocator, "status");
-    try map_result.map.put("status", key_str);
+    try map_result.map.putString("status", key_str);
 
     const response = message.Response{
         .msgid = 2,

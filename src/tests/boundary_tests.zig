@@ -357,13 +357,13 @@ test "msgpack handles struct with all optional fields null" {
     try std.testing.expect(obj == .map);
     try std.testing.expectEqual(@as(usize, 3), obj.map.count());
 
-    const a_val = obj.map.get("a").?;
+    const a_val = obj.map.getByString("a").?;
     try std.testing.expect(a_val == .nil);
 
-    const b_val = obj.map.get("b").?;
+    const b_val = obj.map.getByString("b").?;
     try std.testing.expect(b_val == .nil);
 
-    const c_val = obj.map.get("c").?;
+    const c_val = obj.map.getByString("c").?;
     try std.testing.expect(c_val == .nil);
 }
 

@@ -249,7 +249,7 @@ fn performReplace(
 
     // Parse output to get substitution count
     if (exec_result == .map) {
-        if (exec_result.map.get("output")) |output| {
+        if (exec_result.map.getByString("output")) |output| {
             if (msgpack.asString(output)) |output_str| {
                 if (verbose) {
                     std.debug.print("  Output: {s}\n", .{output_str});

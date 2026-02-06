@@ -194,9 +194,8 @@ test "payload_utils: clone map with single entry" {
     var original = msgpack.Payload.mapPayload(allocator);
     defer original.free(allocator);
 
-    const key = try allocator.dupe(u8, "key1");
     const value = msgpack.Payload.intToPayload(42);
-    try original.map.put(key, value);
+    try original.map.putString("key1", value);
 
     const cloned = try payload_utils.clonePayload(allocator, original);
     defer cloned.free(allocator);
@@ -204,7 +203,7 @@ test "payload_utils: clone map with single entry" {
     try std.testing.expect(cloned == .map);
     try std.testing.expectEqual(@as(usize, 1), cloned.map.count());
 
-    const cloned_value = cloned.map.get("key1");
+    const cloned_value = cloned.map.getByString("key1");
     try std.testing.expect(cloned_value != null);
     try std.testing.expectEqual(@as(i64, 42), cloned_value.?.int);
 }
@@ -215,46 +214,40 @@ test "payload_utils: clone map with multiple entries" {
     var original = msgpack.Payload.mapPayload(allocator);
     defer original.free(allocator);
 
-    const key1 = try allocator.dupe(u8, "key1");
-    const key2 = try allocator.dupe(u8, "key2");
-    const key3 = try allocator.dupe(u8, "key3");
-
-    try original.map.put(key1, msgpack.Payload.intToPayload(1));
-    try original.map.put(key2, msgpack.Payload.boolToPayload(true));
-    try original.map.put(key3, try msgpack.Payload.strToPayload("value3", allocator));
+    try original.map.putString("key1", msgpack.Payload.intToPayload(1));
+    try original.map.putString("key2", msgpack.Payload.boolToPayload(true));
+    try original.map.putString("key3", try msgpack.Payload.strToPayload("value3", allocator));
 
     const cloned = try payload_utils.clonePayload(allocator, original);
     defer cloned.free(allocator);
 
     try std.testing.expectEqual(@as(usize, 3), cloned.map.count());
 
-    try std.testing.expectEqual(@as(i64, 1), cloned.map.get("key1").?.int);
-    try std.testing.expectEqual(true, cloned.map.get("key2").?.bool);
-    try std.testing.expectEqualStrings("value3", cloned.map.get("key3").?.str.value());
+    try std.testing.expectEqual(@as(i64, 1), cloned.map.getByString("key1").?.int);
+    try std.testing.expectEqual(true, cloned.map.getByString("key2").?.bool);
+    try std.testing.expectEqualStrings("value3", cloned.map.getByString("key3").?.str.value());
 }
 
 test "payload_utils: clone nested map" {
     const allocator = std.testing.allocator;
 
     var inner_map = msgpack.Payload.mapPayload(allocator);
-    const inner_key = try allocator.dupe(u8, "inner_key");
-    try inner_map.map.put(inner_key, msgpack.Payload.intToPayload(99));
+    try inner_map.map.putString("inner_key", msgpack.Payload.intToPayload(99));
 
     var outer_map = msgpack.Payload.mapPayload(allocator);
     defer outer_map.free(allocator);
-    const outer_key = try allocator.dupe(u8, "outer_key");
-    try outer_map.map.put(outer_key, inner_map);
+    try outer_map.map.putString("outer_key", inner_map);
 
     const cloned = try payload_utils.clonePayload(allocator, outer_map);
     defer cloned.free(allocator);
 
     try std.testing.expectEqual(@as(usize, 1), cloned.map.count());
 
-    const cloned_inner = cloned.map.get("outer_key");
+    const cloned_inner = cloned.map.getByString("outer_key");
     try std.testing.expect(cloned_inner != null);
     try std.testing.expect(cloned_inner.? == .map);
     try std.testing.expectEqual(@as(usize, 1), cloned_inner.?.map.count());
-    try std.testing.expectEqual(@as(i64, 99), cloned_inner.?.map.get("inner_key").?.int);
+    try std.testing.expectEqual(@as(i64, 99), cloned_inner.?.map.getByString("inner_key").?.int);
 }
 
 test "payload_utils: clone map with array values" {
@@ -266,13 +259,12 @@ test "payload_utils: clone map with array values" {
 
     var original = msgpack.Payload.mapPayload(allocator);
     defer original.free(allocator);
-    const key = try allocator.dupe(u8, "array_key");
-    try original.map.put(key, arr);
+    try original.map.putString("array_key", arr);
 
     const cloned = try payload_utils.clonePayload(allocator, original);
     defer cloned.free(allocator);
 
-    const cloned_arr = cloned.map.get("array_key");
+    const cloned_arr = cloned.map.getByString("array_key");
     try std.testing.expect(cloned_arr != null);
     try std.testing.expect(cloned_arr.? == .arr);
     try std.testing.expectEqual(@as(usize, 2), cloned_arr.?.arr.len);
@@ -286,19 +278,17 @@ test "payload_utils: clone map is independent of original" {
     var original = msgpack.Payload.mapPayload(allocator);
     defer original.free(allocator);
 
-    const key1 = try allocator.dupe(u8, "key1");
-    try original.map.put(key1, msgpack.Payload.intToPayload(100));
+    try original.map.putString("key1", msgpack.Payload.intToPayload(100));
 
     const cloned = try payload_utils.clonePayload(allocator, original);
     defer cloned.free(allocator);
 
     // Modify original after cloning
-    const key2 = try allocator.dupe(u8, "key2");
-    try original.map.put(key2, msgpack.Payload.intToPayload(200));
+    try original.map.putString("key2", msgpack.Payload.intToPayload(200));
 
     // Cloned should not be affected
     try std.testing.expectEqual(@as(usize, 1), cloned.map.count());
-    try std.testing.expect(cloned.map.get("key2") == null);
+    try std.testing.expect(cloned.map.getByString("key2") == null);
 }
 
 test "payload_utils: clone binary data" {

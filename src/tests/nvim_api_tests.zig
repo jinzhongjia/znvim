@@ -261,7 +261,7 @@ test "nvim_exec2 captures output" {
     defer msgpack.free(result, allocator);
 
     try std.testing.expect(result == .map);
-    const output_val = result.map.get("output") orelse return error.TestExpectedEqual;
+    const output_val = result.map.getByString("output") orelse return error.TestExpectedEqual;
     const output = try msgpack.expectString(output_val);
     try std.testing.expectEqualStrings("test output", output);
 }
@@ -510,7 +510,7 @@ test "nvim_get_chan_info returns channel info" {
     try std.testing.expect(result == .map);
 
     // Should have at least stream and mode fields
-    const stream_val = result.map.get("stream") orelse return error.TestExpectedEqual;
+    const stream_val = result.map.getByString("stream") orelse return error.TestExpectedEqual;
     const stream = try msgpack.expectString(stream_val);
     try std.testing.expectEqualStrings("stdio", stream);
 }

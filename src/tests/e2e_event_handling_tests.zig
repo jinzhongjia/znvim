@@ -106,8 +106,8 @@ fn clonePayload(allocator: std.mem.Allocator, payload: msgpack.Value) !msgpack.V
             errdefer new_map.free(allocator);
             var it = map.iterator();
             while (it.next()) |entry| {
-                const key_copy = try allocator.dupe(u8, entry.key_ptr.*);
-                errdefer allocator.free(key_copy);
+                const key_copy = try clonePayload(allocator, entry.key_ptr.*);
+                errdefer key_copy.free(allocator);
                 const value_copy = try clonePayload(allocator, entry.value_ptr.*);
                 errdefer msgpack.free(value_copy, allocator);
                 try new_map.map.put(key_copy, value_copy);

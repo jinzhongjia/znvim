@@ -16,8 +16,8 @@ pub const Connection = struct {
     stream: Stream,
     child_process: ?std.process.Child = null,
 
-    pub fn close(self: *Connection, rt: *Runtime) void {
-        self.stream.close(rt);
+    pub fn close(self: *Connection) void {
+        self.stream.close();
         if (self.child_process) |*child| {
             _ = child.kill() catch {};
             _ = child.wait() catch {};
@@ -40,7 +40,7 @@ pub const ConnectError = error{
 
 /// Connect to a Unix domain socket.
 /// Only available on Unix-like systems.
-pub fn connectUnixSocket(rt: *Runtime, path: []const u8) ConnectError!Connection {
+pub fn connectUnixSocket(path: []const u8) ConnectError!Connection {
     if (comptime !zio.net.has_unix_sockets) {
         return ConnectError.UnsupportedPlatform;
     }
@@ -49,7 +49,7 @@ pub fn connectUnixSocket(rt: *Runtime, path: []const u8) ConnectError!Connection
         error.NameTooLong => return ConnectError.NameTooLong,
     };
 
-    const stream = addr.connect(rt, .{}) catch |err| {
+    const stream = addr.connect(.{}) catch |err| {
         std.log.err("Failed to connect to Unix socket: {s}, error: {}", .{ path, err });
         return ConnectError.ConnectionFailed;
     };
@@ -58,10 +58,10 @@ pub fn connectUnixSocket(rt: *Runtime, path: []const u8) ConnectError!Connection
 }
 
 /// Connect to a TCP socket using IP address.
-pub fn connectTcp(rt: *Runtime, host: []const u8, port: u16) ConnectError!Connection {
+pub fn connectTcp(host: []const u8, port: u16) ConnectError!Connection {
     // Try to parse as IPv4 first
     if (zio.net.IpAddress.parseIp4(host, port)) |addr| {
-        const stream = addr.connect(rt, .{}) catch |err| {
+        const stream = addr.connect(.{}) catch |err| {
             std.log.err("Failed to connect to TCP IPv4: {s}:{}, error: {}", .{ host, port, err });
             return ConnectError.ConnectionFailed;
         };
@@ -70,7 +70,7 @@ pub fn connectTcp(rt: *Runtime, host: []const u8, port: u16) ConnectError!Connec
 
     // Try to parse as IPv6
     if (zio.net.IpAddress.parseIp6(host, port)) |addr| {
-        const stream = addr.connect(rt, .{}) catch |err| {
+        const stream = addr.connect(.{}) catch |err| {
             std.log.err("Failed to connect to TCP IPv6: {s}:{}, error: {}", .{ host, port, err });
             return ConnectError.ConnectionFailed;
         };
@@ -83,7 +83,7 @@ pub fn connectTcp(rt: *Runtime, host: []const u8, port: u16) ConnectError!Connec
         error.InvalidHostName => return ConnectError.InvalidHostName,
     };
 
-    const stream = hostname.connect(rt, port, .{}) catch |err| {
+    const stream = hostname.connect(port, .{}) catch |err| {
         std.log.err("Failed to connect to TCP host: {s}:{}, error: {}", .{ host, port, err });
         return ConnectError.ConnectionFailed;
     };
