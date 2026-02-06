@@ -13,6 +13,7 @@ pub const encodeNotification = encoder.encodeNotification;
 pub const encodeResponse = encoder.encodeResponse;
 
 pub const decode = decoder.decode;
+
 test "request encode/decode roundtrip" {
     const allocator = std.testing.allocator;
 
